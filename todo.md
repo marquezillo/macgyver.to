@@ -10,3 +10,5 @@
 - [x] Integrate real LLM API (invokeLLM) for intelligent responses
 - [x] Make landing generation a capability triggered by user request, not the default
 - [x] Update Sidebar branding
+
+- [x] Add predefined suggestion buttons (Claude-style) to initial chat screen
