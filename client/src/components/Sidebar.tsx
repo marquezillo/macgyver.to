@@ -95,7 +95,7 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
       {/* Header: New Chat */}
       <div className="p-3 mb-2">
         <div className="flex items-center justify-between mb-4 px-1">
-           <span className="font-semibold text-sm text-gray-500">AI Designer</span>
+           <span className="font-semibold text-sm text-gray-500">Manus</span>
            <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400" onClick={onToggle}>
              <PanelLeftClose className="h-4 w-4" />
            </Button>

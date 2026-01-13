@@ -103,7 +103,7 @@ export default function Editor() {
              >
                <PanelRightClose className="h-5 w-5" />
              </Button>
-             <span className="font-medium text-sm text-gray-600">Generated Landing Page</span>
+             <span className="font-medium text-sm text-gray-600">Vista previa</span>
            </div>
            
            <div className="flex items-center gap-2">

@@ -3,6 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
+import { invokeLLM } from "./_core/llm";
 import {
   createChat,
   getChatsByUserId,
@@ -14,8 +15,33 @@ import {
   getMessagesByChatId,
 } from "./db";
 
+// System prompt for the AI assistant
+const SYSTEM_PROMPT = `Eres un asistente de IA avanzado y versátil. Puedes ayudar con una amplia variedad de tareas:
+
+- Responder preguntas y proporcionar información
+- Ayudar con programación y desarrollo de software
+- Escribir y editar textos
+- Analizar datos y resolver problemas
+- Generar ideas creativas
+- Y mucho más
+
+Cuando el usuario te pida crear una landing page, página web, o diseño web, responde con un JSON estructurado que incluya las secciones a generar. El formato debe ser:
+
+{
+  "type": "landing",
+  "sections": [
+    { "id": "hero-1", "type": "hero", "content": { "title": "...", "subtitle": "...", "ctaText": "..." } },
+    { "id": "features-1", "type": "features", "content": { "title": "..." } },
+    ...
+  ],
+  "message": "Tu mensaje explicativo aquí"
+}
+
+Los tipos de sección disponibles son: hero, features, testimonials, pricing, faq, cta, footer.
+
+Para cualquier otra consulta, responde de forma natural y útil en español.`;
+
 export const appRouter = router({
-  // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -28,9 +54,67 @@ export const appRouter = router({
     }),
   }),
 
+  // AI/LLM operations
+  ai: router({
+    // Send a message to the LLM and get a response
+    chat: protectedProcedure
+      .input(z.object({
+        messages: z.array(z.object({
+          role: z.enum(['user', 'assistant']),
+          content: z.string(),
+        })),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          // Build conversation history for LLM
+          const llmMessages = [
+            { role: 'system' as const, content: SYSTEM_PROMPT },
+            ...input.messages.map(m => ({
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+            })),
+          ];
+
+          const result = await invokeLLM({ messages: llmMessages });
+          
+          const responseContent = result.choices[0]?.message?.content;
+          const textContent = typeof responseContent === 'string' 
+            ? responseContent 
+            : Array.isArray(responseContent) 
+              ? responseContent.find(c => c.type === 'text')?.text || ''
+              : '';
+
+          // Try to parse as landing page JSON
+          let parsedResponse: { type?: string; sections?: unknown[]; message?: string } | null = null;
+          let isLandingResponse = false;
+
+          try {
+            // Check if response contains JSON
+            const jsonMatch = textContent.match(/\{[\s\S]*"type"\s*:\s*"landing"[\s\S]*\}/);
+            if (jsonMatch) {
+              parsedResponse = JSON.parse(jsonMatch[0]);
+              isLandingResponse = parsedResponse?.type === 'landing';
+            }
+          } catch {
+            // Not a JSON response, that's fine
+          }
+
+          return {
+            content: isLandingResponse && parsedResponse?.message 
+              ? parsedResponse.message 
+              : textContent,
+            hasArtifact: isLandingResponse,
+            artifactData: isLandingResponse ? { sections: parsedResponse?.sections } : null,
+          };
+        } catch (error) {
+          console.error('LLM Error:', error);
+          throw new Error('Error al procesar tu mensaje. Por favor, intenta de nuevo.');
+        }
+      }),
+  }),
+
   // Chat operations
   chat: router({
-    // Create a new chat
     create: protectedProcedure
       .input(z.object({ title: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
@@ -38,13 +122,11 @@ export const appRouter = router({
         return chat;
       }),
 
-    // Get all chats for the current user
     list: protectedProcedure.query(async ({ ctx }) => {
       const chatList = await getChatsByUserId(ctx.user.id);
       return chatList;
     }),
 
-    // Get a specific chat by ID
     get: protectedProcedure
       .input(z.object({ chatId: z.number() }))
       .query(async ({ ctx, input }) => {
@@ -52,7 +134,6 @@ export const appRouter = router({
         return chat;
       }),
 
-    // Update chat title
     updateTitle: protectedProcedure
       .input(z.object({ chatId: z.number(), title: z.string() }))
       .mutation(async ({ input }) => {
@@ -60,7 +141,6 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Update chat artifact data (the generated landing page)
     updateArtifact: protectedProcedure
       .input(z.object({ chatId: z.number(), artifactData: z.unknown() }))
       .mutation(async ({ input }) => {
@@ -68,11 +148,9 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Delete a chat
     delete: protectedProcedure
       .input(z.object({ chatId: z.number() }))
       .mutation(async ({ ctx, input }) => {
-        // Verify ownership first
         const chat = await getChatById(input.chatId, ctx.user.id);
         if (!chat) {
           throw new Error("Chat not found or access denied");
@@ -84,7 +162,6 @@ export const appRouter = router({
 
   // Message operations
   message: router({
-    // Add a message to a chat
     create: protectedProcedure
       .input(z.object({
         chatId: z.number(),
@@ -93,7 +170,6 @@ export const appRouter = router({
         hasArtifact: z.boolean().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        // Verify chat ownership
         const chat = await getChatById(input.chatId, ctx.user.id);
         if (!chat) {
           throw new Error("Chat not found or access denied");
@@ -107,11 +183,9 @@ export const appRouter = router({
         return message;
       }),
 
-    // Get all messages for a chat
     list: protectedProcedure
       .input(z.object({ chatId: z.number() }))
       .query(async ({ ctx, input }) => {
-        // Verify chat ownership
         const chat = await getChatById(input.chatId, ctx.user.id);
         if (!chat) {
           throw new Error("Chat not found or access denied");

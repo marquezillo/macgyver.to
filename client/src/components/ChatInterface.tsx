@@ -2,11 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Bot, User, Sparkles, Loader2, LayoutTemplate, ArrowRight } from 'lucide-react';
+import { Send, Bot, User, Loader2, LayoutTemplate, ArrowRight } from 'lucide-react';
 import { useEditorStore } from '@/store/editorStore';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { getLoginUrl } from '@/const';
+import { Streamdown } from 'streamdown';
 
 interface Message {
   id: string | number;
@@ -25,11 +25,11 @@ interface ChatInterfaceProps {
 const WELCOME_MESSAGE: Message = {
   id: 'welcome',
   role: 'assistant',
-  content: '¡Hola! Soy tu AI Designer. ¿Qué vamos a construir hoy? \n\nPuedes decirme:\n- "Crea una landing para una app de fitness"\n- "Añade una sección de precios"\n- "Cambia el título del hero a \'Entrena duro\'"'
+  content: '¡Hola! ¿En qué puedo ayudarte hoy?'
 };
 
 export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCreated }: ChatInterfaceProps) {
-  const { addSection, sections, setSections } = useEditorStore();
+  const { sections, setSections } = useEditorStore();
   const { isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
   
@@ -68,13 +68,10 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
     },
   });
 
-  const updateChatTitle = trpc.chat.updateTitle.useMutation({
-    onSuccess: () => {
-      utils.chat.list.invalidate();
-    },
-  });
-
   const updateChatArtifact = trpc.chat.updateArtifact.useMutation();
+
+  // LLM mutation
+  const aiChat = trpc.ai.chat.useMutation();
 
   // Sync database messages to local state
   useEffect(() => {
@@ -87,7 +84,6 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       }));
       setLocalMessages(mapped);
     } else if (!chatId) {
-      // Reset to welcome message for new chat
       setLocalMessages([WELCOME_MESSAGE]);
     }
   }, [dbMessages, chatId]);
@@ -100,7 +96,6 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
         setSections(artifact.sections as any);
       }
     } else if (!chatId) {
-      // Clear sections for new chat
       setSections([]);
     }
   }, [chatData, chatId, setSections]);
@@ -111,54 +106,6 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [localMessages]);
-
-  const processCommand = async (text: string) => {
-    const lowerText = text.toLowerCase();
-    
-    if (lowerText.includes('landing') || lowerText.includes('crea')) {
-      return {
-        reply: "¡Claro! He generado una estructura base para tu landing page con Hero, Features y Testimonios.",
-        hasArtifact: true,
-        action: () => {
-          setSections([
-            { id: 'hero-1', type: 'hero', variant: 'centered', content: { title: 'Tu Nueva Landing Page', subtitle: 'Generada automáticamente con IA', ctaText: 'Empezar' } },
-            { id: 'features-1', type: 'features', variant: 'grid', content: { title: 'Características Principales' } },
-            { id: 'testimonials-1', type: 'testimonials', variant: 'cards', content: { title: 'Lo que dicen nuestros clientes' } }
-          ]);
-        }
-      };
-    }
-    
-    if (lowerText.includes('precio') || lowerText.includes('pricing')) {
-      return {
-        reply: "He añadido una sección de precios a tu landing.",
-        hasArtifact: true,
-        action: () => addSection('pricing')
-      };
-    }
-
-    if (lowerText.includes('hero')) {
-       return {
-        reply: "He añadido una nueva sección Hero al principio.",
-        hasArtifact: true,
-        action: () => addSection('hero')
-      };
-    }
-
-    if (lowerText.includes('faq') || lowerText.includes('preguntas')) {
-       return {
-        reply: "Sección de Preguntas Frecuentes añadida.",
-        hasArtifact: true,
-        action: () => addSection('faq')
-      };
-    }
-
-    return {
-      reply: "Entendido. Aunque por ahora soy una demo, pronto podré realizar cambios más complejos. Prueba pidiéndome añadir secciones como 'precios' o 'faq'.",
-      hasArtifact: false,
-      action: () => {}
-    };
-  };
 
   const handleSend = async () => {
     if (!input.trim() || isProcessing) return;
@@ -205,20 +152,31 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       }
     }
 
-    // Process command and generate response
-    setTimeout(async () => {
-      const result = await processCommand(userText);
+    try {
+      // Build conversation history (excluding welcome message)
+      const conversationHistory = localMessages
+        .filter(m => m.id !== 'welcome')
+        .map(m => ({ role: m.role, content: m.content }));
       
-      // Execute Action (Modify State)
-      if (result.action) {
-        result.action();
+      // Add current message
+      conversationHistory.push({ role: 'user', content: userText });
+
+      // Call real LLM
+      const result = await aiChat.mutateAsync({ messages: conversationHistory });
+
+      // If there's artifact data (landing page), update the editor
+      if (result.hasArtifact && result.artifactData) {
+        const artifact = result.artifactData as { sections?: unknown[] };
+        if (artifact.sections) {
+          setSections(artifact.sections as any);
+        }
       }
 
       // Add AI Response locally
       const aiMsg: Message = {
         id: `temp-ai-${Date.now()}`,
         role: 'assistant',
-        content: result.reply,
+        content: result.content,
         hasArtifact: result.hasArtifact
       };
       setLocalMessages(prev => [...prev, aiMsg]);
@@ -229,37 +187,44 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
           await createMessage.mutateAsync({
             chatId: currentChatId,
             role: 'assistant',
-            content: result.reply,
+            content: result.content,
             hasArtifact: result.hasArtifact,
           });
 
           // Update chat artifact data if we generated something
-          if (result.hasArtifact) {
-            // Get current sections from store
-            const currentSections = useEditorStore.getState().sections;
+          if (result.hasArtifact && result.artifactData) {
             await updateChatArtifact.mutateAsync({
               chatId: currentChatId,
-              artifactData: { sections: currentSections },
+              artifactData: result.artifactData,
             });
           }
         } catch (error) {
           console.error('Failed to save AI message:', error);
         }
       }
-      
+    } catch (error) {
+      console.error('AI Error:', error);
+      // Add error message
+      const errorMsg: Message = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: 'Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta de nuevo.',
+        hasArtifact: false
+      };
+      setLocalMessages(prev => [...prev, errorMsg]);
+    } finally {
       setIsProcessing(false);
-    }, 1200);
+    }
   };
 
   const displayMessages = localMessages;
 
   return (
     <div className="flex flex-col h-full bg-white w-full">
-      {/* Header - Minimalist */}
+      {/* Header */}
       <div className="p-4 border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10 flex justify-between items-center">
-        <h2 className="font-semibold text-sm text-gray-700 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-indigo-500" />
-          AI Designer
+        <h2 className="font-semibold text-sm text-gray-700">
+          Nueva conversación
         </h2>
         {!isPreviewOpen && sections.length > 0 && (
            <Button variant="outline" size="sm" onClick={onOpenPreview} className="h-8 gap-2 text-xs">
@@ -271,7 +236,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       
       {/* Messages Area */}
       <ScrollArea className="flex-1 p-4 md:p-8">
-        <div className="max-w-2xl mx-auto space-y-8 pb-4">
+        <div className="max-w-2xl mx-auto space-y-6 pb-4">
           {messagesLoading && chatId ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
@@ -280,43 +245,47 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
             displayMessages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-4 ${
+                className={`flex gap-3 ${
                   msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'
                 }`}
               >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm border ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                     msg.role === 'user' 
-                      ? 'bg-gray-900 border-gray-900 text-white' 
-                      : 'bg-white border-gray-200 text-indigo-600'
+                      ? 'bg-gray-900 text-white' 
+                      : 'bg-gradient-to-br from-violet-500 to-purple-600 text-white'
                   }`}
                 >
-                  {msg.role === 'user' ? <User size={14} /> : <Bot size={16} />}
+                  {msg.role === 'user' ? <User size={14} /> : <Bot size={14} />}
                 </div>
                 <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                   <div
-                    className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                    className={`p-4 rounded-2xl text-sm leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-gray-100 text-gray-900 rounded-tr-none'
-                        : 'bg-white border border-gray-100 text-gray-700 rounded-tl-none'
+                        ? 'bg-gray-900 text-white rounded-tr-sm'
+                        : 'bg-gray-100 text-gray-800 rounded-tl-sm'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    {msg.role === 'assistant' ? (
+                      <Streamdown>{msg.content}</Streamdown>
+                    ) : (
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    )}
                   </div>
                   
                   {msg.hasArtifact && (
                     <button 
                       onClick={onOpenPreview}
-                      className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group text-left w-64"
+                      className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-violet-300 transition-all group text-left w-64"
                     >
-                      <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-indigo-100 transition-colors">
-                        <LayoutTemplate className="w-5 h-5 text-indigo-600" />
+                      <div className="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-violet-100 transition-colors">
+                        <LayoutTemplate className="w-5 h-5 text-violet-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-900">Landing Page</p>
-                        <p className="text-[10px] text-gray-500 truncate">Click to view generated design</p>
+                        <p className="text-xs font-semibold text-gray-900">Diseño Web</p>
+                        <p className="text-[10px] text-gray-500 truncate">Click para ver</p>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all" />
+                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-violet-500 group-hover:translate-x-0.5 transition-all" />
                     </button>
                   )}
                 </div>
@@ -325,13 +294,13 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
           )}
           
           {isProcessing && (
-            <div className="flex gap-4 max-w-2xl mx-auto">
-               <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center shrink-0">
-                 <Bot size={16} className="text-indigo-600" />
+            <div className="flex gap-3">
+               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shrink-0">
+                 <Bot size={14} className="text-white" />
                </div>
-               <div className="bg-white border border-gray-100 p-4 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
-                 <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                 <span className="text-xs text-gray-400">Generando diseño...</span>
+               <div className="bg-gray-100 p-4 rounded-2xl rounded-tl-sm flex items-center gap-2">
+                 <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                 <span className="text-sm text-gray-500">Pensando...</span>
                </div>
             </div>
           )}
@@ -340,34 +309,31 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="p-4 bg-white">
-        <div className="max-w-2xl mx-auto relative">
+      <div className="p-4 bg-white border-t border-gray-100">
+        <div className="max-w-2xl mx-auto">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSend();
             }}
-            className="relative flex items-end shadow-lg rounded-2xl border border-gray-200 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-indigo-100 transition-all"
+            className="relative flex items-center gap-2"
           >
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Describe tu landing page..."
-              className="flex-1 min-h-[56px] py-4 pl-4 pr-12 border-none focus-visible:ring-0 text-base bg-transparent"
+              placeholder="Escribe un mensaje..."
+              className="flex-1 h-12 px-4 rounded-xl border-gray-200 focus-visible:ring-violet-500"
               disabled={isProcessing}
             />
             <Button 
               type="submit" 
               size="icon" 
-              className="absolute right-2 bottom-2 h-10 w-10 rounded-xl bg-gray-900 hover:bg-black transition-colors"
+              className="h-12 w-12 rounded-xl bg-gray-900 hover:bg-gray-800"
               disabled={isProcessing || !input.trim()}
             >
-              <Send className="w-4 h-4 text-white" />
+              <Send className="w-4 h-4" />
             </Button>
           </form>
-          <div className="mt-3 text-center">
-             <p className="text-[10px] text-gray-400">AI Designer puede cometer errores. Revisa el diseño generado.</p>
-          </div>
         </div>
       </div>
     </div>
