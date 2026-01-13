@@ -9,6 +9,15 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { invokeLLMStream } from "./llm";
 import { sdk } from "./sdk";
+import { performDeepResearchStream } from "../deepResearch";
+import { storagePut } from "../storage";
+import multer from "multer";
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 16 * 1024 * 1024 }, // 16MB limit
+});
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -143,6 +152,242 @@ async function startServer() {
         res.status(500).json({ error: "Internal server error" });
       } else {
         res.write(`data: ${JSON.stringify({ type: "error", error: "Stream error" })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
+  // File upload endpoint
+  app.post("/api/files/upload", upload.single("file"), async (req, res) => {
+    try {
+      // Verify authentication
+      let user;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        user = null;
+      }
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const file = req.file;
+      if (!file) {
+        res.status(400).json({ error: "No file uploaded" });
+        return;
+      }
+
+      // Generate unique filename
+      const ext = file.originalname.split(".").pop() || "bin";
+      const filename = `uploads/${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+
+      // Upload to S3
+      const { url } = await storagePut(filename, file.buffer, file.mimetype);
+
+      res.json({
+        url,
+        filename: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+      });
+    } catch (error) {
+      console.error("File upload error:", error);
+      res.status(500).json({ error: "Failed to upload file" });
+    }
+  });
+
+  // File analysis endpoint (SSE)
+  app.post("/api/files/analyze", async (req, res) => {
+    try {
+      // Verify authentication
+      let user;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        user = null;
+      }
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { fileUrl, mimeType, prompt } = req.body as { fileUrl: string; mimeType: string; prompt?: string };
+      
+      if (!fileUrl || !mimeType) {
+        res.status(400).json({ error: "fileUrl and mimeType required" });
+        return;
+      }
+
+      // Set SSE headers
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+
+      // Build message with file content based on type
+      const userPrompt = prompt || "Analiza este archivo y describe su contenido de forma detallada.";
+      
+      let messageContent: any[];
+      
+      if (mimeType.startsWith("image/")) {
+        // Image analysis
+        messageContent = [
+          { type: "text", text: userPrompt },
+          { type: "image_url", image_url: { url: fileUrl, detail: "high" } }
+        ];
+      } else if (mimeType === "application/pdf") {
+        // PDF analysis
+        messageContent = [
+          { type: "text", text: userPrompt },
+          { type: "file_url", file_url: { url: fileUrl, mime_type: "application/pdf" } }
+        ];
+      } else {
+        // Other file types - just describe
+        messageContent = [
+          { type: "text", text: `${userPrompt}\n\nArchivo: ${fileUrl}\nTipo: ${mimeType}` }
+        ];
+      }
+
+      const llmMessages = [
+        { role: 'system' as const, content: 'Eres un asistente experto en análisis de documentos e imágenes. Proporciona análisis detallados y útiles.' },
+        { role: 'user' as const, content: messageContent }
+      ];
+
+      let fullContent = "";
+
+      // Stream the response
+      for await (const chunk of invokeLLMStream({ messages: llmMessages })) {
+        fullContent += chunk;
+        res.write(`data: ${JSON.stringify({ type: "chunk", content: chunk })}\n\n`);
+      }
+
+      // Send final message
+      res.write(`data: ${JSON.stringify({ type: "done", content: fullContent })}\n\n`);
+      res.end();
+    } catch (error) {
+      console.error("File analysis error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Internal server error" });
+      } else {
+        res.write(`data: ${JSON.stringify({ type: "error", error: "Analysis error" })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
+  // Deep Research streaming endpoint (SSE)
+  app.post("/api/research/stream", async (req, res) => {
+    try {
+      // Verify authentication
+      let user;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        user = null;
+      }
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { question } = req.body as { question: string };
+      
+      if (!question || typeof question !== "string") {
+        res.status(400).json({ error: "Question string required" });
+        return;
+      }
+
+      // Set SSE headers
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+
+      // Stream the research
+      for await (const event of performDeepResearchStream(question)) {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      }
+      
+      res.end();
+    } catch (error) {
+      console.error("Research streaming error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Internal server error" });
+      } else {
+        res.write(`data: ${JSON.stringify({ type: "error", data: "Research error" })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
+  // Code execution endpoint (simulated Python execution with LLM)
+  app.post("/api/code/execute", async (req, res) => {
+    try {
+      // Verify authentication
+      let user;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        user = null;
+      }
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { code, language } = req.body as { code: string; language?: string };
+      
+      if (!code || typeof code !== "string") {
+        res.status(400).json({ error: "Code string required" });
+        return;
+      }
+
+      const lang = language || "python";
+
+      // Set SSE headers
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+
+      // Send status
+      res.write(`data: ${JSON.stringify({ type: "status", message: "Analizando código..." })}\n\n`);
+
+      // Use LLM to simulate code execution
+      const llmMessages = [
+        { 
+          role: 'system' as const, 
+          content: `Eres un intérprete de ${lang}. Cuando el usuario te dé código, debes:
+1. Analizar el código
+2. Simular su ejecución paso a paso
+3. Mostrar el output exacto que produciría
+4. Si hay errores, mostrar el traceback
+
+Responde SOLO con el output del código, como si fueras una terminal. No expliques nada, solo muestra el resultado de la ejecución.`
+        },
+        { role: 'user' as const, content: `Ejecuta este código ${lang}:\n\n\`\`\`${lang}\n${code}\n\`\`\`` }
+      ];
+
+      res.write(`data: ${JSON.stringify({ type: "status", message: "Ejecutando..." })}\n\n`);
+
+      let fullOutput = "";
+
+      // Stream the response
+      for await (const chunk of invokeLLMStream({ messages: llmMessages })) {
+        fullOutput += chunk;
+        res.write(`data: ${JSON.stringify({ type: "output", content: chunk })}\n\n`);
+      }
+
+      // Send completion
+      res.write(`data: ${JSON.stringify({ type: "done", output: fullOutput })}\n\n`);
+      res.end();
+    } catch (error) {
+      console.error("Code execution error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Internal server error" });
+      } else {
+        res.write(`data: ${JSON.stringify({ type: "error", error: "Execution error" })}\n\n`);
         res.end();
       }
     }

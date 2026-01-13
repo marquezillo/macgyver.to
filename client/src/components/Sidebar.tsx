@@ -2,12 +2,23 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Settings, PanelLeftClose, Loader2, Trash2, Pencil, Check, X, Search } from 'lucide-react';
+import { 
+  Plus, Settings, PanelLeftClose, Loader2, Trash2, Pencil, Check, X, Search,
+  Star, Folder, FolderPlus, ChevronRight, ChevronDown, MoreHorizontal, Moon, Sun, Download
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { isToday, isYesterday } from 'date-fns';
+import { useTheme } from '@/contexts/ThemeContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -18,37 +29,61 @@ interface SidebarProps {
 }
 
 // Helper to group chats by date
-function groupChatsByDate(chats: { id: number; title: string; updatedAt: Date }[]) {
+function groupChatsByDate(chats: { id: number; title: string; updatedAt: Date; isFavorite?: number; folderId?: number | null }[]) {
+  const favorites: typeof chats = [];
   const today: typeof chats = [];
   const yesterday: typeof chats = [];
   const older: typeof chats = [];
 
   chats.forEach(chat => {
-    const date = chat.updatedAt instanceof Date ? chat.updatedAt : new Date(chat.updatedAt);
-    if (isToday(date)) {
-      today.push(chat);
-    } else if (isYesterday(date)) {
-      yesterday.push(chat);
-    } else {
-      older.push(chat);
+    if (chat.isFavorite) {
+      favorites.push(chat);
+    } else if (!chat.folderId) {
+      const date = chat.updatedAt instanceof Date ? chat.updatedAt : new Date(chat.updatedAt);
+      if (isToday(date)) {
+        today.push(chat);
+      } else if (isYesterday(date)) {
+        yesterday.push(chat);
+      } else {
+        older.push(chat);
+      }
     }
   });
 
-  return { today, yesterday, older };
+  return { favorites, today, yesterday, older };
 }
+
+const FOLDER_COLORS = [
+  { name: 'gray', bg: 'bg-gray-100', text: 'text-gray-600' },
+  { name: 'blue', bg: 'bg-blue-100', text: 'text-blue-600' },
+  { name: 'green', bg: 'bg-green-100', text: 'text-green-600' },
+  { name: 'purple', bg: 'bg-purple-100', text: 'text-purple-600' },
+  { name: 'orange', bg: 'bg-orange-100', text: 'text-orange-600' },
+  { name: 'pink', bg: 'bg-pink-100', text: 'text-pink-600' },
+];
 
 export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatId }: SidebarProps) {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
+  const { theme, toggleTheme, switchable } = useTheme();
   const utils = trpc.useUtils();
   
   // State for editing and search
   const [editingChatId, setEditingChatId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
   const editInputRef = useRef<HTMLInputElement>(null);
+  const newFolderInputRef = useRef<HTMLInputElement>(null);
   
   // Fetch chats from database
   const { data: chats, isLoading: chatsLoading } = trpc.chat.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  // Fetch folders
+  const { data: folders } = trpc.folder.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
@@ -67,6 +102,37 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
     },
   });
 
+  // Toggle favorite mutation
+  const toggleFavorite = trpc.chat.toggleFavorite.useMutation({
+    onSuccess: () => {
+      utils.chat.list.invalidate();
+    },
+  });
+
+  // Move to folder mutation
+  const moveToFolder = trpc.chat.moveToFolder.useMutation({
+    onSuccess: () => {
+      utils.chat.list.invalidate();
+    },
+  });
+
+  // Create folder mutation
+  const createFolder = trpc.folder.create.useMutation({
+    onSuccess: () => {
+      utils.folder.list.invalidate();
+      setShowNewFolder(false);
+      setNewFolderName('');
+    },
+  });
+
+  // Delete folder mutation
+  const deleteFolder = trpc.folder.delete.useMutation({
+    onSuccess: () => {
+      utils.folder.list.invalidate();
+      utils.chat.list.invalidate();
+    },
+  });
+
   // Focus input when editing starts
   useEffect(() => {
     if (editingChatId && editInputRef.current) {
@@ -74,6 +140,12 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
       editInputRef.current.select();
     }
   }, [editingChatId]);
+
+  useEffect(() => {
+    if (showNewFolder && newFolderInputRef.current) {
+      newFolderInputRef.current.focus();
+    }
+  }, [showNewFolder]);
 
   const handleDeleteChat = (e: React.MouseEvent, chatId: number) => {
     e.stopPropagation();
@@ -113,14 +185,70 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
     }
   };
 
+  const handleToggleFavorite = (e: React.MouseEvent, chatId: number, currentFavorite: number) => {
+    e.stopPropagation();
+    toggleFavorite.mutate({ chatId, isFavorite: !currentFavorite });
+  };
+
+  const handleMoveToFolder = (chatId: number, folderId: number | null) => {
+    moveToFolder.mutate({ chatId, folderId });
+  };
+
+  const handleExportChat = async (chatId: number, format: 'markdown' | 'json') => {
+    try {
+      const result = await utils.client.export.conversation.query({ chatId, format });
+      const blob = new Blob([result.content], { type: format === 'markdown' ? 'text/markdown' : 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export error:', error);
+    }
+  };
+
+  const handleCreateFolder = () => {
+    if (newFolderName.trim()) {
+      createFolder.mutate({ name: newFolderName.trim() });
+    }
+  };
+
+  const handleDeleteFolder = (e: React.MouseEvent, folderId: number) => {
+    e.stopPropagation();
+    if (confirm('¿Eliminar esta carpeta? Los chats se moverán a la lista principal.')) {
+      deleteFolder.mutate({ folderId });
+    }
+  };
+
+  const toggleFolderExpand = (folderId: number) => {
+    setExpandedFolders(prev => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+      return next;
+    });
+  };
+
   // Filter chats by search query
   const filteredChats = chats?.filter(chat => 
     chat.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const grouped = filteredChats ? groupChatsByDate(filteredChats) : { today: [], yesterday: [], older: [] };
+  const grouped = filteredChats ? groupChatsByDate(filteredChats) : { favorites: [], today: [], yesterday: [], older: [] };
 
-  const renderChatItem = (chat: { id: number; title: string; updatedAt: Date }) => {
+  // Get chats for a specific folder
+  const getChatsForFolder = (folderId: number) => {
+    return filteredChats?.filter(chat => chat.folderId === folderId) || [];
+  };
+
+  const renderChatItem = (chat: { id: number; title: string; updatedAt: Date; isFavorite?: number; folderId?: number | null }) => {
     const isEditing = editingChatId === chat.id;
     
     return (
@@ -163,26 +291,116 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
           </div>
         ) : (
           <>
+            {chat.isFavorite ? (
+              <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 mr-2 shrink-0" />
+            ) : null}
             <span className="truncate flex-1 text-left">{chat.title}</span>
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={(e) => handleStartEdit(e, chat)}
-              >
-                <Pencil className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={(e) => handleDeleteChat(e, chat.id)}
-              >
-                <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-500" />
-              </Button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <MoreHorizontal className="h-3 w-3 text-gray-400" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={(e) => handleStartEdit(e as any, chat)}>
+                  <Pencil className="h-3 w-3 mr-2" />
+                  Renombrar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => handleToggleFavorite(e as any, chat.id, chat.isFavorite || 0)}>
+                  <Star className={cn("h-3 w-3 mr-2", chat.isFavorite && "fill-yellow-500 text-yellow-500")} />
+                  {chat.isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+                </DropdownMenuItem>
+                {folders && folders.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem disabled className="text-xs text-gray-400">
+                      Mover a carpeta
+                    </DropdownMenuItem>
+                    {chat.folderId && (
+                      <DropdownMenuItem onClick={() => handleMoveToFolder(chat.id, null)}>
+                        <X className="h-3 w-3 mr-2" />
+                        Quitar de carpeta
+                      </DropdownMenuItem>
+                    )}
+                    {folders.map(folder => (
+                      <DropdownMenuItem 
+                        key={folder.id}
+                        onClick={() => handleMoveToFolder(chat.id, folder.id)}
+                        disabled={chat.folderId === folder.id}
+                      >
+                        <Folder className="h-3 w-3 mr-2" />
+                        {folder.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleExportChat(chat.id, 'markdown')}>
+                  <Download className="h-3 w-3 mr-2" />
+                  Exportar Markdown
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportChat(chat.id, 'json')}>
+                  <Download className="h-3 w-3 mr-2" />
+                  Exportar JSON
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={(e) => handleDeleteChat(e as any, chat.id)}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <Trash2 className="h-3 w-3 mr-2" />
+                  Eliminar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </>
+        )}
+      </div>
+    );
+  };
+
+  const renderFolderSection = (folder: { id: number; name: string; color?: string | null }) => {
+    const isExpanded = expandedFolders.has(folder.id);
+    const folderChats = getChatsForFolder(folder.id);
+    const colorConfig = FOLDER_COLORS.find(c => c.name === folder.color) || FOLDER_COLORS[0];
+
+    return (
+      <div key={folder.id} className="mb-2">
+        <div 
+          className="flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-gray-200/50 cursor-pointer group"
+          onClick={() => toggleFolderExpand(folder.id)}
+        >
+          {isExpanded ? (
+            <ChevronDown className="h-3 w-3 text-gray-400 shrink-0" />
+          ) : (
+            <ChevronRight className="h-3 w-3 text-gray-400 shrink-0" />
+          )}
+          <div className={cn("p-1 rounded", colorConfig.bg)}>
+            <Folder className={cn("h-3 w-3", colorConfig.text)} />
+          </div>
+          <span className="text-sm text-gray-700 flex-1 truncate">{folder.name}</span>
+          <span className="text-xs text-gray-400">{folderChats.length}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => handleDeleteFolder(e, folder.id)}
+          >
+            <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-500" />
+          </Button>
+        </div>
+        {isExpanded && (
+          <div className="ml-4 mt-1 space-y-1">
+            {folderChats.length === 0 ? (
+              <p className="text-xs text-gray-400 px-2 py-1">Carpeta vacía</p>
+            ) : (
+              folderChats.map(renderChatItem)
+            )}
+          </div>
         )}
       </div>
     );
@@ -191,7 +409,7 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
   return (
     <div 
       className={cn(
-        "flex flex-col h-full bg-gray-50 border-r border-gray-200 transition-all duration-300 ease-in-out shrink-0",
+        "flex flex-col h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out shrink-0",
         isOpen ? "w-[260px]" : "w-0 overflow-hidden border-none"
       )}
     >
@@ -257,6 +475,133 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Favorites Section */}
+            {grouped.favorites.length > 0 && (
+              <div>
+                <h3 className="text-xs font-medium text-gray-400 px-2 mb-2 flex items-center gap-1">
+                  <Star className="h-3 w-3" />
+                  Favoritos
+                </h3>
+                <div className="space-y-1">
+                  {grouped.favorites.map(renderChatItem)}
+                </div>
+              </div>
+            )}
+
+            {/* Folders Section */}
+            {folders && folders.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between px-2 mb-2">
+                  <h3 className="text-xs font-medium text-gray-400 flex items-center gap-1">
+                    <Folder className="h-3 w-3" />
+                    Carpetas
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5"
+                    onClick={() => setShowNewFolder(true)}
+                  >
+                    <FolderPlus className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                  </Button>
+                </div>
+                {showNewFolder && (
+                  <div className="flex items-center gap-1 px-2 mb-2">
+                    <Input
+                      ref={newFolderInputRef}
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      placeholder="Nombre de carpeta"
+                      className="h-7 text-xs flex-1"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleCreateFolder();
+                        if (e.key === 'Escape') {
+                          setShowNewFolder(false);
+                          setNewFolderName('');
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={handleCreateFolder}
+                      disabled={createFolder.isPending}
+                    >
+                      <Check className="h-3 w-3 text-green-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => {
+                        setShowNewFolder(false);
+                        setNewFolderName('');
+                      }}
+                    >
+                      <X className="h-3 w-3 text-gray-400" />
+                    </Button>
+                  </div>
+                )}
+                {folders.map(renderFolderSection)}
+              </div>
+            )}
+
+            {/* Add folder button if no folders exist */}
+            {(!folders || folders.length === 0) && isAuthenticated && (
+              <div className="px-2">
+                {showNewFolder ? (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      ref={newFolderInputRef}
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      placeholder="Nombre de carpeta"
+                      className="h-7 text-xs flex-1"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleCreateFolder();
+                        if (e.key === 'Escape') {
+                          setShowNewFolder(false);
+                          setNewFolderName('');
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={handleCreateFolder}
+                      disabled={createFolder.isPending}
+                    >
+                      <Check className="h-3 w-3 text-green-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => {
+                        setShowNewFolder(false);
+                        setNewFolderName('');
+                      }}
+                    >
+                      <X className="h-3 w-3 text-gray-400" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-xs text-gray-400 hover:text-gray-600"
+                    onClick={() => setShowNewFolder(true)}
+                  >
+                    <FolderPlus className="h-3 w-3 mr-2" />
+                    Crear carpeta
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Today */}
             {grouped.today.length > 0 && (
               <div>
                 <h3 className="text-xs font-medium text-gray-400 px-2 mb-2">Hoy</h3>
@@ -266,6 +611,7 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
               </div>
             )}
             
+            {/* Yesterday */}
             {grouped.yesterday.length > 0 && (
               <div>
                 <h3 className="text-xs font-medium text-gray-400 px-2 mb-2">Ayer</h3>
@@ -275,6 +621,7 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
               </div>
             )}
 
+            {/* Older */}
             {grouped.older.length > 0 && (
               <div>
                 <h3 className="text-xs font-medium text-gray-400 px-2 mb-2">Anteriormente</h3>
@@ -288,15 +635,33 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
       </ScrollArea>
 
       {/* Footer: User Profile */}
-      <div className="p-3 border-t border-gray-200 mt-auto">
+      <div className="p-3 border-t border-gray-200 dark:border-gray-700 mt-auto space-y-2">
+        {/* Theme Toggle */}
+        {switchable && (
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 px-2 h-9 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
+            onClick={toggleTheme}
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-4 h-4 text-yellow-500" />
+            ) : (
+              <Moon className="w-4 h-4 text-gray-500" />
+            )}
+            <span className="text-sm text-gray-600 dark:text-gray-300">
+              {theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
+            </span>
+          </Button>
+        )}
+        
         {isAuthenticated && user ? (
-          <Button variant="ghost" className="w-full justify-start gap-2 px-2 h-12 hover:bg-gray-200/50">
+          <Button variant="ghost" className="w-full justify-start gap-2 px-2 h-12 hover:bg-gray-200/50 dark:hover:bg-gray-700/50">
             <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium text-xs">
               {user.name?.substring(0, 2).toUpperCase() || 'US'}
             </div>
             <div className="flex flex-col items-start text-left flex-1 min-w-0">
-              <span className="text-sm font-medium text-gray-700 truncate w-full">{user.name || 'Usuario'}</span>
-              <span className="text-[10px] text-gray-500">{user.role === 'admin' ? 'Admin' : 'Pro Plan'}</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate w-full">{user.name || 'Usuario'}</span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">{user.role === 'admin' ? 'Admin' : 'Pro Plan'}</span>
             </div>
             <Settings className="w-4 h-4 text-gray-400 shrink-0" />
           </Button>

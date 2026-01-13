@@ -16,3 +16,15 @@
 - [x] Implement LLM streaming responses (real-time text generation)
 - [x] Implement chat renaming from sidebar
 - [x] Implement history search/filter
+
+## Advanced Features
+- [x] Deep Research: Multi-source investigation with synthesis (Perplexity-style)
+- [x] Image Generation: Integrate image generation API
+- [x] File Analysis: Upload and analyze PDFs, documents, images
+- [x] Code Execution: Python sandbox/terminal for running code
+
+## UX Features
+- [x] Folders/Projects: Organize conversations into folders
+- [x] Favorites/Pins: Mark important conversations
+- [x] Theme Customization: Dark/light mode and color personalization
+- [x] Export Conversations: PDF, Markdown, or public link sharing

@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { invokeLLM } from "./_core/llm";
+import { generateImage } from "./_core/imageGeneration";
 import {
   createChat,
   getChatsByUserId,
@@ -13,6 +14,13 @@ import {
   deleteChat,
   createMessage,
   getMessagesByChatId,
+  createFolder,
+  getFoldersByUserId,
+  updateFolder,
+  deleteFolder,
+  toggleChatFavorite,
+  moveChatToFolder,
+  getChatsByFolderId,
 } from "./db";
 
 // System prompt for the AI assistant
@@ -113,6 +121,35 @@ export const appRouter = router({
       }),
   }),
 
+  // Image generation
+  image: router({
+    generate: protectedProcedure
+      .input(z.object({
+        prompt: z.string(),
+        originalImageUrl: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const options: { prompt: string; originalImages?: Array<{ url: string; mimeType: string }> } = {
+            prompt: input.prompt,
+          };
+          
+          if (input.originalImageUrl) {
+            options.originalImages = [{
+              url: input.originalImageUrl,
+              mimeType: 'image/png',
+            }];
+          }
+          
+          const result = await generateImage(options);
+          return { url: result.url };
+        } catch (error) {
+          console.error('Image generation error:', error);
+          throw new Error('Error al generar la imagen. Por favor, intenta de nuevo.');
+        }
+      }),
+  }),
+
   // Chat operations
   chat: router({
     create: protectedProcedure
@@ -158,6 +195,35 @@ export const appRouter = router({
         await deleteChat(input.chatId);
         return { success: true };
       }),
+
+    toggleFavorite: protectedProcedure
+      .input(z.object({ chatId: z.number(), isFavorite: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        const chat = await getChatById(input.chatId, ctx.user.id);
+        if (!chat) {
+          throw new Error("Chat not found or access denied");
+        }
+        await toggleChatFavorite(input.chatId, input.isFavorite);
+        return { success: true };
+      }),
+
+    moveToFolder: protectedProcedure
+      .input(z.object({ chatId: z.number(), folderId: z.number().nullable() }))
+      .mutation(async ({ ctx, input }) => {
+        const chat = await getChatById(input.chatId, ctx.user.id);
+        if (!chat) {
+          throw new Error("Chat not found or access denied");
+        }
+        await moveChatToFolder(input.chatId, input.folderId);
+        return { success: true };
+      }),
+
+    listByFolder: protectedProcedure
+      .input(z.object({ folderId: z.number() }))
+      .query(async ({ input }) => {
+        const chatList = await getChatsByFolderId(input.folderId);
+        return chatList;
+      }),
   }),
 
   // Message operations
@@ -192,6 +258,83 @@ export const appRouter = router({
         }
         const messageList = await getMessagesByChatId(input.chatId);
         return messageList;
+      }),
+  }),
+
+  // Folder operations
+  folder: router({
+    create: protectedProcedure
+      .input(z.object({ 
+        name: z.string(), 
+        color: z.string().optional(),
+        icon: z.string().optional() 
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const folder = await createFolder(ctx.user.id, input.name, input.color, input.icon);
+        return folder;
+      }),
+
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const folderList = await getFoldersByUserId(ctx.user.id);
+      return folderList;
+    }),
+
+    update: protectedProcedure
+      .input(z.object({ 
+        folderId: z.number(), 
+        name: z.string(),
+        color: z.string().optional(),
+        icon: z.string().optional()
+      }))
+      .mutation(async ({ input }) => {
+        await updateFolder(input.folderId, input.name, input.color, input.icon);
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ folderId: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteFolder(input.folderId);
+        return { success: true };
+      }),
+  }),
+
+  // Export conversation
+  export: router({
+    conversation: protectedProcedure
+      .input(z.object({ 
+        chatId: z.number(),
+        format: z.enum(['markdown', 'json'])
+      }))
+      .query(async ({ ctx, input }) => {
+        const chat = await getChatById(input.chatId, ctx.user.id);
+        if (!chat) {
+          throw new Error("Chat not found or access denied");
+        }
+        const messages = await getMessagesByChatId(input.chatId);
+        
+        if (input.format === 'markdown') {
+          let markdown = `# ${chat.title}\n\n`;
+          markdown += `*Exportado el ${new Date().toLocaleDateString('es-ES')}*\n\n---\n\n`;
+          
+          for (const msg of messages) {
+            const role = msg.role === 'user' ? '**Tú**' : '**Asistente**';
+            markdown += `${role}:\n\n${msg.content}\n\n---\n\n`;
+          }
+          
+          return { content: markdown, filename: `${chat.title.replace(/[^a-zA-Z0-9]/g, '_')}.md` };
+        } else {
+          const jsonContent = {
+            title: chat.title,
+            exportedAt: new Date().toISOString(),
+            messages: messages.map(m => ({
+              role: m.role,
+              content: m.content,
+              timestamp: m.createdAt
+            }))
+          };
+          return { content: JSON.stringify(jsonContent, null, 2), filename: `${chat.title.replace(/[^a-zA-Z0-9]/g, '_')}.json` };
+        }
       }),
   }),
 });

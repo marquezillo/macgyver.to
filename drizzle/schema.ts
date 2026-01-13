@@ -17,6 +17,8 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  /** User's preferred theme */
+  theme: mysqlEnum("theme", ["light", "dark", "system"]).default("light").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -26,6 +28,26 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
+ * Folders table for organizing chats.
+ */
+export const folders = mysqlTable("folders", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Foreign key to users table */
+  userId: int("userId").notNull(),
+  /** Folder name */
+  name: varchar("name", { length: 100 }).notNull(),
+  /** Folder color (for UI) */
+  color: varchar("color", { length: 20 }).default("gray"),
+  /** Folder icon */
+  icon: varchar("icon", { length: 50 }).default("folder"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Folder = typeof folders.$inferSelect;
+export type InsertFolder = typeof folders.$inferInsert;
+
+/**
  * Chat conversations table.
  * Each chat belongs to a user and can contain multiple messages.
  */
@@ -33,8 +55,12 @@ export const chats = mysqlTable("chats", {
   id: int("id").autoincrement().primaryKey(),
   /** Foreign key to users table */
   userId: int("userId").notNull(),
+  /** Optional: Foreign key to folders table */
+  folderId: int("folderId"),
   /** Title of the chat (auto-generated from first message or user-defined) */
   title: varchar("title", { length: 255 }).notNull().default("Nueva conversación"),
+  /** Whether this chat is marked as favorite */
+  isFavorite: int("isFavorite").default(0).notNull(),
   /** Optional: Store the generated landing page data as JSON */
   artifactData: json("artifactData"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

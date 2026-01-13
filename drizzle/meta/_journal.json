@@ -15,6 +15,13 @@
       "when": 1768336655233,
       "tag": "0001_gigantic_loki",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1768343413744,
+      "tag": "0002_young_logan",
+      "breakpoints": true
     }
   ]
 }

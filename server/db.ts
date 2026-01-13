@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, chats, messages, InsertChat, InsertMessage, Chat, Message } from "../drizzle/schema";
+import { InsertUser, users, chats, messages, folders, InsertChat, InsertMessage, InsertFolder, Chat, Message, Folder } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -209,4 +209,111 @@ export async function getMessagesByChatId(chatId: number): Promise<Message[]> {
   }
 
   return db.select().from(messages).where(eq(messages.chatId, chatId)).orderBy(messages.createdAt);
+}
+
+
+// ============================================
+// Folder CRUD Operations
+// ============================================
+
+export async function createFolder(userId: number, name: string, color?: string, icon?: string): Promise<Folder | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot create folder: database not available");
+    return null;
+  }
+
+  const folderData: InsertFolder = {
+    userId,
+    name,
+    color: color || 'gray',
+    icon: icon || 'folder',
+  };
+
+  const result = await db.insert(folders).values(folderData);
+  const insertId = result[0].insertId;
+
+  const created = await db.select().from(folders).where(eq(folders.id, insertId)).limit(1);
+  return created[0] || null;
+}
+
+export async function getFoldersByUserId(userId: number): Promise<Folder[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get folders: database not available");
+    return [];
+  }
+
+  return db.select().from(folders).where(eq(folders.userId, userId)).orderBy(folders.name);
+}
+
+export async function updateFolder(folderId: number, name: string, color?: string, icon?: string): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update folder: database not available");
+    return;
+  }
+
+  const updateData: Partial<InsertFolder> = { name };
+  if (color) updateData.color = color;
+  if (icon) updateData.icon = icon;
+
+  await db.update(folders).set(updateData).where(eq(folders.id, folderId));
+}
+
+export async function deleteFolder(folderId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot delete folder: database not available");
+    return;
+  }
+
+  // Remove folder reference from chats
+  await db.update(chats).set({ folderId: null }).where(eq(chats.folderId, folderId));
+  // Delete the folder
+  await db.delete(folders).where(eq(folders.id, folderId));
+}
+
+// ============================================
+// Chat Favorite & Folder Operations
+// ============================================
+
+export async function toggleChatFavorite(chatId: number, isFavorite: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot toggle favorite: database not available");
+    return;
+  }
+
+  await db.update(chats).set({ isFavorite: isFavorite ? 1 : 0 }).where(eq(chats.id, chatId));
+}
+
+export async function moveChatToFolder(chatId: number, folderId: number | null): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot move chat: database not available");
+    return;
+  }
+
+  await db.update(chats).set({ folderId }).where(eq(chats.id, chatId));
+}
+
+export async function getChatsByFolderId(folderId: number): Promise<Chat[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get chats by folder: database not available");
+    return [];
+  }
+
+  return db.select().from(chats).where(eq(chats.folderId, folderId)).orderBy(desc(chats.updatedAt));
+}
+
+export async function getFavoriteChats(userId: number): Promise<Chat[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get favorite chats: database not available");
+    return [];
+  }
+
+  return db.select().from(chats).where(eq(chats.userId, userId)).orderBy(desc(chats.updatedAt));
 }
