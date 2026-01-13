@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,6 +13,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   hasArtifact?: boolean;
+  isStreaming?: boolean;
 }
 
 interface ChatInterfaceProps {
@@ -39,7 +40,9 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [streamingContent, setStreamingContent] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Fetch messages from database if we have a chatId
   const { data: dbMessages, isLoading: messagesLoading } = trpc.message.list.useQuery(
@@ -73,9 +76,6 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
 
   const updateChatArtifact = trpc.chat.updateArtifact.useMutation();
 
-  // LLM mutation
-  const aiChat = trpc.ai.chat.useMutation();
-
   // Sync database messages to local state
   useEffect(() => {
     if (dbMessages && dbMessages.length > 0) {
@@ -108,7 +108,111 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [localMessages]);
+  }, [localMessages, streamingContent]);
+
+  // Stream response from server
+  const streamResponse = useCallback(async (
+    conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
+    currentChatId: number | null | undefined
+  ) => {
+    abortControllerRef.current = new AbortController();
+    
+    try {
+      const response = await fetch('/api/ai/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: conversationHistory }),
+        credentials: 'include',
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No reader available');
+
+      const decoder = new TextDecoder();
+      let accumulatedContent = '';
+      let finalData: { content: string; hasArtifact: boolean; artifactData: unknown } | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          
+          try {
+            const data = JSON.parse(line.slice(6));
+            
+            if (data.type === 'chunk') {
+              accumulatedContent += data.content;
+              setStreamingContent(accumulatedContent);
+            } else if (data.type === 'done') {
+              finalData = data;
+            } else if (data.type === 'error') {
+              throw new Error(data.error);
+            }
+          } catch (e) {
+            // Skip malformed JSON
+          }
+        }
+      }
+
+      // Finalize the message
+      if (finalData) {
+        // If there's artifact data, update the editor
+        if (finalData.hasArtifact && finalData.artifactData) {
+          const artifact = finalData.artifactData as { sections?: unknown[] };
+          if (artifact.sections) {
+            setSections(artifact.sections as any);
+          }
+        }
+
+        // Add final AI message
+        const aiMsg: Message = {
+          id: `ai-${Date.now()}`,
+          role: 'assistant',
+          content: finalData.content,
+          hasArtifact: finalData.hasArtifact,
+        };
+        setLocalMessages(prev => [...prev, aiMsg]);
+        setStreamingContent('');
+
+        // Save to database
+        if (isAuthenticated && currentChatId) {
+          try {
+            await createMessage.mutateAsync({
+              chatId: currentChatId,
+              role: 'assistant',
+              content: finalData.content,
+              hasArtifact: finalData.hasArtifact,
+            });
+
+            if (finalData.hasArtifact && finalData.artifactData) {
+              await updateChatArtifact.mutateAsync({
+                chatId: currentChatId,
+                artifactData: finalData.artifactData,
+              });
+            }
+          } catch (error) {
+            console.error('Failed to save AI message:', error);
+          }
+        }
+      }
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        console.log('Stream aborted');
+        return;
+      }
+      throw error;
+    }
+  }, [isAuthenticated, createMessage, updateChatArtifact, setSections]);
 
   const handleSend = async (text?: string) => {
     const userText = text || input;
@@ -116,6 +220,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
     
     setInput('');
     setIsProcessing(true);
+    setStreamingContent('');
 
     // Add User Message locally first
     const tempUserMsg: Message = {
@@ -163,49 +268,11 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       // Add current message
       conversationHistory.push({ role: 'user', content: userText });
 
-      // Call real LLM
-      const result = await aiChat.mutateAsync({ messages: conversationHistory });
-
-      // If there's artifact data (landing page), update the editor
-      if (result.hasArtifact && result.artifactData) {
-        const artifact = result.artifactData as { sections?: unknown[] };
-        if (artifact.sections) {
-          setSections(artifact.sections as any);
-        }
-      }
-
-      // Add AI Response locally
-      const aiMsg: Message = {
-        id: `temp-ai-${Date.now()}`,
-        role: 'assistant',
-        content: result.content,
-        hasArtifact: result.hasArtifact
-      };
-      setLocalMessages(prev => [...prev, aiMsg]);
-
-      // Save AI message to database
-      if (isAuthenticated && currentChatId) {
-        try {
-          await createMessage.mutateAsync({
-            chatId: currentChatId,
-            role: 'assistant',
-            content: result.content,
-            hasArtifact: result.hasArtifact,
-          });
-
-          // Update chat artifact data if we generated something
-          if (result.hasArtifact && result.artifactData) {
-            await updateChatArtifact.mutateAsync({
-              chatId: currentChatId,
-              artifactData: result.artifactData,
-            });
-          }
-        } catch (error) {
-          console.error('Failed to save AI message:', error);
-        }
-      }
+      // Stream the response
+      await streamResponse(conversationHistory, currentChatId);
     } catch (error) {
       console.error('AI Error:', error);
+      setStreamingContent('');
       // Add error message
       const errorMsg: Message = {
         id: `error-${Date.now()}`,
@@ -300,67 +367,84 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                   <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
                 </div>
               ) : (
-                localMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex gap-3 ${
-                      msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'
-                    }`}
-                  >
+                <>
+                  {localMessages.map((msg) => (
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                        msg.role === 'user' 
-                          ? 'bg-gray-900 text-white' 
-                          : 'bg-gradient-to-br from-violet-500 to-purple-600 text-white'
+                      key={msg.id}
+                      className={`flex gap-3 ${
+                        msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'
                       }`}
                     >
-                      {msg.role === 'user' ? <User size={14} /> : <Bot size={14} />}
-                    </div>
-                    <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                       <div
-                        className={`p-4 rounded-2xl text-sm leading-relaxed ${
-                          msg.role === 'user'
-                            ? 'bg-gray-900 text-white rounded-tr-sm'
-                            : 'bg-gray-100 text-gray-800 rounded-tl-sm'
+                        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                          msg.role === 'user' 
+                            ? 'bg-gray-900 text-white' 
+                            : 'bg-gradient-to-br from-violet-500 to-purple-600 text-white'
                         }`}
                       >
-                        {msg.role === 'assistant' ? (
-                          <Streamdown>{msg.content}</Streamdown>
-                        ) : (
-                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                        {msg.role === 'user' ? <User size={14} /> : <Bot size={14} />}
+                      </div>
+                      <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                        <div
+                          className={`p-4 rounded-2xl text-sm leading-relaxed ${
+                            msg.role === 'user'
+                              ? 'bg-gray-900 text-white rounded-tr-sm'
+                              : 'bg-gray-100 text-gray-800 rounded-tl-sm'
+                          }`}
+                        >
+                          {msg.role === 'assistant' ? (
+                            <Streamdown>{msg.content}</Streamdown>
+                          ) : (
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                          )}
+                        </div>
+                        
+                        {msg.hasArtifact && (
+                          <button 
+                            onClick={onOpenPreview}
+                            className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-violet-300 transition-all group text-left w-64"
+                          >
+                            <div className="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-violet-100 transition-colors">
+                              <LayoutTemplate className="w-5 h-5 text-violet-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-gray-900">Diseño Web</p>
+                              <p className="text-[10px] text-gray-500 truncate">Click para ver</p>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-violet-500 group-hover:translate-x-0.5 transition-all" />
+                          </button>
                         )}
                       </div>
-                      
-                      {msg.hasArtifact && (
-                        <button 
-                          onClick={onOpenPreview}
-                          className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-violet-300 transition-all group text-left w-64"
-                        >
-                          <div className="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-violet-100 transition-colors">
-                            <LayoutTemplate className="w-5 h-5 text-violet-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-gray-900">Diseño Web</p>
-                            <p className="text-[10px] text-gray-500 truncate">Click para ver</p>
-                          </div>
-                          <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-violet-500 group-hover:translate-x-0.5 transition-all" />
-                        </button>
-                      )}
                     </div>
-                  </div>
-                ))
-              )}
-              
-              {isProcessing && (
-                <div className="flex gap-3">
-                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shrink-0">
-                     <Bot size={14} className="text-white" />
-                   </div>
-                   <div className="bg-gray-100 p-4 rounded-2xl rounded-tl-sm flex items-center gap-2">
-                     <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
-                     <span className="text-sm text-gray-500">Pensando...</span>
-                   </div>
-                </div>
+                  ))}
+                  
+                  {/* Streaming message */}
+                  {streamingContent && (
+                    <div className="flex gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shrink-0">
+                        <Bot size={14} className="text-white" />
+                      </div>
+                      <div className="flex flex-col gap-2 max-w-[85%] items-start">
+                        <div className="p-4 rounded-2xl rounded-tl-sm text-sm leading-relaxed bg-gray-100 text-gray-800">
+                          <Streamdown>{streamingContent}</Streamdown>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Loading indicator when processing but not yet streaming */}
+                  {isProcessing && !streamingContent && (
+                    <div className="flex gap-3">
+                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shrink-0">
+                         <Bot size={14} className="text-white" />
+                       </div>
+                       <div className="bg-gray-100 p-4 rounded-2xl rounded-tl-sm flex items-center gap-2">
+                         <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                         <span className="text-sm text-gray-500">Pensando...</span>
+                       </div>
+                    </div>
+                  )}
+                </>
               )}
               <div ref={scrollRef} />
             </div>

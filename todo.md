@@ -12,3 +12,7 @@
 - [x] Update Sidebar branding
 
 - [x] Add predefined suggestion buttons (Claude-style) to initial chat screen
+
+- [x] Implement LLM streaming responses (real-time text generation)
+- [x] Implement chat renaming from sidebar
+- [x] Implement history search/filter

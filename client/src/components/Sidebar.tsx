@@ -1,12 +1,13 @@
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Settings, PanelLeftClose, Loader2, Trash2 } from 'lucide-react';
+import { Plus, Settings, PanelLeftClose, Loader2, Trash2, Pencil, Check, X, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
-import { formatDistanceToNow, isToday, isYesterday, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { isToday, isYesterday } from 'date-fns';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -40,6 +41,12 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
   const { user, loading: authLoading, isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
   
+  // State for editing and search
+  const [editingChatId, setEditingChatId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
+  
   // Fetch chats from database
   const { data: chats, isLoading: chatsLoading } = trpc.chat.list.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -52,6 +59,22 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
     },
   });
 
+  // Update chat title mutation
+  const updateTitle = trpc.chat.updateTitle.useMutation({
+    onSuccess: () => {
+      utils.chat.list.invalidate();
+      setEditingChatId(null);
+    },
+  });
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (editingChatId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingChatId]);
+
   const handleDeleteChat = (e: React.MouseEvent, chatId: number) => {
     e.stopPropagation();
     if (confirm('¿Estás seguro de que quieres eliminar esta conversación?')) {
@@ -59,31 +82,111 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
     }
   };
 
-  const grouped = chats ? groupChatsByDate(chats) : { today: [], yesterday: [], older: [] };
+  const handleStartEdit = (e: React.MouseEvent, chat: { id: number; title: string }) => {
+    e.stopPropagation();
+    setEditingChatId(chat.id);
+    setEditTitle(chat.title);
+  };
 
-  const renderChatItem = (chat: { id: number; title: string; updatedAt: Date }) => (
-    <Button 
-      key={chat.id} 
-      variant="ghost" 
-      className={cn(
-        "w-full justify-start text-sm font-normal h-9 px-2 group relative",
-        activeChatId === chat.id 
-          ? "bg-gray-200/70 text-gray-900" 
-          : "text-gray-600 hover:bg-gray-200/50"
-      )}
-      onClick={() => onSelectChat?.(chat.id)}
-    >
-      <span className="truncate flex-1 text-left">{chat.title}</span>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity absolute right-1"
-        onClick={(e) => handleDeleteChat(e, chat.id)}
-      >
-        <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-500" />
-      </Button>
-    </Button>
+  const handleSaveEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (editingChatId && editTitle.trim()) {
+      updateTitle.mutate({ chatId: editingChatId, title: editTitle.trim() });
+    }
+  };
+
+  const handleCancelEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingChatId(null);
+    setEditTitle('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (editingChatId && editTitle.trim()) {
+        updateTitle.mutate({ chatId: editingChatId, title: editTitle.trim() });
+      }
+    } else if (e.key === 'Escape') {
+      setEditingChatId(null);
+      setEditTitle('');
+    }
+  };
+
+  // Filter chats by search query
+  const filteredChats = chats?.filter(chat => 
+    chat.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const grouped = filteredChats ? groupChatsByDate(filteredChats) : { today: [], yesterday: [], older: [] };
+
+  const renderChatItem = (chat: { id: number; title: string; updatedAt: Date }) => {
+    const isEditing = editingChatId === chat.id;
+    
+    return (
+      <div 
+        key={chat.id}
+        className={cn(
+          "w-full flex items-center text-sm font-normal h-9 px-2 group relative rounded-md cursor-pointer",
+          activeChatId === chat.id 
+            ? "bg-gray-200/70 text-gray-900" 
+            : "text-gray-600 hover:bg-gray-200/50"
+        )}
+        onClick={() => !isEditing && onSelectChat?.(chat.id)}
+      >
+        {isEditing ? (
+          <div className="flex items-center gap-1 w-full" onClick={e => e.stopPropagation()}>
+            <Input
+              ref={editInputRef}
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="h-6 text-xs px-1 flex-1"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              onClick={handleSaveEdit}
+              disabled={updateTitle.isPending}
+            >
+              <Check className="h-3 w-3 text-green-600" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              onClick={handleCancelEdit}
+            >
+              <X className="h-3 w-3 text-gray-400" />
+            </Button>
+          </div>
+        ) : (
+          <>
+            <span className="truncate flex-1 text-left">{chat.title}</span>
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={(e) => handleStartEdit(e, chat)}
+              >
+                <Pencil className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={(e) => handleDeleteChat(e, chat.id)}
+              >
+                <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-500" />
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div 
@@ -110,6 +213,21 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
         </Button>
       </div>
 
+      {/* Search Bar */}
+      {isAuthenticated && chats && chats.length > 0 && (
+        <div className="px-3 mb-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar conversaciones..."
+              className="h-8 pl-8 text-xs bg-white border-gray-200"
+            />
+          </div>
+        </div>
+      )}
+
       {/* History List */}
       <ScrollArea className="flex-1 px-3">
         {!isAuthenticated ? (
@@ -131,6 +249,11 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
           <div className="text-center py-8 px-4">
             <p className="text-sm text-gray-500">No tienes conversaciones aún</p>
             <p className="text-xs text-gray-400 mt-1">Crea un nuevo chat para empezar</p>
+          </div>
+        ) : filteredChats && filteredChats.length === 0 ? (
+          <div className="text-center py-8 px-4">
+            <p className="text-sm text-gray-500">No se encontraron resultados</p>
+            <p className="text-xs text-gray-400 mt-1">Intenta con otra búsqueda</p>
           </div>
         ) : (
           <div className="space-y-4">
