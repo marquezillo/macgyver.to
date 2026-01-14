@@ -12,6 +12,7 @@ import { sdk } from "./sdk";
 import { performDeepResearchStream } from "../deepResearch";
 import { storagePut } from "../storage";
 import { getMemoriesForContext, getUserByOpenId } from "../db";
+import { extractMemoriesFromConversation } from "../memoryExtraction";
 import multer from "multer";
 
 // Configure multer for file uploads
@@ -144,6 +145,16 @@ async function startServer() {
         }
       } catch {
         // Not a JSON response
+      }
+
+      // Extract memories in the background (non-blocking)
+      const lastUserMessage = messages.filter(m => m.role === 'user').pop();
+      if (lastUserMessage && dbUser?.id) {
+        extractMemoriesFromConversation(
+          dbUser.id,
+          lastUserMessage.content,
+          displayMessage
+        ).catch(err => console.error('[MemoryExtraction] Background extraction failed:', err));
       }
 
       // Send final message with metadata

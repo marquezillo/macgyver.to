@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { invokeLLM } from "./_core/llm";
 import { generateImage } from "./_core/imageGeneration";
+import { extractMemoriesFromConversation } from "./memoryExtraction";
 import {
   createChat,
   getChatsByUserId,
@@ -77,8 +78,9 @@ export const appRouter = router({
           role: z.enum(['user', 'assistant']),
           content: z.string(),
         })),
+        chatId: z.number().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         try {
           // Build conversation history for LLM
           const llmMessages = [
@@ -111,6 +113,17 @@ export const appRouter = router({
             }
           } catch {
             // Not a JSON response, that's fine
+          }
+
+          // Extract memories in the background (non-blocking)
+          const lastUserMessage = input.messages.filter(m => m.role === 'user').pop();
+          if (lastUserMessage && ctx.user?.id) {
+            extractMemoriesFromConversation(
+              ctx.user.id,
+              lastUserMessage.content,
+              textContent,
+              input.chatId
+            ).catch(err => console.error('[MemoryExtraction] Background extraction failed:', err));
           }
 
           return {

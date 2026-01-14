@@ -33,7 +33,10 @@
 - [x] Create memories database table (user preferences, facts, context)
 - [x] Implement memory CRUD API (create, list, delete memories)
 - [x] Integrate memories into LLM system prompt context
-- [ ] Auto-extract memories from conversations
+- [x] Auto-extract memories from conversations
+  - [x] Create LLM-based memory extraction function
+  - [x] Integrate extraction after each assistant response
+  - [x] Add deduplication logic to avoid duplicate memories
 - [x] Add memory management UI in settings
 
 ## Bug Fixes
