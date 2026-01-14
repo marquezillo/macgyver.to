@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { arrayMove } from '@dnd-kit/sortable';
 import { nanoid } from 'nanoid';
 
-export type SectionType = 'hero' | 'features' | 'testimonials' | 'pricing' | 'cta' | 'stats' | 'faq';
+export type SectionType = 'hero' | 'features' | 'testimonials' | 'pricing' | 'cta' | 'stats' | 'faq' | 'form' | 'footer';
 
 export interface Section {
   id: string;
@@ -74,6 +74,21 @@ const defaultContent: Record<SectionType, Record<string, any>> = {
       { question: "How does it work?", answer: "It works like magic." },
       { question: "Is it free?", answer: "Yes, there is a free tier." }
     ]
+  },
+  form: {
+    title: "Contact Us",
+    subtitle: "Fill out the form below and we'll get back to you.",
+    fields: [
+      { id: 'name', label: 'Full Name', type: 'text', placeholder: 'Your name', required: true },
+      { id: 'email', label: 'Email', type: 'email', placeholder: 'your@email.com', required: true },
+      { id: 'message', label: 'Message', type: 'textarea', placeholder: 'Your message...' }
+    ],
+    submitText: "Send Message"
+  },
+  footer: {
+    companyName: "My Company",
+    description: "Building amazing products for our customers.",
+    copyright: `© ${new Date().getFullYear()} All rights reserved.`
   }
 };
 

@@ -152,7 +152,10 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (response.status === 401) {
+          throw new Error('Para usar Deep Research, por favor inicia sesión primero.');
+        }
+        throw new Error(`Error del servidor (${response.status}). Por favor, intenta de nuevo.`);
       }
 
       const reader = response.body?.getReader();
@@ -252,7 +255,10 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (response.status === 401) {
+          throw new Error('Para usar el chat, por favor inicia sesión primero.');
+        }
+        throw new Error(`Error del servidor (${response.status}). Por favor, intenta de nuevo.`);
       }
 
       const reader = response.body?.getReader();
