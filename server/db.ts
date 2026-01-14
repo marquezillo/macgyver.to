@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, chats, messages, folders, InsertChat, InsertMessage, InsertFolder, Chat, Message, Folder } from "../drizzle/schema";
+import { InsertUser, users, chats, messages, folders, memories, InsertChat, InsertMessage, InsertFolder, InsertMemory, Chat, Message, Folder, Memory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -316,4 +316,158 @@ export async function getFavoriteChats(userId: number): Promise<Chat[]> {
   }
 
   return db.select().from(chats).where(eq(chats.userId, userId)).orderBy(desc(chats.updatedAt));
+}
+
+
+// ============================================
+// Memory CRUD Operations (Long-term Memory)
+// ============================================
+
+export async function createMemory(
+  userId: number,
+  category: 'preference' | 'fact' | 'context' | 'instruction',
+  content: string,
+  source: 'manual' | 'auto' = 'auto',
+  sourceChatId?: number,
+  importance: number = 5
+): Promise<Memory | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot create memory: database not available");
+    return null;
+  }
+
+  const memoryData: InsertMemory = {
+    userId,
+    category,
+    content,
+    source,
+    sourceChatId: sourceChatId || null,
+    importance,
+    isActive: 1,
+  };
+
+  const result = await db.insert(memories).values(memoryData);
+  const insertId = result[0].insertId;
+
+  const created = await db.select().from(memories).where(eq(memories.id, insertId)).limit(1);
+  return created[0] || null;
+}
+
+export async function getMemoriesByUserId(userId: number, activeOnly: boolean = true): Promise<Memory[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get memories: database not available");
+    return [];
+  }
+
+  let query = db.select().from(memories).where(eq(memories.userId, userId));
+  
+  const results = await query.orderBy(desc(memories.importance), desc(memories.createdAt));
+  
+  if (activeOnly) {
+    return results.filter(m => m.isActive === 1);
+  }
+  return results;
+}
+
+export async function getMemoriesByCategory(
+  userId: number,
+  category: 'preference' | 'fact' | 'context' | 'instruction'
+): Promise<Memory[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get memories: database not available");
+    return [];
+  }
+
+  const results = await db.select().from(memories)
+    .where(eq(memories.userId, userId))
+    .orderBy(desc(memories.importance));
+  
+  return results.filter(m => m.category === category && m.isActive === 1);
+}
+
+export async function updateMemory(
+  memoryId: number,
+  updates: { content?: string; importance?: number; isActive?: number; category?: 'preference' | 'fact' | 'context' | 'instruction' }
+): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update memory: database not available");
+    return;
+  }
+
+  await db.update(memories).set(updates).where(eq(memories.id, memoryId));
+}
+
+export async function deleteMemory(memoryId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot delete memory: database not available");
+    return;
+  }
+
+  await db.delete(memories).where(eq(memories.id, memoryId));
+}
+
+export async function toggleMemoryActive(memoryId: number, isActive: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot toggle memory: database not available");
+    return;
+  }
+
+  await db.update(memories).set({ isActive: isActive ? 1 : 0 }).where(eq(memories.id, memoryId));
+}
+
+/**
+ * Get formatted memories for LLM context injection.
+ * Returns memories formatted as a string to be included in the system prompt.
+ */
+export async function getMemoriesForContext(userId: number): Promise<string> {
+  const memories = await getMemoriesByUserId(userId, true);
+  
+  if (memories.length === 0) {
+    return '';
+  }
+
+  const grouped = {
+    preference: memories.filter(m => m.category === 'preference'),
+    fact: memories.filter(m => m.category === 'fact'),
+    context: memories.filter(m => m.category === 'context'),
+    instruction: memories.filter(m => m.category === 'instruction'),
+  };
+
+  let contextString = '\n\n## Información del usuario (memoria a largo plazo):\n';
+  
+  if (grouped.preference.length > 0) {
+    contextString += '\n### Preferencias:\n';
+    grouped.preference.forEach(m => {
+      contextString += `- ${m.content}\n`;
+    });
+  }
+  
+  if (grouped.fact.length > 0) {
+    contextString += '\n### Datos personales:\n';
+    grouped.fact.forEach(m => {
+      contextString += `- ${m.content}\n`;
+    });
+  }
+  
+  if (grouped.context.length > 0) {
+    contextString += '\n### Contexto:\n';
+    grouped.context.forEach(m => {
+      contextString += `- ${m.content}\n`;
+    });
+  }
+  
+  if (grouped.instruction.length > 0) {
+    contextString += '\n### Instrucciones especiales:\n';
+    grouped.instruction.forEach(m => {
+      contextString += `- ${m.content}\n`;
+    });
+  }
+
+  return contextString;
 }

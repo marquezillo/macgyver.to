@@ -89,3 +89,31 @@ export const messages = mysqlTable("messages", {
 
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = typeof messages.$inferInsert;
+
+
+/**
+ * Memories table for long-term user memory.
+ * Stores facts, preferences, and context that the AI should remember across conversations.
+ */
+export const memories = mysqlTable("memories", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Foreign key to users table */
+  userId: int("userId").notNull(),
+  /** Category of memory: preference, fact, context, instruction */
+  category: mysqlEnum("category", ["preference", "fact", "context", "instruction"]).notNull(),
+  /** The memory content */
+  content: text("content").notNull(),
+  /** Source: manual (user added) or auto (extracted from conversation) */
+  source: mysqlEnum("source", ["manual", "auto"]).default("auto").notNull(),
+  /** Optional: Reference to the chat where this memory was extracted from */
+  sourceChatId: int("sourceChatId"),
+  /** Importance score (1-10) for prioritizing memories in context */
+  importance: int("importance").default(5).notNull(),
+  /** Whether this memory is active (can be disabled without deleting) */
+  isActive: int("isActive").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Memory = typeof memories.$inferSelect;
+export type InsertMemory = typeof memories.$inferInsert;

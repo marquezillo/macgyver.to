@@ -21,6 +21,12 @@ import {
   toggleChatFavorite,
   moveChatToFolder,
   getChatsByFolderId,
+  createMemory,
+  getMemoriesByUserId,
+  updateMemory,
+  deleteMemory,
+  toggleMemoryActive,
+  getMemoriesForContext,
 } from "./db";
 
 // System prompt for the AI assistant
@@ -336,6 +342,70 @@ export const appRouter = router({
           return { content: JSON.stringify(jsonContent, null, 2), filename: `${chat.title.replace(/[^a-zA-Z0-9]/g, '_')}.json` };
         }
       }),
+  }),
+
+  // Memory operations (long-term memory)
+  memory: router({
+    create: protectedProcedure
+      .input(z.object({
+        category: z.enum(['preference', 'fact', 'context', 'instruction']),
+        content: z.string(),
+        importance: z.number().min(1).max(10).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const memory = await createMemory(
+          ctx.user.id,
+          input.category,
+          input.content,
+          'manual',
+          undefined,
+          input.importance || 5
+        );
+        return memory;
+      }),
+
+    list: protectedProcedure
+      .input(z.object({ activeOnly: z.boolean().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        const memories = await getMemoriesByUserId(ctx.user.id, input?.activeOnly ?? true);
+        return memories;
+      }),
+
+    update: protectedProcedure
+      .input(z.object({
+        memoryId: z.number(),
+        content: z.string().optional(),
+        importance: z.number().min(1).max(10).optional(),
+        category: z.enum(['preference', 'fact', 'context', 'instruction']).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const updates: { content?: string; importance?: number; category?: 'preference' | 'fact' | 'context' | 'instruction' } = {};
+        if (input.content) updates.content = input.content;
+        if (input.importance) updates.importance = input.importance;
+        if (input.category) updates.category = input.category;
+        await updateMemory(input.memoryId, updates);
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ memoryId: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteMemory(input.memoryId);
+        return { success: true };
+      }),
+
+    toggle: protectedProcedure
+      .input(z.object({ memoryId: z.number(), isActive: z.boolean() }))
+      .mutation(async ({ input }) => {
+        await toggleMemoryActive(input.memoryId, input.isActive);
+        return { success: true };
+      }),
+
+    // Get formatted context for LLM
+    getContext: protectedProcedure.query(async ({ ctx }) => {
+      const context = await getMemoriesForContext(ctx.user.id);
+      return { context };
+    }),
   }),
 });
 

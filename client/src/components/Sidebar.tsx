@@ -4,8 +4,9 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Plus, Settings, PanelLeftClose, Loader2, Trash2, Pencil, Check, X, Search,
-  Star, Folder, FolderPlus, ChevronRight, ChevronDown, MoreHorizontal, Moon, Sun, Download
+  Star, Folder, FolderPlus, ChevronRight, ChevronDown, MoreHorizontal, Moon, Sun, Download, Brain
 } from 'lucide-react';
+import { Link } from 'wouter';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -636,6 +637,19 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
 
       {/* Footer: User Profile */}
       <div className="p-3 border-t border-gray-200 dark:border-gray-700 mt-auto space-y-2">
+        {/* Memory Settings */}
+        {isAuthenticated && (
+          <Link href="/settings/memory">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2 px-2 h-9 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
+            >
+              <Brain className="w-4 h-4 text-purple-500" />
+              <span className="text-sm text-gray-600 dark:text-gray-300">Memoria</span>
+            </Button>
+          </Link>
+        )}
+
         {/* Theme Toggle */}
         {switchable && (
           <Button

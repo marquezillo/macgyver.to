@@ -22,6 +22,13 @@
       "when": 1768343413744,
       "tag": "0002_young_logan",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1768389706084,
+      "tag": "0003_smart_clea",
+      "breakpoints": true
     }
   ]
 }

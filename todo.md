@@ -28,3 +28,10 @@
 - [x] Favorites/Pins: Mark important conversations
 - [x] Theme Customization: Dark/light mode and color personalization
 - [x] Export Conversations: PDF, Markdown, or public link sharing
+
+## Long-Term Memory
+- [x] Create memories database table (user preferences, facts, context)
+- [x] Implement memory CRUD API (create, list, delete memories)
+- [x] Integrate memories into LLM system prompt context
+- [ ] Auto-extract memories from conversations
+- [x] Add memory management UI in settings

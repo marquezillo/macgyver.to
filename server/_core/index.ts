@@ -11,6 +11,7 @@ import { invokeLLMStream } from "./llm";
 import { sdk } from "./sdk";
 import { performDeepResearchStream } from "../deepResearch";
 import { storagePut } from "../storage";
+import { getMemoriesForContext, getUserByOpenId } from "../db";
 import multer from "multer";
 
 // Configure multer for file uploads
@@ -101,9 +102,17 @@ async function startServer() {
       res.setHeader("Connection", "keep-alive");
       res.setHeader("X-Accel-Buffering", "no");
 
-      // Build conversation history for LLM
+      // Get user's long-term memory context
+      const dbUser = await getUserByOpenId(user.openId);
+      let memoryContext = '';
+      if (dbUser) {
+        memoryContext = await getMemoriesForContext(dbUser.id);
+      }
+
+      // Build conversation history for LLM with memory context
+      const systemPromptWithMemory = SYSTEM_PROMPT + memoryContext;
       const llmMessages = [
-        { role: 'system' as const, content: SYSTEM_PROMPT },
+        { role: 'system' as const, content: systemPromptWithMemory },
         ...messages.map(m => ({
           role: m.role as 'user' | 'assistant',
           content: m.content,
