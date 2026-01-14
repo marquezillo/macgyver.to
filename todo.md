@@ -65,3 +65,8 @@
 - [x] Implement image lightbox with zoom and download in chat
 - [x] Fix scroll overlapping header in chat
 - [x] DEFINITIVE FIX: Chat scroll eating header and cannot scroll up
+
+## Landing Generation Improvements
+- [x] Improve landing generation to include functional backend (form processing, database, APIs)
+- [x] Update system prompt to generate full-stack landings, not just visual
+- [x] Add form submission handling with database storage

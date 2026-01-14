@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, chats, messages, folders, memories, InsertChat, InsertMessage, InsertFolder, InsertMemory, Chat, Message, Folder, Memory } from "../drizzle/schema";
+import { InsertUser, users, chats, messages, folders, memories, formSubmissions, InsertChat, InsertMessage, InsertFolder, InsertMemory, InsertFormSubmission, Chat, Message, Folder, Memory, FormSubmission } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -470,4 +470,109 @@ export async function getMemoriesForContext(userId: number): Promise<string> {
   }
 
   return contextString;
+}
+
+
+// ============================================================================
+// Form Submissions
+// ============================================================================
+
+/**
+ * Create a new form submission
+ */
+export async function createFormSubmission(submission: InsertFormSubmission): Promise<number | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot create form submission: database not available");
+    return null;
+  }
+
+  const result = await db.insert(formSubmissions).values(submission);
+  return result[0].insertId;
+}
+
+/**
+ * Get all form submissions, optionally filtered by chatId or landingIdentifier
+ */
+export async function getFormSubmissions(filters?: {
+  chatId?: number;
+  landingIdentifier?: string;
+  country?: string;
+  status?: 'pending' | 'processed' | 'refunded';
+}): Promise<FormSubmission[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get form submissions: database not available");
+    return [];
+  }
+
+  let query = db.select().from(formSubmissions).orderBy(desc(formSubmissions.createdAt));
+  
+  // Note: For complex filtering, you'd use .where() with conditions
+  // This is a simplified version - in production you'd build dynamic conditions
+  const results = await query;
+  
+  // Apply filters in memory for now (in production, use SQL WHERE clauses)
+  let filtered = results;
+  if (filters?.chatId) {
+    filtered = filtered.filter(s => s.chatId === filters.chatId);
+  }
+  if (filters?.landingIdentifier) {
+    filtered = filtered.filter(s => s.landingIdentifier === filters.landingIdentifier);
+  }
+  if (filters?.country) {
+    filtered = filtered.filter(s => s.country === filters.country);
+  }
+  if (filters?.status) {
+    filtered = filtered.filter(s => s.status === filters.status);
+  }
+  
+  return filtered;
+}
+
+/**
+ * Update form submission status
+ */
+export async function updateFormSubmissionStatus(
+  submissionId: number, 
+  status: 'pending' | 'processed' | 'refunded'
+): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update form submission: database not available");
+    return;
+  }
+
+  await db.update(formSubmissions).set({ status }).where(eq(formSubmissions.id, submissionId));
+}
+
+/**
+ * Get form submission statistics
+ */
+export async function getFormSubmissionStats(filters?: {
+  landingIdentifier?: string;
+  country?: string;
+}): Promise<{
+  total: number;
+  pending: number;
+  processed: number;
+  refunded: number;
+  byCountry: Record<string, number>;
+}> {
+  const submissions = await getFormSubmissions(filters);
+  
+  const stats = {
+    total: submissions.length,
+    pending: submissions.filter(s => s.status === 'pending').length,
+    processed: submissions.filter(s => s.status === 'processed').length,
+    refunded: submissions.filter(s => s.status === 'refunded').length,
+    byCountry: {} as Record<string, number>,
+  };
+  
+  submissions.forEach(s => {
+    const country = s.country || 'unknown';
+    stats.byCountry[country] = (stats.byCountry[country] || 0) + 1;
+  });
+  
+  return stats;
 }

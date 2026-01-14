@@ -117,3 +117,32 @@ export const memories = mysqlTable("memories", {
 
 export type Memory = typeof memories.$inferSelect;
 export type InsertMemory = typeof memories.$inferInsert;
+
+/**
+ * Form submissions table for storing landing page form data.
+ * Uses JSON column to store heterogeneous form data from different landing pages.
+ */
+export const formSubmissions = mysqlTable("formSubmissions", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Optional: Foreign key to chats table (the landing page that generated this form) */
+  chatId: int("chatId"),
+  /** Form section ID within the landing */
+  formSectionId: varchar("formSectionId", { length: 100 }),
+  /** Country/region for multi-country tracking */
+  country: varchar("country", { length: 50 }),
+  /** Domain/landing identifier for multi-web tracking */
+  landingIdentifier: varchar("landingIdentifier", { length: 255 }),
+  /** The actual form data as JSON (heterogeneous schema support) */
+  formData: json("formData").notNull(),
+  /** Status: pending, processed, refunded */
+  status: mysqlEnum("status", ["pending", "processed", "refunded"]).default("pending").notNull(),
+  /** IP address of the submitter */
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  /** User agent of the submitter */
+  userAgent: text("userAgent"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FormSubmission = typeof formSubmissions.$inferSelect;
+export type InsertFormSubmission = typeof formSubmissions.$inferInsert;

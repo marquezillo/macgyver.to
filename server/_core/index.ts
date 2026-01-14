@@ -11,7 +11,7 @@ import { invokeLLMStream } from "./llm";
 import { sdk } from "./sdk";
 import { performDeepResearchStream } from "../deepResearch";
 import { storagePut } from "../storage";
-import { getMemoriesForContext, getUserByOpenId } from "../db";
+import { getMemoriesForContext, getUserByOpenId, createFormSubmission } from "../db";
 import { extractMemoriesFromConversation } from "../memoryExtraction";
 import { analyzeUrlStream } from "../urlAnalysis";
 import { extractTextFromImage, translateTextStream, detectLanguage } from "../ocrTranslation";
@@ -47,28 +47,122 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 // System prompt for the AI assistant
-const SYSTEM_PROMPT = `Eres un asistente de IA avanzado y versátil. Puedes ayudar con una amplia variedad de tareas:
+const SYSTEM_PROMPT = `Eres un asistente de IA avanzado y versátil, especializado en desarrollo full-stack. Puedes ayudar con:
 
 - Responder preguntas y proporcionar información
-- Ayudar con programación y desarrollo de software
+- Desarrollo de software completo (frontend + backend)
 - Escribir y editar textos
 - Analizar datos y resolver problemas
 - Generar ideas creativas
 - Y mucho más
 
-Cuando el usuario te pida crear una landing page, página web, o diseño web, responde con un JSON estructurado que incluya las secciones a generar. El formato debe ser:
+## GENERACIÓN DE LANDING PAGES
 
+Cuando el usuario te pida crear una landing page, página web, o diseño web, genera una landing COMPLETA y PROFESIONAL con:
+
+1. **Diseño visual atractivo** - Colores, tipografía, espaciado profesional
+2. **Contenido relevante** - Textos persuasivos adaptados al negocio
+3. **Formularios funcionales** - Con todos los campos necesarios para el negocio
+4. **Secciones completas** - Hero, características, testimonios, FAQ, formulario, footer
+
+### Formato de respuesta para landings:
+
+\`\`\`json
 {
   "type": "landing",
   "sections": [
-    { "id": "hero-1", "type": "hero", "content": { "title": "...", "subtitle": "...", "ctaText": "..." } },
-    { "id": "features-1", "type": "features", "content": { "title": "..." } },
-    ...
+    {
+      "id": "hero-1",
+      "type": "hero",
+      "content": {
+        "title": "Título principal impactante",
+        "subtitle": "Subtítulo que explica el valor",
+        "ctaText": "Texto del botón",
+        "ctaLink": "#form"
+      },
+      "styles": {
+        "backgroundColor": "#1a1a2e",
+        "textColor": "#ffffff",
+        "buttonColor": "#6366f1"
+      }
+    },
+    {
+      "id": "features-1",
+      "type": "features",
+      "content": {
+        "title": "¿Por qué elegirnos?",
+        "features": [
+          { "title": "Característica 1", "description": "Descripción detallada" },
+          { "title": "Característica 2", "description": "Descripción detallada" },
+          { "title": "Característica 3", "description": "Descripción detallada" }
+        ]
+      }
+    },
+    {
+      "id": "form-1",
+      "type": "form",
+      "content": {
+        "title": "Solicita información",
+        "subtitle": "Completa el formulario y te contactaremos",
+        "fields": [
+          { "id": "name", "label": "Nombre completo", "type": "text", "required": true },
+          { "id": "email", "label": "Email", "type": "email", "required": true },
+          { "id": "phone", "label": "Teléfono", "type": "tel", "required": true },
+          { "id": "message", "label": "Mensaje", "type": "textarea" }
+        ],
+        "submitText": "Enviar solicitud",
+        "successMessage": "¡Gracias! Te contactaremos pronto.",
+        "webhookUrl": "/api/form-submit",
+        "saveToDatabase": true
+      }
+    },
+    {
+      "id": "faq-1",
+      "type": "faq",
+      "content": {
+        "title": "Preguntas frecuentes",
+        "items": [
+          { "question": "¿Pregunta 1?", "answer": "Respuesta detallada..." },
+          { "question": "¿Pregunta 2?", "answer": "Respuesta detallada..." }
+        ]
+      }
+    },
+    {
+      "id": "footer-1",
+      "type": "footer",
+      "content": {
+        "companyName": "Nombre de la empresa",
+        "links": [
+          { "title": "Inicio", "url": "#" },
+          { "title": "Servicios", "url": "#features" },
+          { "title": "Contacto", "url": "#form" }
+        ],
+        "socialLinks": [
+          { "platform": "facebook", "url": "#" },
+          { "platform": "instagram", "url": "#" }
+        ]
+      }
+    }
   ],
-  "message": "Tu mensaje explicativo aquí"
+  "message": "He creado tu landing page con formulario funcional que guarda los datos en la base de datos."
 }
+\`\`\`
 
-Los tipos de sección disponibles son: hero, features, testimonials, pricing, faq, cta, footer.
+### Tipos de sección disponibles:
+- **hero**: Sección principal con título, subtítulo y CTA
+- **features**: Características o beneficios del producto/servicio
+- **form**: Formulario con campos personalizados (SIEMPRE incluir cuando pidan formulario)
+- **faq**: Preguntas frecuentes con acordeón
+- **cta**: Llamada a la acción secundaria
+- **footer**: Pie de página con enlaces y redes sociales
+- **testimonials**: Testimonios de clientes
+- **pricing**: Tabla de precios
+
+### IMPORTANTE para formularios:
+- Siempre incluye campos relevantes para el tipo de negocio
+- Añade validación (required: true) en campos importantes
+- Incluye "saveToDatabase": true para guardar en BD
+- Personaliza el mensaje de éxito
 
 Para cualquier otra consulta, responde de forma natural y útil en español.`;
 
@@ -674,6 +768,57 @@ Responde SOLO con el output del código, como si fueras una terminal. No expliqu
         res.write(`data: ${JSON.stringify({ type: "error", data: "Agent error" })}\n\n`);
         res.end();
       }
+    }
+  });
+
+  // Form submission endpoint (public - no auth required for landing pages)
+  app.post("/api/form-submit", async (req, res) => {
+    try {
+      const { 
+        formSectionId, 
+        chatId, 
+        country, 
+        landingIdentifier, 
+        formData 
+      } = req.body as {
+        formSectionId?: string;
+        chatId?: number;
+        country?: string;
+        landingIdentifier?: string;
+        formData: Record<string, unknown>;
+      };
+
+      if (!formData || typeof formData !== 'object') {
+        res.status(400).json({ error: "formData is required and must be an object" });
+        return;
+      }
+
+      // Get IP and user agent for tracking
+      const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 
+                        req.socket.remoteAddress || 
+                        'unknown';
+      const userAgent = req.headers['user-agent'] || '';
+
+      // Save to database
+      const submissionId = await createFormSubmission({
+        formSectionId,
+        chatId,
+        country,
+        landingIdentifier,
+        formData,
+        ipAddress,
+        userAgent,
+        status: 'pending',
+      });
+
+      res.json({ 
+        success: true, 
+        submissionId,
+        message: "Form submitted successfully" 
+      });
+    } catch (error) {
+      console.error("Form submission error:", error);
+      res.status(500).json({ error: "Failed to submit form" });
     }
   });
 
