@@ -1,8 +1,26 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Bot, User, Loader2, LayoutTemplate, ArrowRight, Mail, Code, Globe, FileText, Lightbulb, PenLine, Search, ExternalLink, Image as ImageIcon, Paperclip, X, File, Terminal, Play } from 'lucide-react';
+import { 
+  Send, 
+  Bot, 
+  User, 
+  Loader2, 
+  ExternalLink, 
+  Image as ImageIcon, 
+  Search, 
+  Paperclip, 
+  File, 
+  X,
+  Code,
+  Globe,
+  FileText,
+  LayoutTemplate,
+  Terminal,
+  Play,
+  Copy,
+  Check
+} from 'lucide-react';
 import { useEditorStore } from '@/store/editorStore';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -10,61 +28,51 @@ import { Streamdown } from 'streamdown';
 import { ChatImagePreview } from './ImageLightbox';
 
 interface Message {
-  id: string | number;
+  id?: number;
   role: 'user' | 'assistant';
   content: string;
   hasArtifact?: boolean;
-  isStreaming?: boolean;
   isResearch?: boolean;
-  isImage?: boolean;
-  isFileAnalysis?: boolean;
-  imageUrl?: string;
-  fileInfo?: { name: string; type: string; url: string };
   sources?: Array<{ title: string; url: string; snippet: string }>;
-  followUpQuestions?: string[];
-}
-
-interface UploadedFile {
-  url: string;
-  filename: string;
-  mimeType: string;
-  size: number;
+  isImage?: boolean;
+  imageUrl?: string;
 }
 
 interface ChatInterfaceProps {
-  onOpenPreview?: () => void;
-  isPreviewOpen?: boolean;
+  onOpenPreview: () => void;
+  isPreviewOpen: boolean;
   chatId?: number | null;
   onChatCreated?: (chatId: number) => void;
 }
 
 const SUGGESTIONS = [
-  { icon: Search, label: 'Investiga un tema', prompt: 'Investiga sobre', color: 'indigo', isResearch: true },
-  { icon: ImageIcon, label: 'Genera una imagen', prompt: 'Genera una imagen de', color: 'pink', isImage: true },
-  { icon: FileText, label: 'Analiza un archivo', prompt: '', color: 'cyan', isFileUpload: true },
+  { icon: Search, label: 'Investiga un tema', prompt: 'Investiga ', color: 'indigo', isResearch: true },
+  { icon: ImageIcon, label: 'Genera una imagen', prompt: 'Genera una imagen de ', color: 'pink', isImage: true },
+  { icon: FileText, label: 'Analiza un archivo', prompt: 'Analiza este archivo: ', color: 'cyan', isFileUpload: true },
   { icon: Terminal, label: 'Ejecuta código', prompt: '', color: 'amber', isCodeExec: true },
-  { icon: Globe, label: 'Crea una landing', prompt: 'Crea una landing page moderna para mi startup de tecnología', color: 'violet' },
-  { icon: Code, label: 'Ayúdame con código', prompt: 'Necesito ayuda con un problema de programación', color: 'emerald' },
+  { icon: Globe, label: 'Crea una landing', prompt: 'Crea una landing page moderna para ', color: 'blue' },
+  { icon: Code, label: 'Ayúdame con código', prompt: 'Ayúdame a escribir código para ', color: 'violet' },
 ];
 
 export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCreated }: ChatInterfaceProps) {
-  const { sections, setSections } = useEditorStore();
-  const { isAuthenticated } = useAuth();
-  const utils = trpc.useUtils();
-  
-  const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [researchStatus, setResearchStatus] = useState<string | null>(null);
   const [researchSources, setResearchSources] = useState<Array<{ title: string; url: string; snippet: string }>>([]);
-  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<{ filename: string; content: string; type: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showCodeEditor, setShowCodeEditor] = useState(false);
-  const [codeInput, setCodeInput] = useState('');
+  const [codeInput, setCodeInput] = useState('# Escribe tu código Python aquí\nprint("Hola mundo!")');
   const [codeOutput, setCodeOutput] = useState('');
   const [isExecutingCode, setIsExecutingCode] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+  
+  const { setSections, sections } = useEditorStore();
+  const { isAuthenticated, user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,16 +95,10 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
         onChatCreated?.(chat.id);
         utils.chat.list.invalidate();
       }
-    },
+    }
   });
-
-  const createMessage = trpc.message.create.useMutation({
-    onSuccess: () => {
-      if (chatId) {
-        utils.message.list.invalidate({ chatId });
-      }
-    },
-  });
+  const createMessage = trpc.message.create.useMutation();
+  const utils = trpc.useUtils();
 
   const updateChatArtifact = trpc.chat.updateArtifact.useMutation();
 
@@ -145,558 +147,361 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
 
   // Deep Research streaming
   const streamResearch = useCallback(async (
-    question: string,
-    currentChatId: number | null | undefined
+    query: string,
+    currentChatId: number | null
   ) => {
-    abortControllerRef.current = new AbortController();
     setResearchStatus('Iniciando investigación...');
     setResearchSources([]);
     
     try {
-      const response = await fetch('/api/research/stream', {
+      const response = await fetch('/api/research', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question }),
-        credentials: 'include',
-        signal: abortControllerRef.current.signal,
+        body: JSON.stringify({ query, chatId: currentChatId }),
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error('Para usar Deep Research, por favor inicia sesión primero.');
+          throw new Error('Debes iniciar sesión para usar Deep Research');
         }
-        throw new Error(`Error del servidor (${response.status}). Por favor, intenta de nuevo.`);
+        throw new Error('Research request failed');
       }
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No reader available');
 
       const decoder = new TextDecoder();
-      let accumulatedContent = '';
+      let fullContent = '';
       let sources: Array<{ title: string; url: string; snippet: string }> = [];
-      let followUpQuestions: string[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
+        const chunk = decoder.decode(value);
         const lines = chunk.split('\n');
 
         for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          
-          try {
-            const event = JSON.parse(line.slice(6));
-            
-            if (event.type === 'status') {
-              setResearchStatus(event.data as string);
-            } else if (event.type === 'source') {
-              const source = event.data as { title: string; url: string; snippet: string };
-              sources.push(source);
-              setResearchSources([...sources]);
-            } else if (event.type === 'content') {
-              accumulatedContent += event.data;
-              setStreamingContent(accumulatedContent);
-              setResearchStatus(null);
-            } else if (event.type === 'done') {
-              const doneData = event.data as { sources: typeof sources; followUpQuestions: string[] };
-              sources = doneData.sources || sources;
-              followUpQuestions = doneData.followUpQuestions || [];
-            } else if (event.type === 'error') {
-              throw new Error(event.data as string);
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.status) {
+                setResearchStatus(data.status);
+              }
+              if (data.sources) {
+                sources = data.sources;
+                setResearchSources(data.sources);
+              }
+              if (data.content) {
+                fullContent += data.content;
+                setStreamingContent(fullContent);
+                setResearchStatus(null);
+              }
+              if (data.done) {
+                // Research complete
+                setResearchStatus(null);
+              }
+            } catch {
+              // Skip invalid JSON
             }
-          } catch (e) {
-            // Skip malformed JSON
           }
         }
       }
 
-      // Finalize the research message
-      const aiMsg: Message = {
-        id: `ai-${Date.now()}`,
-        role: 'assistant',
-        content: accumulatedContent,
-        isResearch: true,
-        sources,
-        followUpQuestions,
-      };
-      setLocalMessages(prev => [...prev, aiMsg]);
-      setStreamingContent('');
-      setResearchStatus(null);
-      setResearchSources([]);
-
-      // Save to database
-      if (isAuthenticated && currentChatId) {
-        try {
-          await createMessage.mutateAsync({
-            chatId: currentChatId,
-            role: 'assistant',
-            content: accumulatedContent,
-            hasArtifact: false,
-          });
-        } catch (error) {
-          console.error('Failed to save research message:', error);
-        }
-      }
+      return { content: fullContent, sources };
     } catch (error) {
-      if ((error as Error).name === 'AbortError') {
-        console.log('Research aborted');
-        return;
-      }
+      console.error('Research error:', error);
       throw error;
     }
-  }, [isAuthenticated, createMessage]);
+  }, []);
 
   // Regular chat streaming
   const streamResponse = useCallback(async (
-    conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
-    currentChatId: number | null | undefined
+    messages: Array<{ role: string; content: string }>,
+    currentChatId: number | null
   ) => {
     abortControllerRef.current = new AbortController();
     
     try {
-      const response = await fetch('/api/ai/stream', {
+      const response = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: conversationHistory }),
-        credentials: 'include',
+        body: JSON.stringify({ 
+          messages,
+          chatId: currentChatId 
+        }),
         signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error('Para usar el chat, por favor inicia sesión primero.');
+          throw new Error('Debes iniciar sesión para usar el chat');
         }
-        throw new Error(`Error del servidor (${response.status}). Por favor, intenta de nuevo.`);
+        throw new Error('Stream request failed');
       }
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No reader available');
 
       const decoder = new TextDecoder();
-      let accumulatedContent = '';
-      let finalData: { content: string; hasArtifact: boolean; artifactData: unknown } | null = null;
+      let fullContent = '';
+      let hasArtifact = false;
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
+        const chunk = decoder.decode(value);
         const lines = chunk.split('\n');
 
         for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          
-          try {
-            const data = JSON.parse(line.slice(6));
-            
-            if (data.type === 'chunk') {
-              accumulatedContent += data.content;
-              setStreamingContent(accumulatedContent);
-            } else if (data.type === 'done') {
-              finalData = data;
-            } else if (data.type === 'error') {
-              throw new Error(data.error);
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.content) {
+                fullContent += data.content;
+                setStreamingContent(fullContent);
+              }
+              if (data.artifact) {
+                hasArtifact = true;
+                setSections(data.artifact.sections || []);
+                
+                // Save artifact to database
+                if (currentChatId) {
+                  updateChatArtifact.mutate({
+                    chatId: currentChatId,
+                    artifactData: data.artifact
+                  });
+                }
+              }
+            } catch {
+              // Skip invalid JSON
             }
-          } catch (e) {
-            // Skip malformed JSON
           }
         }
       }
 
-      // Finalize the message
-      if (finalData) {
-        // If there's artifact data, update the editor
-        if (finalData.hasArtifact && finalData.artifactData) {
-          const artifact = finalData.artifactData as { sections?: unknown[] };
-          if (artifact.sections) {
-            setSections(artifact.sections as any);
-          }
-        }
-
-        // Add final AI message
-        const aiMsg: Message = {
-          id: `ai-${Date.now()}`,
-          role: 'assistant',
-          content: finalData.content,
-          hasArtifact: finalData.hasArtifact,
-        };
-        setLocalMessages(prev => [...prev, aiMsg]);
-        setStreamingContent('');
-
-        // Save to database
-        if (isAuthenticated && currentChatId) {
-          try {
-            await createMessage.mutateAsync({
-              chatId: currentChatId,
-              role: 'assistant',
-              content: finalData.content,
-              hasArtifact: finalData.hasArtifact,
-            });
-
-            if (finalData.hasArtifact && finalData.artifactData) {
-              await updateChatArtifact.mutateAsync({
-                chatId: currentChatId,
-                artifactData: finalData.artifactData,
-              });
-            }
-          } catch (error) {
-            console.error('Failed to save AI message:', error);
-          }
-        }
-      }
+      return { content: fullContent, hasArtifact };
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
-        console.log('Stream aborted');
-        return;
+        return { content: streamingContent, hasArtifact: false };
       }
       throw error;
     }
-  }, [isAuthenticated, createMessage, updateChatArtifact, setSections]);
-
-  // Image generation mutation
-  const generateImageMutation = trpc.image.generate.useMutation();
+  }, [setSections, streamingContent, updateChatArtifact]);
 
   // File upload handler
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file size (16MB limit)
-    if (file.size > 16 * 1024 * 1024) {
-      alert('El archivo es demasiado grande. Máximo 16MB.');
-      return;
-    }
-
     setIsUploading(true);
+    
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/api/files/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const data = await response.json();
-      setUploadedFile(data);
-      setInput(`Analiza este archivo: ${file.name}`);
+      // Read file as base64
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(',')[1];
+        setUploadedFile({
+          filename: file.name,
+          content: base64,
+          type: file.type
+        });
+        setIsUploading(false);
+      };
+      reader.onerror = () => {
+        console.error('Error reading file');
+        setIsUploading(false);
+      };
+      reader.readAsDataURL(file);
     } catch (error) {
       console.error('File upload error:', error);
-      alert('Error al subir el archivo. Por favor, intenta de nuevo.');
-    } finally {
       setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+    }
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
-  // File analysis streaming
-  const streamFileAnalysis = useCallback(async (
-    fileUrl: string,
-    mimeType: string,
-    prompt: string,
-    currentChatId: number | null | undefined
-  ) => {
-    abortControllerRef.current = new AbortController();
-    
-    try {
-      const response = await fetch('/api/files/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileUrl, mimeType, prompt }),
-        credentials: 'include',
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error('File analysis failed');
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No reader available');
-
-      const decoder = new TextDecoder();
-      let accumulatedContent = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          
-          try {
-            const event = JSON.parse(line.slice(6));
-            
-            if (event.type === 'chunk') {
-              accumulatedContent += event.content;
-              setStreamingContent(accumulatedContent);
-            } else if (event.type === 'done') {
-              accumulatedContent = event.content;
-            } else if (event.type === 'error') {
-              throw new Error(event.error);
-            }
-          } catch (e) {
-            // Skip malformed JSON
-          }
-        }
-      }
-
-      // Finalize the analysis message
-      const aiMsg: Message = {
-        id: `ai-${Date.now()}`,
-        role: 'assistant',
-        content: accumulatedContent,
-        isFileAnalysis: true,
-      };
-      setLocalMessages(prev => [...prev, aiMsg]);
-      setStreamingContent('');
-
-      // Save to database
-      if (isAuthenticated && currentChatId) {
-        try {
-          await createMessage.mutateAsync({
-            chatId: currentChatId,
-            role: 'assistant',
-            content: accumulatedContent,
-            hasArtifact: false,
-          });
-        } catch (error) {
-          console.error('Failed to save analysis message:', error);
-        }
-      }
-    } catch (error) {
-      if ((error as Error).name === 'AbortError') {
-        console.log('Analysis aborted');
-        return;
-      }
-      throw error;
-    }
-  }, [isAuthenticated, createMessage]);
-
-  // Code execution function
-  const executeCode = async () => {
-    if (!codeInput.trim() || isExecutingCode) return;
+  // Code execution handler
+  const handleExecuteCode = async () => {
+    if (!codeInput.trim()) return;
     
     setIsExecutingCode(true);
     setCodeOutput('');
     
     try {
-      const response = await fetch('/api/code/execute', {
+      const response = await fetch('/api/execute-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: codeInput, language: 'python' }),
-        credentials: 'include',
+        body: JSON.stringify({ code: codeInput }),
       });
-
-      if (!response.ok) {
-        throw new Error('Execution failed');
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No reader available');
-
-      const decoder = new TextDecoder();
-      let output = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          
-          try {
-            const event = JSON.parse(line.slice(6));
-            
-            if (event.type === 'output') {
-              output += event.content;
-              setCodeOutput(output);
-            } else if (event.type === 'done') {
-              output = event.output;
-              setCodeOutput(output);
-            } else if (event.type === 'error') {
-              setCodeOutput(`Error: ${event.error}`);
-            }
-          } catch (e) {
-            // Skip malformed JSON
-          }
-        }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setCodeOutput(result.output || 'Código ejecutado sin salida');
+      } else {
+        setCodeOutput(`Error: ${result.error}`);
       }
     } catch (error) {
-      console.error('Code execution error:', error);
-      setCodeOutput('Error al ejecutar el código. Por favor, intenta de nuevo.');
+      setCodeOutput(`Error de conexión: ${(error as Error).message}`);
     } finally {
       setIsExecutingCode(false);
     }
   };
 
-  const handleSend = async (text?: string, isResearch: boolean = false, isImageGen: boolean = false) => {
-    const userText = text || input;
-    if (!userText.trim() || isProcessing) return;
-    
+  const handleSend = async (overrideInput?: string, isResearch = false, isImage = false) => {
+    const messageContent = overrideInput ?? input;
+    if (!messageContent.trim() && !uploadedFile) return;
+
+    // Build the full message content
+    let fullContent = messageContent;
+    if (uploadedFile) {
+      fullContent = `[Archivo adjunto: ${uploadedFile.filename}]\n\n${messageContent || 'Analiza este archivo'}`;
+    }
+
+    const userMessage: Message = { role: 'user', content: fullContent };
+    setLocalMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsProcessing(true);
     setStreamingContent('');
 
-    // Add User Message locally first
-    const tempUserMsg: Message = {
-      id: `temp-${Date.now()}`,
-      role: 'user',
-      content: userText
-    };
-    setLocalMessages(prev => [...prev, tempUserMsg]);
-
-    let currentChatId = chatId;
-
-    // If authenticated and no chat exists, create one
-    if (isAuthenticated && !currentChatId) {
-      try {
-        const newChat = await createChat.mutateAsync({ 
-          title: userText.substring(0, 50) + (userText.length > 50 ? '...' : '')
-        });
-        if (newChat) {
-          currentChatId = newChat.id;
+    try {
+      // Create chat if needed
+      let currentChatId = chatId;
+      if (!currentChatId && isAuthenticated) {
+        const title = fullContent.slice(0, 50) + (fullContent.length > 50 ? '...' : '');
+        const chat = await createChat.mutateAsync({ title });
+        if (chat) {
+          currentChatId = chat.id;
         }
-      } catch (error) {
-        console.error('Failed to create chat:', error);
       }
-    }
 
-    // Save user message to database
-    if (isAuthenticated && currentChatId) {
-      try {
+      // Save user message to database
+      if (isAuthenticated && currentChatId) {
         await createMessage.mutateAsync({
           chatId: currentChatId,
           role: 'user',
-          content: userText,
+          content: fullContent,
           hasArtifact: false,
         });
-      } catch (error) {
-        console.error('Failed to save user message:', error);
       }
-    }
 
-    // Check if we have an uploaded file to analyze
-    const fileToAnalyze = uploadedFile;
-    if (fileToAnalyze) {
-      setUploadedFile(null); // Clear the uploaded file
-    }
-
-    try {
-      if (fileToAnalyze) {
-        // File analysis mode
-        // Add "analyzing" message
-        const analyzingMsg: Message = {
-          id: `analyzing-${Date.now()}`,
-          role: 'assistant',
-          content: 'Analizando archivo...',
-          isStreaming: true,
-        };
-        setLocalMessages(prev => [...prev, analyzingMsg]);
-        
-        await streamFileAnalysis(
-          fileToAnalyze.url,
-          fileToAnalyze.mimeType,
-          userText,
-          currentChatId
-        );
-        
-        // Remove the analyzing message (streamFileAnalysis adds the final message)
-        setLocalMessages(prev => prev.filter(m => m.id !== analyzingMsg.id));
-      } else if (isImageGen || userText.toLowerCase().startsWith('genera una imagen')) {
-        // Image generation mode
-        const prompt = userText.toLowerCase().startsWith('genera una imagen de') 
-          ? userText.substring(21).trim() 
-          : userText.toLowerCase().startsWith('genera una imagen')
-            ? userText.substring(18).trim()
-            : userText;
-        
-        // Add "generating" message
-        const generatingMsg: Message = {
-          id: `gen-${Date.now()}`,
-          role: 'assistant',
-          content: 'Generando imagen...',
-          isStreaming: true,
-        };
-        setLocalMessages(prev => [...prev, generatingMsg]);
-        
-        const result = await generateImageMutation.mutateAsync({ prompt });
-        
-        // Replace with final message including image
-        setLocalMessages(prev => {
-          const filtered = prev.filter(m => m.id !== generatingMsg.id);
-          return [...filtered, {
-            id: `img-${Date.now()}`,
-            role: 'assistant',
-            content: `He generado esta imagen basada en tu descripción: "${prompt}"`,
-            isImage: true,
-            imageUrl: result.url,
-          }];
+      // Check if this is an image generation request
+      if (isImage || messageContent.toLowerCase().includes('genera una imagen') || messageContent.toLowerCase().includes('crea una imagen')) {
+        // Generate image
+        const response = await fetch('/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: messageContent }),
         });
         
+        const result = await response.json();
+        
+        if (result.success && result.url) {
+          const assistantMessage: Message = {
+            role: 'assistant',
+            content: 'He generado esta imagen basada en tu descripción.',
+            isImage: true,
+            imageUrl: result.url,
+          };
+          setLocalMessages(prev => [...prev, assistantMessage]);
+          
+          // Save to database
+          if (isAuthenticated && currentChatId) {
+            await createMessage.mutateAsync({
+              chatId: currentChatId,
+              role: 'assistant',
+              content: `[Imagen generada: ${result.url}]`,
+              hasArtifact: false,
+            });
+          }
+        } else {
+          throw new Error(result.error || 'Error generating image');
+        }
+      } else if (isResearch) {
+        // Use deep research
+        const result = await streamResearch(messageContent, currentChatId ?? null);
+        
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: result.content,
+          isResearch: true,
+          sources: result.sources,
+        };
+        setLocalMessages(prev => [...prev, assistantMessage]);
+        setStreamingContent('');
+        setResearchSources([]);
+
         // Save to database
         if (isAuthenticated && currentChatId) {
           await createMessage.mutateAsync({
             chatId: currentChatId,
             role: 'assistant',
-            content: `[Imagen generada: ${result.url}]`,
+            content: result.content,
             hasArtifact: false,
           });
         }
-      } else if (isResearch) {
-        // Use deep research
-        await streamResearch(userText, currentChatId);
       } else {
-        // Build conversation history
-        const conversationHistory = localMessages
-          .map(m => ({ role: m.role, content: m.content }));
-        
-        // Add current message
-        conversationHistory.push({ role: 'user', content: userText });
+        // Regular chat with streaming
+        const messagesForAPI = [...localMessages, userMessage].map(m => ({
+          role: m.role,
+          content: m.content,
+        }));
 
-        // Stream the response
-        await streamResponse(conversationHistory, currentChatId);
+        // Add file content if present
+        if (uploadedFile) {
+          messagesForAPI[messagesForAPI.length - 1].content = JSON.stringify({
+            text: messageContent || 'Analiza este archivo',
+            file: uploadedFile
+          });
+        }
+
+        const result = await streamResponse(messagesForAPI, currentChatId ?? null);
+        
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: result.content,
+          hasArtifact: result.hasArtifact,
+        };
+        setLocalMessages(prev => [...prev, assistantMessage]);
+        setStreamingContent('');
+
+        // Save to database
+        if (isAuthenticated && currentChatId) {
+          await createMessage.mutateAsync({
+            chatId: currentChatId,
+            role: 'assistant',
+            content: result.content,
+            hasArtifact: result.hasArtifact,
+          });
+        }
       }
     } catch (error) {
-      console.error('AI Error:', error);
+      console.error('Error:', error);
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: (error as Error).message || 'Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta de nuevo.',
+      };
+      setLocalMessages(prev => [...prev, errorMessage]);
       setStreamingContent('');
       setResearchStatus(null);
-      // Add error message
-      const errorMsg: Message = {
-        id: `error-${Date.now()}`,
-        role: 'assistant',
-        content: 'Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta de nuevo.',
-        hasArtifact: false
-      };
-      setLocalMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsProcessing(false);
+      setUploadedFile(null);
     }
   };
 
-  const handleSuggestionClick = (prompt: string, isResearch?: boolean, isImage?: boolean, isFileUpload?: boolean, isCodeExec?: boolean) => {
+  const handleSuggestionClick = (prompt: string, isResearch = false, isImage = false, isFileUpload = false, isCodeExec = false) => {
     if (isFileUpload) {
-      // Trigger file input
       fileInputRef.current?.click();
       return;
     }
     if (isCodeExec) {
-      // Open code editor
       setShowCodeEditor(true);
       return;
     }
@@ -710,10 +515,10 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
   const isEmptyChat = localMessages.length === 0 && !chatId;
 
   return (
-    <div className="flex flex-col h-full bg-white w-full">
+    <div className="flex flex-col h-full bg-white w-full overflow-hidden">
       {/* Header - only show when in conversation */}
       {!isEmptyChat && (
-        <div className="p-4 border-b border-gray-100 bg-white flex justify-between items-center shrink-0">
+        <div className="p-4 border-b border-gray-100 bg-white flex justify-between items-center flex-shrink-0">
           <h2 className="font-semibold text-sm text-gray-700">
             Conversación
           </h2>
@@ -726,8 +531,11 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
         </div>
       )}
       
-      {/* Messages Area or Welcome Screen */}
-      <ScrollArea className="flex-1 h-0 min-h-0">
+      {/* Messages Area or Welcome Screen - This is the scrollable area */}
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto min-h-0"
+      >
         {isEmptyChat ? (
           /* Welcome Screen with Suggestions */
           <div className="h-full flex flex-col items-center justify-center p-8">
@@ -801,22 +609,16 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                 </div>
               ) : (
                 <>
-                  {localMessages.map((msg) => (
+                  {localMessages.map((msg, index) => (
                     <div
-                      key={msg.id}
-                      className={`flex gap-3 message-bubble ${
-                        msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'
-                      }`}
+                      key={index}
+                      className={`flex gap-3 message-bubble ${msg.role === 'user' ? 'justify-end' : ''}`}
                     >
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                          msg.role === 'user' 
-                            ? 'bg-gray-900 text-white' 
-                            : 'bg-gradient-to-br from-violet-500 to-purple-600 text-white'
-                        }`}
-                      >
-                        {msg.role === 'user' ? <User size={14} /> : <Bot size={14} />}
-                      </div>
+                      {msg.role === 'assistant' && (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shrink-0">
+                          <Bot size={14} className="text-white" />
+                        </div>
+                      )}
                       <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                         <div
                           className={`p-4 rounded-2xl text-sm leading-relaxed ${
@@ -826,7 +628,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                           }`}
                         >
                           {msg.role === 'assistant' ? (
-                            <div className="prose prose-sm max-w-none">
+                            <div className="streamdown-container prose prose-sm max-w-none">
                               <Streamdown>{msg.content}</Streamdown>
                             </div>
                           ) : (
@@ -842,7 +644,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                         {/* Research Sources */}
                         {msg.isResearch && msg.sources && msg.sources.length > 0 && (
                           <div className="w-full bg-gray-50 rounded-xl p-3 space-y-2">
-                            <p className="text-xs font-semibold text-gray-600 flex items-center gap-1">
+                            <p className="text-xs font-medium text-gray-500 flex items-center gap-1">
                               <Search className="w-3 h-3" />
                               Fuentes ({msg.sources.length})
                             </p>
@@ -853,47 +655,37 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                                   href={source.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="flex items-center gap-2 text-xs text-gray-600 hover:text-indigo-600 transition-colors group"
+                                  className="flex items-start gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors group"
                                 >
-                                  <ExternalLink className="w-3 h-3 shrink-0" />
-                                  <span className="truncate group-hover:underline">{source.title || source.url}</span>
+                                  <ExternalLink className="w-3 h-3 text-gray-400 mt-0.5 shrink-0 group-hover:text-indigo-500" />
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-medium text-gray-700 truncate group-hover:text-indigo-600">
+                                      {source.title || 'Sin título'}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 truncate">{source.url}</p>
+                                  </div>
                                 </a>
                               ))}
                             </div>
                           </div>
                         )}
-
-                        {/* Follow-up Questions */}
-                        {msg.isResearch && msg.followUpQuestions && msg.followUpQuestions.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {msg.followUpQuestions.map((q, idx) => (
-                              <button
-                                key={idx}
-                                onClick={() => handleSend(q, true)}
-                                className="text-xs px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-full hover:bg-indigo-100 transition-colors"
-                              >
-                                {q}
-                              </button>
-                            ))}
-                          </div>
-                        )}
                         
+                        {/* Artifact indicator */}
                         {msg.hasArtifact && (
-                          <button 
+                          <button
                             onClick={onOpenPreview}
-                            className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-violet-300 transition-all group text-left w-64"
+                            className="flex items-center gap-2 text-xs text-violet-600 hover:text-violet-700 bg-violet-50 px-3 py-1.5 rounded-lg transition-colors"
                           >
-                            <div className="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-violet-100 transition-colors">
-                              <LayoutTemplate className="w-5 h-5 text-violet-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-gray-900">Diseño Web</p>
-                              <p className="text-[10px] text-gray-500 truncate">Click para ver</p>
-                            </div>
-                            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-violet-500 group-hover:translate-x-0.5 transition-all" />
+                            <LayoutTemplate className="w-3 h-3" />
+                            Ver diseño generado
                           </button>
                         )}
                       </div>
+                      {msg.role === 'user' && (
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                          <User size={14} className="text-gray-600" />
+                        </div>
+                      )}
                     </div>
                   ))}
                   
@@ -957,10 +749,10 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
             </div>
           </div>
         )}
-      </ScrollArea>
+      </div>
 
-      {/* Input Area */}
-      <div className="p-4 bg-white border-t border-gray-100">
+      {/* Input Area - Fixed at bottom */}
+      <div className="p-4 bg-white border-t border-gray-100 flex-shrink-0">
         <div className="max-w-2xl mx-auto">
           {/* File attachment preview */}
           {uploadedFile && (
@@ -1058,26 +850,38 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
             {/* Code Input */}
             <div className="flex-1 overflow-hidden flex flex-col">
               <div className="p-4 flex-1 min-h-0">
-                <label className="text-xs font-medium text-gray-500 mb-2 block">Código</label>
-                <textarea
-                  value={codeInput}
-                  onChange={(e) => setCodeInput(e.target.value)}
-                  placeholder="# Escribe tu código Python aquí...\nprint('Hola mundo')\n\n# Ejemplo:\nfor i in range(5):\n    print(f'Número: {i}')"
-                  className="w-full h-40 p-3 font-mono text-sm bg-gray-900 text-green-400 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  disabled={isExecutingCode}
-                />
+                <div className="relative h-full">
+                  <textarea
+                    value={codeInput}
+                    onChange={(e) => setCodeInput(e.target.value)}
+                    className="w-full h-full min-h-[200px] p-4 font-mono text-sm bg-gray-900 text-gray-100 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    placeholder="# Escribe tu código Python aquí"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(codeInput);
+                      setCodeCopied(true);
+                      setTimeout(() => setCodeCopied(false), 2000);
+                    }}
+                    className="absolute top-2 right-2 p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                    title="Copiar código"
+                  >
+                    {codeCopied ? (
+                      <Check className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <Copy className="w-4 h-4 text-gray-400" />
+                    )}
+                  </button>
+                </div>
               </div>
               
               {/* Output */}
-              {(codeOutput || isExecutingCode) && (
-                <div className="p-4 border-t border-gray-100">
-                  <label className="text-xs font-medium text-gray-500 mb-2 block flex items-center gap-2">
-                    Output
-                    {isExecutingCode && <Loader2 className="w-3 h-3 animate-spin" />}
-                  </label>
-                  <pre className="w-full h-32 p-3 font-mono text-sm bg-gray-100 text-gray-800 rounded-lg overflow-auto whitespace-pre-wrap">
-                    {codeOutput || 'Ejecutando...'}
-                  </pre>
+              {codeOutput && (
+                <div className="px-4 pb-4">
+                  <div className="bg-gray-100 rounded-xl p-4">
+                    <p className="text-xs font-medium text-gray-500 mb-2">Salida:</p>
+                    <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono">{codeOutput}</pre>
+                  </div>
                 </div>
               )}
             </div>
@@ -1092,11 +896,11 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                   setCodeOutput('');
                 }}
               >
-                Cerrar
+                Cancelar
               </Button>
               <Button
-                onClick={executeCode}
-                disabled={!codeInput.trim() || isExecutingCode}
+                onClick={handleExecuteCode}
+                disabled={isExecutingCode || !codeInput.trim()}
                 className="bg-amber-600 hover:bg-amber-700"
               >
                 {isExecutingCode ? (

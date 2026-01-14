@@ -64,3 +64,4 @@
 - [x] Fix layout breaking when agent responds with images
 - [x] Implement image lightbox with zoom and download in chat
 - [x] Fix scroll overlapping header in chat
+- [x] DEFINITIVE FIX: Chat scroll eating header and cannot scroll up
