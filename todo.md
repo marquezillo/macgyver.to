@@ -63,3 +63,4 @@
 - [x] Improve streaming response rendering - reduce visual jumps during typing
 - [x] Fix layout breaking when agent responds with images
 - [x] Implement image lightbox with zoom and download in chat
+- [x] Fix scroll overlapping header in chat

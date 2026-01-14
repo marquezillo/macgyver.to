@@ -713,7 +713,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
     <div className="flex flex-col h-full bg-white w-full">
       {/* Header - only show when in conversation */}
       {!isEmptyChat && (
-        <div className="p-4 border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10 flex justify-between items-center">
+        <div className="p-4 border-b border-gray-100 bg-white flex justify-between items-center shrink-0">
           <h2 className="font-semibold text-sm text-gray-700">
             Conversación
           </h2>
