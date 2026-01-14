@@ -35,3 +35,6 @@
 - [x] Integrate memories into LLM system prompt context
 - [ ] Auto-extract memories from conversations
 - [x] Add memory management UI in settings
+
+## Bug Fixes
+- [x] Fix HeroSection backgroundColor undefined error

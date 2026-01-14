@@ -9,9 +9,9 @@ interface SectionRendererProps {
 export function SectionRenderer({ section }: SectionRendererProps) {
   switch (section.type) {
     case 'hero':
-      return <HeroSection id={section.id} content={section.content} styles={section.styles} />;
+      return <HeroSection id={section.id} content={section.content} styles={section.styles || {}} />;
     case 'features':
-      return <FeaturesSection id={section.id} content={section.content} styles={section.styles} />;
+      return <FeaturesSection id={section.id} content={section.content} styles={section.styles || {}} />;
     default:
       return (
         <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
