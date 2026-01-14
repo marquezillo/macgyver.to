@@ -13,6 +13,12 @@ import { performDeepResearchStream } from "../deepResearch";
 import { storagePut } from "../storage";
 import { getMemoriesForContext, getUserByOpenId } from "../db";
 import { extractMemoriesFromConversation } from "../memoryExtraction";
+import { analyzeUrlStream } from "../urlAnalysis";
+import { extractTextFromImage, translateTextStream, detectLanguage } from "../ocrTranslation";
+import { createDiagram, suggestDiagramType } from "../diagramGeneration";
+import { compareDocumentsStream } from "../documentComparison";
+import { summarizeVideoStream } from "../videoSummary";
+import { runAutonomousTaskStream, shouldUseAutonomousMode } from "../autonomousAgents";
 import multer from "multer";
 
 // Configure multer for file uploads
@@ -408,6 +414,264 @@ Responde SOLO con el output del código, como si fueras una terminal. No expliqu
         res.status(500).json({ error: "Internal server error" });
       } else {
         res.write(`data: ${JSON.stringify({ type: "error", error: "Execution error" })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
+  // URL Analysis endpoint (SSE)
+  app.post("/api/url/analyze", async (req, res) => {
+    try {
+      let user;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        user = null;
+      }
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { url } = req.body as { url: string };
+      if (!url || typeof url !== "string") {
+        res.status(400).json({ error: "URL string required" });
+        return;
+      }
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+
+      for await (const event of analyzeUrlStream(url)) {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      }
+      res.end();
+    } catch (error) {
+      console.error("URL analysis error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Internal server error" });
+      } else {
+        res.write(`data: ${JSON.stringify({ type: "error", data: "Analysis error" })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
+  // OCR endpoint
+  app.post("/api/ocr/extract", upload.single("image"), async (req, res) => {
+    try {
+      let user;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        user = null;
+      }
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const file = req.file;
+      if (!file) {
+        res.status(400).json({ error: "Image file required" });
+        return;
+      }
+
+      const imageBase64 = file.buffer.toString("base64");
+      const result = await extractTextFromImage(imageBase64, file.mimetype);
+      res.json(result);
+    } catch (error) {
+      console.error("OCR error:", error);
+      res.status(500).json({ error: "OCR extraction failed" });
+    }
+  });
+
+  // Translation endpoint (SSE)
+  app.post("/api/translate/stream", async (req, res) => {
+    try {
+      let user;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        user = null;
+      }
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { text, targetLanguage } = req.body as { text: string; targetLanguage: string };
+      if (!text || !targetLanguage) {
+        res.status(400).json({ error: "text and targetLanguage required" });
+        return;
+      }
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+
+      for await (const event of translateTextStream(text, targetLanguage)) {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      }
+      res.end();
+    } catch (error) {
+      console.error("Translation error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Internal server error" });
+      } else {
+        res.write(`data: ${JSON.stringify({ type: "error", data: "Translation error" })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
+  // Diagram generation endpoint
+  app.post("/api/diagram/generate", async (req, res) => {
+    try {
+      let user;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        user = null;
+      }
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { description, type } = req.body as { description: string; type?: string };
+      if (!description) {
+        res.status(400).json({ error: "Description required" });
+        return;
+      }
+
+      const diagramType = type || await suggestDiagramType(description);
+      const result = await createDiagram(description, diagramType as any);
+      res.json(result);
+    } catch (error) {
+      console.error("Diagram generation error:", error);
+      res.status(500).json({ error: "Diagram generation failed" });
+    }
+  });
+
+  // Document comparison endpoint (SSE)
+  app.post("/api/documents/compare", async (req, res) => {
+    try {
+      let user;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        user = null;
+      }
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { documents } = req.body as { documents: Array<{ name: string; content: string; type: string }> };
+      if (!documents || !Array.isArray(documents) || documents.length < 2) {
+        res.status(400).json({ error: "At least 2 documents required" });
+        return;
+      }
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+
+      for await (const event of compareDocumentsStream(documents)) {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      }
+      res.end();
+    } catch (error) {
+      console.error("Document comparison error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Internal server error" });
+      } else {
+        res.write(`data: ${JSON.stringify({ type: "error", data: "Comparison error" })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
+  // Video summary endpoint (SSE)
+  app.post("/api/video/summarize", async (req, res) => {
+    try {
+      let user;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        user = null;
+      }
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { url } = req.body as { url: string };
+      if (!url) {
+        res.status(400).json({ error: "Video URL required" });
+        return;
+      }
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+
+      for await (const event of summarizeVideoStream(url)) {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      }
+      res.end();
+    } catch (error) {
+      console.error("Video summary error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Internal server error" });
+      } else {
+        res.write(`data: ${JSON.stringify({ type: "error", data: "Summary error" })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
+  // Autonomous agent endpoint (SSE)
+  app.post("/api/agent/run", async (req, res) => {
+    try {
+      let user;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        user = null;
+      }
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { goal } = req.body as { goal: string };
+      if (!goal) {
+        res.status(400).json({ error: "Goal required" });
+        return;
+      }
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+
+      for await (const event of runAutonomousTaskStream(goal)) {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      }
+      res.end();
+    } catch (error) {
+      console.error("Agent error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Internal server error" });
+      } else {
+        res.write(`data: ${JSON.stringify({ type: "error", data: "Agent error" })}\n\n`);
         res.end();
       }
     }

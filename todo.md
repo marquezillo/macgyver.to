@@ -47,3 +47,13 @@
 - [x] Implement CTASection component
 - [x] Implement FooterSection component
 - [x] Improve error handling for unauthenticated users
+
+## Advanced AI Capabilities (New)
+- [x] URL Analysis - Paste URL and get automatic summary/analysis
+- [x] OCR Enhanced - Extract text from images and screenshots
+- [x] Automatic Translation - Detect language and offer translation
+- [x] Diagram Generation - Create flowcharts, ERDs, architectures from text
+- [x] Document Comparison - Upload 2+ files and compare differences
+- [x] Video Summary - Paste YouTube URL and get summary
+- [x] External APIs Connection - Integrate Notion, Google Sheets, Airtable via MCP
+- [x] Autonomous Agents - Multi-step tasks that AI executes without intervention
