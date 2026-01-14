@@ -57,3 +57,7 @@
 - [x] Video Summary - Paste YouTube URL and get summary
 - [x] External APIs Connection - Integrate Notion, Google Sheets, Airtable via MCP
 - [x] Autonomous Agents - Multi-step tasks that AI executes without intervention
+
+## Bug Fixes (New)
+- [x] Fix chat scroll - cannot scroll up to see previous messages
+- [x] Improve streaming response rendering - reduce visual jumps during typing

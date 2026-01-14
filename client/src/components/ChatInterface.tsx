@@ -717,7 +717,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       )}
       
       {/* Messages Area or Welcome Screen */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 h-0 min-h-0">
         {isEmptyChat ? (
           /* Welcome Screen with Suggestions */
           <div className="h-full flex flex-col items-center justify-center p-8">
@@ -794,7 +794,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                   {localMessages.map((msg) => (
                     <div
                       key={msg.id}
-                      className={`flex gap-3 ${
+                      className={`flex gap-3 message-bubble ${
                         msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'
                       }`}
                     >
@@ -816,7 +816,9 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                           }`}
                         >
                           {msg.role === 'assistant' ? (
-                            <Streamdown>{msg.content}</Streamdown>
+                            <div className="prose prose-sm max-w-none">
+                              <Streamdown>{msg.content}</Streamdown>
+                            </div>
                           ) : (
                             <p className="whitespace-pre-wrap">{msg.content}</p>
                           )}
@@ -934,13 +936,15 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                   
                   {/* Streaming message */}
                   {streamingContent && !researchStatus && (
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 message-bubble" data-streaming="true">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shrink-0">
                         <Bot size={14} className="text-white" />
                       </div>
                       <div className="flex flex-col gap-2 max-w-[85%] items-start">
                         <div className="p-4 rounded-2xl rounded-tl-sm text-sm leading-relaxed bg-gray-100 text-gray-800">
-                          <Streamdown>{streamingContent}</Streamdown>
+                          <div className="streamdown-container prose prose-sm max-w-none">
+                            <Streamdown>{streamingContent}</Streamdown>
+                          </div>
                         </div>
                       </div>
                     </div>
