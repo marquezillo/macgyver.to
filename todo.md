@@ -61,3 +61,5 @@
 ## Bug Fixes (New)
 - [x] Fix chat scroll - cannot scroll up to see previous messages
 - [x] Improve streaming response rendering - reduce visual jumps during typing
+- [x] Fix layout breaking when agent responds with images
+- [x] Implement image lightbox with zoom and download in chat

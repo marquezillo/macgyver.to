@@ -7,6 +7,7 @@ import { useEditorStore } from '@/store/editorStore';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Streamdown } from 'streamdown';
+import { ChatImagePreview } from './ImageLightbox';
 
 interface Message {
   id: string | number;
@@ -102,12 +103,21 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
   // Sync database messages to local state
   useEffect(() => {
     if (dbMessages && dbMessages.length > 0) {
-      const mapped: Message[] = dbMessages.map(m => ({
-        id: m.id,
-        role: m.role,
-        content: m.content,
-        hasArtifact: m.hasArtifact === 1,
-      }));
+      const mapped: Message[] = dbMessages.map(m => {
+        // Parse image URL from stored content format: [Imagen generada: URL]
+        const imageMatch = m.content.match(/\[Imagen generada:\s*(https?:\/\/[^\]]+)\]/);
+        const isImage = !!imageMatch;
+        const imageUrl = imageMatch ? imageMatch[1] : undefined;
+        
+        return {
+          id: m.id,
+          role: m.role,
+          content: isImage ? 'He generado esta imagen basada en tu descripción.' : m.content,
+          hasArtifact: m.hasArtifact === 1,
+          isImage,
+          imageUrl,
+        };
+      });
       setLocalMessages(mapped);
     } else if (!chatId) {
       setLocalMessages([]);
@@ -826,28 +836,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                         
                         {/* Generated Image */}
                         {msg.isImage && msg.imageUrl && (
-                          <div className="mt-2 rounded-xl overflow-hidden border border-gray-200 shadow-sm max-w-md">
-                            <img 
-                              src={msg.imageUrl} 
-                              alt="Imagen generada por IA" 
-                              className="w-full h-auto"
-                            />
-                            <div className="p-2 bg-gray-50 flex justify-between items-center">
-                              <span className="text-xs text-gray-500 flex items-center gap-1">
-                                <ImageIcon className="w-3 h-3" />
-                                Generada con IA
-                              </span>
-                              <a 
-                                href={msg.imageUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                                Abrir
-                              </a>
-                            </div>
-                          </div>
+                          <ChatImagePreview src={msg.imageUrl} alt="Imagen generada por IA" />
                         )}
                         
                         {/* Research Sources */}
