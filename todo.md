@@ -70,3 +70,17 @@
 - [x] Improve landing generation to include functional backend (form processing, database, APIs)
 - [x] Update system prompt to generate full-stack landings, not just visual
 - [x] Add form submission handling with database storage
+
+## Full-Stack Project System (Like Manus)
+- [x] Design project system architecture
+- [x] Create projects database schema (projects table with metadata)
+- [x] Create project files table (store generated code)
+- [x] Implement project CRUD API (create, read, update, delete projects)
+- [x] Implement project code generation (React + Express template)
+- [x] Implement per-project database provisioning (separate schema per project)
+- [x] Implement project build system (compile React, bundle Express)
+- [x] Implement project deployment system (run projects on server with unique ports)
+- [x] Create project management UI (list projects, view status, manage)
+- [x] Integrate project creation with chat flow
+- [ ] Implement project preview (live dev server per project)
+- [ ] Implement project export (download as zip)

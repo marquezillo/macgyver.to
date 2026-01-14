@@ -19,7 +19,8 @@ import {
   Terminal,
   Play,
   Copy,
-  Check
+  Check,
+  FolderPlus
 } from 'lucide-react';
 import { useEditorStore } from '@/store/editorStore';
 import { trpc } from '@/lib/trpc';
@@ -52,6 +53,7 @@ const SUGGESTIONS = [
   { icon: Terminal, label: 'Ejecuta código', prompt: '', color: 'amber', isCodeExec: true },
   { icon: Globe, label: 'Crea una landing', prompt: 'Crea una landing page moderna para ', color: 'blue' },
   { icon: Code, label: 'Ayúdame con código', prompt: 'Ayúdame a escribir código para ', color: 'violet' },
+  { icon: FolderPlus, label: 'Crear proyecto', prompt: 'Crea un proyecto full-stack para ', color: 'emerald', isProject: true },
 ];
 
 export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCreated }: ChatInterfaceProps) {

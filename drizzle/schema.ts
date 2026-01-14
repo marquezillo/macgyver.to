@@ -146,3 +146,83 @@ export const formSubmissions = mysqlTable("formSubmissions", {
 
 export type FormSubmission = typeof formSubmissions.$inferSelect;
 export type InsertFormSubmission = typeof formSubmissions.$inferInsert;
+
+
+/**
+ * Projects table for full-stack user projects.
+ * Each project is a complete application with its own code, database, and deployment.
+ */
+export const projects = mysqlTable("projects", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Foreign key to users table */
+  userId: int("userId").notNull(),
+  /** Project name */
+  name: varchar("name", { length: 100 }).notNull(),
+  /** Project description */
+  description: text("description"),
+  /** Project type: landing, webapp, api */
+  type: mysqlEnum("type", ["landing", "webapp", "api"]).default("webapp").notNull(),
+  /** Project status: draft, building, running, stopped, error */
+  status: mysqlEnum("status", ["draft", "building", "running", "stopped", "error"]).default("draft").notNull(),
+  /** Port number when running (unique per project) */
+  port: int("port"),
+  /** Process ID when running */
+  pid: int("pid"),
+  /** Database schema name for this project (isolated per project) */
+  dbSchema: varchar("dbSchema", { length: 100 }),
+  /** Project configuration as JSON */
+  config: json("config"),
+  /** Build logs */
+  buildLog: text("buildLog"),
+  /** Last error message if status is error */
+  lastError: text("lastError"),
+  /** Public URL when deployed */
+  publicUrl: varchar("publicUrl", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Project = typeof projects.$inferSelect;
+export type InsertProject = typeof projects.$inferInsert;
+
+/**
+ * Project files table for storing generated code.
+ * Each file belongs to a project and contains the file content.
+ */
+export const projectFiles = mysqlTable("projectFiles", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Foreign key to projects table */
+  projectId: int("projectId").notNull(),
+  /** File path relative to project root */
+  path: varchar("path", { length: 500 }).notNull(),
+  /** File content */
+  content: text("content").notNull(),
+  /** File type for syntax highlighting */
+  fileType: varchar("fileType", { length: 50 }),
+  /** Whether this file was generated or manually edited */
+  isGenerated: int("isGenerated").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProjectFile = typeof projectFiles.$inferSelect;
+export type InsertProjectFile = typeof projectFiles.$inferInsert;
+
+/**
+ * Project database tables - stores the schema for each project's database.
+ * This allows each project to have its own isolated database structure.
+ */
+export const projectDbTables = mysqlTable("projectDbTables", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Foreign key to projects table */
+  projectId: int("projectId").notNull(),
+  /** Table name */
+  tableName: varchar("tableName", { length: 100 }).notNull(),
+  /** Table schema as JSON (columns, types, constraints) */
+  schema: json("schema").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProjectDbTable = typeof projectDbTables.$inferSelect;
+export type InsertProjectDbTable = typeof projectDbTables.$inferInsert;

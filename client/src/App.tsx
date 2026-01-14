@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Editor from "./pages/Editor";
 import MemorySettings from "./pages/MemorySettings";
+import Projects from "./pages/Projects";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -14,6 +15,7 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Editor} />
       <Route path={"/settings/memory"} component={MemorySettings} />
+      <Route path={"/projects"} component={Projects} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

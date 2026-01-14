@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, chats, messages, folders, memories, formSubmissions, InsertChat, InsertMessage, InsertFolder, InsertMemory, InsertFormSubmission, Chat, Message, Folder, Memory, FormSubmission } from "../drizzle/schema";
+import { InsertUser, users, chats, messages, folders, memories, formSubmissions, projects, projectFiles, projectDbTables, InsertChat, InsertMessage, InsertFolder, InsertMemory, InsertFormSubmission, Chat, Message, Folder, Memory, FormSubmission, Project, InsertProject, ProjectFile, InsertProjectFile, ProjectDbTable, InsertProjectDbTable } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -575,4 +575,194 @@ export async function getFormSubmissionStats(filters?: {
   });
   
   return stats;
+}
+
+
+// ============================================
+// Project CRUD Operations (Full-Stack Projects)
+// ============================================
+
+export async function createProject(
+  userId: number,
+  name: string,
+  description?: string,
+  type: 'landing' | 'webapp' | 'api' = 'webapp'
+): Promise<Project | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot create project: database not available");
+    return null;
+  }
+
+  // Generate unique database schema name for this project
+  const dbSchema = `project_${userId}_${Date.now()}`;
+
+  const projectData: InsertProject = {
+    userId,
+    name,
+    description: description || null,
+    type,
+    status: 'draft',
+    dbSchema,
+  };
+
+  const result = await db.insert(projects).values(projectData);
+  const insertId = result[0].insertId;
+
+  const created = await db.select().from(projects).where(eq(projects.id, insertId)).limit(1);
+  return created[0] || null;
+}
+
+export async function getProjectsByUserId(userId: number): Promise<Project[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get projects: database not available");
+    return [];
+  }
+
+  return db.select().from(projects).where(eq(projects.userId, userId)).orderBy(desc(projects.updatedAt));
+}
+
+export async function getProjectById(projectId: number, userId: number): Promise<Project | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get project: database not available");
+    return null;
+  }
+
+  const result = await db.select().from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+
+  const project = result[0];
+  if (project && project.userId !== userId) {
+    return null; // Ownership check
+  }
+  return project || null;
+}
+
+export async function updateProject(
+  projectId: number,
+  updates: Partial<Pick<Project, 'name' | 'description' | 'status' | 'port' | 'pid' | 'buildLog' | 'lastError' | 'publicUrl' | 'config'>>
+): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update project: database not available");
+    return;
+  }
+
+  await db.update(projects).set(updates).where(eq(projects.id, projectId));
+}
+
+export async function deleteProject(projectId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot delete project: database not available");
+    return;
+  }
+
+  // Delete project files first
+  await db.delete(projectFiles).where(eq(projectFiles.projectId, projectId));
+  // Delete project db tables
+  await db.delete(projectDbTables).where(eq(projectDbTables.projectId, projectId));
+  // Delete the project
+  await db.delete(projects).where(eq(projects.id, projectId));
+}
+
+// ============================================
+// Project Files CRUD Operations
+// ============================================
+
+export async function createProjectFile(
+  projectId: number,
+  path: string,
+  content: string,
+  fileType?: string
+): Promise<ProjectFile | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot create project file: database not available");
+    return null;
+  }
+
+  const fileData: InsertProjectFile = {
+    projectId,
+    path,
+    content,
+    fileType: fileType || path.split('.').pop() || 'txt',
+  };
+
+  const result = await db.insert(projectFiles).values(fileData);
+  const insertId = result[0].insertId;
+
+  const created = await db.select().from(projectFiles).where(eq(projectFiles.id, insertId)).limit(1);
+  return created[0] || null;
+}
+
+export async function getProjectFiles(projectId: number): Promise<ProjectFile[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get project files: database not available");
+    return [];
+  }
+
+  return db.select().from(projectFiles).where(eq(projectFiles.projectId, projectId)).orderBy(projectFiles.path);
+}
+
+export async function updateProjectFile(fileId: number, content: string): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update project file: database not available");
+    return;
+  }
+
+  await db.update(projectFiles).set({ content, isGenerated: 0 }).where(eq(projectFiles.id, fileId));
+}
+
+export async function deleteProjectFile(fileId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot delete project file: database not available");
+    return;
+  }
+
+  await db.delete(projectFiles).where(eq(projectFiles.id, fileId));
+}
+
+// ============================================
+// Project Database Tables CRUD
+// ============================================
+
+export async function createProjectDbTable(
+  projectId: number,
+  tableName: string,
+  schema: Record<string, unknown>
+): Promise<ProjectDbTable | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot create project db table: database not available");
+    return null;
+  }
+
+  const tableData: InsertProjectDbTable = {
+    projectId,
+    tableName,
+    schema,
+  };
+
+  const result = await db.insert(projectDbTables).values(tableData);
+  const insertId = result[0].insertId;
+
+  const created = await db.select().from(projectDbTables).where(eq(projectDbTables.id, insertId)).limit(1);
+  return created[0] || null;
+}
+
+export async function getProjectDbTables(projectId: number): Promise<ProjectDbTable[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get project db tables: database not available");
+    return [];
+  }
+
+  return db.select().from(projectDbTables).where(eq(projectDbTables.projectId, projectId));
 }

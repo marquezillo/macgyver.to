@@ -28,7 +28,20 @@ import {
   deleteMemory,
   toggleMemoryActive,
   getMemoriesForContext,
+  createProject,
+  getProjectsByUserId,
+  getProjectById,
+  updateProject,
+  deleteProject,
+  createProjectFile,
+  getProjectFiles,
+  updateProjectFile,
+  deleteProjectFile,
+  createProjectDbTable,
+  getProjectDbTables,
 } from "./db";
+import { generateProject, generateProjectWithAI } from "./projectGenerator";
+import { deployProject, stopProject, getProjectStatus } from "./projectDeployment";
 
 // System prompt for the AI assistant
 const SYSTEM_PROMPT = `Eres un asistente de IA avanzado y versátil. Puedes ayudar con una amplia variedad de tareas:
@@ -419,6 +432,186 @@ export const appRouter = router({
       const context = await getMemoriesForContext(ctx.user.id);
       return { context };
     }),
+  }),
+
+  // Project management
+  project: router({
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        type: z.enum(['landing', 'webapp', 'api']).default('webapp')
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const project = await createProject(
+          ctx.user.id,
+          input.name,
+          input.description,
+          input.type
+        );
+        return project;
+      }),
+
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const projectList = await getProjectsByUserId(ctx.user.id);
+      return projectList;
+    }),
+
+    get: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+        return project;
+      }),
+
+    update: protectedProcedure
+      .input(z.object({
+        projectId: z.number(),
+        name: z.string().optional(),
+        description: z.string().optional()
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+        await updateProject(input.projectId, {
+          name: input.name,
+          description: input.description
+        });
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+        await stopProject(input.projectId);
+        await deleteProject(input.projectId);
+        return { success: true };
+      }),
+
+    // Generate project code with AI
+    generate: protectedProcedure
+      .input(z.object({
+        projectId: z.number(),
+        description: z.string()
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+
+        // Generate files with AI
+        const files = await generateProjectWithAI(input.description, project.name);
+
+        // Save files to database
+        for (const file of files) {
+          await createProjectFile(input.projectId, file.path, file.content, file.fileType);
+        }
+
+        return { success: true, fileCount: files.length };
+      }),
+
+    // Deploy project
+    deploy: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+
+        const result = await deployProject(input.projectId);
+        return result;
+      }),
+
+    // Stop project
+    stop: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+
+        await stopProject(input.projectId);
+        return { success: true };
+      }),
+
+    // Get project status
+    status: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+
+        const status = await getProjectStatus(input.projectId);
+        return status;
+      }),
+
+    // Get project files
+    files: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+
+        const files = await getProjectFiles(input.projectId);
+        return files;
+      }),
+
+    // Update a project file
+    updateFile: protectedProcedure
+      .input(z.object({
+        fileId: z.number(),
+        content: z.string()
+      }))
+      .mutation(async ({ input }) => {
+        await updateProjectFile(input.fileId, input.content);
+        return { success: true };
+      }),
+
+    // Add database table to project
+    addTable: protectedProcedure
+      .input(z.object({
+        projectId: z.number(),
+        tableName: z.string(),
+        schema: z.record(z.string(), z.unknown())
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+
+        const table = await createProjectDbTable(input.projectId, input.tableName, input.schema as Record<string, unknown>);
+        return table;
+      }),
+
+    // Get project database tables
+    tables: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+
+        const tables = await getProjectDbTables(input.projectId);
+        return tables;
+      }),
   }),
 });
 
