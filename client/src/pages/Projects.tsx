@@ -24,7 +24,11 @@ import {
   Loader2,
   RefreshCw,
   FileCode,
-  Settings
+  Settings,
+  Eye,
+  Monitor,
+  Smartphone,
+  Tablet
 } from 'lucide-react';
 import { getLoginUrl } from '@/const';
 
@@ -35,6 +39,8 @@ export default function Projects() {
   const [newProject, setNewProject] = useState<{ name: string; description: string; type: 'landing' | 'webapp' | 'api' }>({ name: '', description: '', type: 'webapp' });
   const [selectedProject, setSelectedProject] = useState<number | null>(null);
   const [deployingProject, setDeployingProject] = useState<number | null>(null);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [startingDevServer, setStartingDevServer] = useState(false);
 
   // Queries
   const { data: projects, isLoading: projectsLoading, refetch: refetchProjects } = trpc.project.list.useQuery(
@@ -50,6 +56,11 @@ export default function Projects() {
   const { data: projectStatus, refetch: refetchStatus } = trpc.project.status.useQuery(
     { projectId: selectedProject! },
     { enabled: !!selectedProject, refetchInterval: 5000 }
+  );
+
+  const { data: devServerStatus, refetch: refetchDevServer } = trpc.project.devServerStatus.useQuery(
+    { projectId: selectedProject! },
+    { enabled: !!selectedProject, refetchInterval: 3000 }
   );
 
   // Mutations
@@ -104,6 +115,41 @@ export default function Projects() {
     }
   });
 
+  const startDevServerMutation = trpc.project.startDevServer.useMutation({
+    onSuccess: (result) => {
+      setStartingDevServer(false);
+      if (result.success) {
+        toast.success('Servidor de desarrollo iniciado');
+      } else {
+        toast.error(result.error || 'Error al iniciar servidor');
+      }
+      refetchDevServer();
+    },
+    onError: (error) => {
+      setStartingDevServer(false);
+      toast.error(error.message);
+    }
+  });
+
+  const stopDevServerMutation = trpc.project.stopDevServer.useMutation({
+    onSuccess: () => {
+      toast.success('Servidor de desarrollo detenido');
+      refetchDevServer();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    }
+  });
+
+  const refreshFilesMutation = trpc.project.refreshFiles.useMutation({
+    onSuccess: () => {
+      toast.success('Archivos actualizados');
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    }
+  });
+
   const handleCreate = () => {
     if (!newProject.name.trim()) {
       toast.error('El nombre es requerido');
@@ -124,6 +170,27 @@ export default function Projects() {
   const handleDelete = (projectId: number) => {
     if (confirm('¿Estás seguro de eliminar este proyecto? Esta acción no se puede deshacer.')) {
       deleteMutation.mutate({ projectId });
+    }
+  };
+
+  const handleStartDevServer = (projectId: number) => {
+    setStartingDevServer(true);
+    startDevServerMutation.mutate({ projectId });
+  };
+
+  const handleStopDevServer = (projectId: number) => {
+    stopDevServerMutation.mutate({ projectId });
+  };
+
+  const handleRefreshFiles = (projectId: number) => {
+    refreshFilesMutation.mutate({ projectId });
+  };
+
+  const getPreviewWidth = () => {
+    switch (previewDevice) {
+      case 'mobile': return '375px';
+      case 'tablet': return '768px';
+      default: return '100%';
     }
   };
 
@@ -342,6 +409,10 @@ export default function Projects() {
             {/* Project Tabs */}
             <Tabs defaultValue="files" className="flex-1 flex flex-col">
               <TabsList className="mx-4 mt-2 w-fit">
+                <TabsTrigger value="preview" className="gap-1">
+                  <Eye className="h-4 w-4" />
+                  Preview
+                </TabsTrigger>
                 <TabsTrigger value="files" className="gap-1">
                   <FileCode className="h-4 w-4" />
                   Archivos
@@ -359,6 +430,131 @@ export default function Projects() {
                   Configuración
                 </TabsTrigger>
               </TabsList>
+
+              <TabsContent value="preview" className="flex-1 m-4 mt-2">
+                <Card className="h-full flex flex-col">
+                  <CardHeader className="flex-shrink-0">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg">Vista Previa en Vivo</CardTitle>
+                        <CardDescription>
+                          {devServerStatus?.running 
+                            ? `Servidor activo en puerto ${devServerStatus.port}` 
+                            : 'Inicia el servidor de desarrollo para ver cambios en tiempo real'
+                          }
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {/* Device selector */}
+                        <div className="flex border rounded-md">
+                          <Button
+                            variant={previewDevice === 'desktop' ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className="rounded-r-none"
+                            onClick={() => setPreviewDevice('desktop')}
+                          >
+                            <Monitor className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant={previewDevice === 'tablet' ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className="rounded-none border-x"
+                            onClick={() => setPreviewDevice('tablet')}
+                          >
+                            <Tablet className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant={previewDevice === 'mobile' ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className="rounded-l-none"
+                            onClick={() => setPreviewDevice('mobile')}
+                          >
+                            <Smartphone className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        {/* Dev server controls */}
+                        {devServerStatus?.running ? (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRefreshFiles(selectedProject!)}
+                              disabled={refreshFilesMutation.isPending}
+                            >
+                              <RefreshCw className={`h-4 w-4 ${refreshFilesMutation.isPending ? 'animate-spin' : ''}`} />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.open(devServerStatus.url, '_blank')}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleStopDevServer(selectedProject!)}
+                              disabled={stopDevServerMutation.isPending}
+                            >
+                              <Square className="h-4 w-4" />
+                              Detener
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => handleStartDevServer(selectedProject!)}
+                            disabled={startingDevServer}
+                          >
+                            {startingDevServer ? (
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            ) : (
+                              <Play className="h-4 w-4 mr-1" />
+                            )}
+                            Iniciar Preview
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex-1 p-4">
+                    {devServerStatus?.running ? (
+                      <div className="h-full flex items-center justify-center bg-muted rounded-lg overflow-hidden">
+                        <div 
+                          style={{ width: getPreviewWidth(), height: '100%' }}
+                          className="bg-white shadow-lg transition-all duration-300"
+                        >
+                          <iframe
+                            src={devServerStatus.url}
+                            className="w-full h-full border-0"
+                            title="Project Preview"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-muted-foreground">
+                        <div className="text-center">
+                          <Eye className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                          <p className="text-lg">Sin preview activo</p>
+                          <p className="text-sm mb-4">Inicia el servidor de desarrollo para ver tu proyecto</p>
+                          <Button
+                            onClick={() => handleStartDevServer(selectedProject!)}
+                            disabled={startingDevServer}
+                          >
+                            {startingDevServer ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Play className="h-4 w-4 mr-2" />
+                            )}
+                            Iniciar Servidor de Desarrollo
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
               <TabsContent value="files" className="flex-1 m-4 mt-2">
                 <Card className="h-full">

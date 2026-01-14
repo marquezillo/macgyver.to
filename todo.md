@@ -82,5 +82,9 @@
 - [x] Implement project deployment system (run projects on server with unique ports)
 - [x] Create project management UI (list projects, view status, manage)
 - [x] Integrate project creation with chat flow
-- [ ] Implement project preview (live dev server per project)
+- [x] Implement project preview (live dev server per project)
+  - [x] Dev server management per project
+  - [x] Port allocation and tracking
+  - [x] Preview UI with iframe embed
+  - [x] Start/stop dev server controls
 - [ ] Implement project export (download as zip)

@@ -42,6 +42,7 @@ import {
 } from "./db";
 import { generateProject, generateProjectWithAI } from "./projectGenerator";
 import { deployProject, stopProject, getProjectStatus } from "./projectDeployment";
+import { startDevServer, stopDevServer, getDevServerStatus, getDevServerLogs, refreshProjectFiles, listRunningDevServers } from "./projectDevServer";
 
 // System prompt for the AI assistant
 const SYSTEM_PROMPT = `Eres un asistente de IA avanzado y versátil. Puedes ayudar con una amplia variedad de tareas:
@@ -611,6 +612,78 @@ export const appRouter = router({
 
         const tables = await getProjectDbTables(input.projectId);
         return tables;
+      }),
+
+    // Start dev server for live preview
+    startDevServer: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+
+        const result = await startDevServer(input.projectId);
+        return result;
+      }),
+
+    // Stop dev server
+    stopDevServer: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+
+        await stopDevServer(input.projectId);
+        return { success: true };
+      }),
+
+    // Get dev server status
+    devServerStatus: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+
+        const status = getDevServerStatus(input.projectId);
+        return status;
+      }),
+
+    // Get dev server logs
+    devServerLogs: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+
+        const logs = getDevServerLogs(input.projectId);
+        return { logs };
+      }),
+
+    // Refresh project files (trigger hot reload)
+    refreshFiles: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+
+        await refreshProjectFiles(input.projectId);
+        return { success: true };
+      }),
+
+    // List all running dev servers (admin)
+    listDevServers: protectedProcedure
+      .query(async () => {
+        const servers = listRunningDevServers();
+        return { servers };
       }),
   }),
 });
