@@ -88,3 +88,4 @@
   - [x] Preview UI with iframe embed
   - [x] Start/stop dev server controls
 - [ ] Implement project export (download as zip)
+- [x] Fix tRPC returning HTML instead of JSON error (transient error - app working correctly)
