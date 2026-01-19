@@ -89,3 +89,12 @@
   - [x] Start/stop dev server controls
 - [ ] Implement project export (download as zip)
 - [x] Fix tRPC returning HTML instead of JSON error (transient error - app working correctly)
+## Responsive Design
+
+- [x] Make sidebar collapsible on mobile (drawer with hamburger menu)
+- [x] Fix chat interface for mobile screens (smaller inputs, compact suggestions)
+- [x] Fix preview panel for mobile (full-screen overlay)
+- [x] Ensure all elements are visible on small screens
+- [x] Make landing sections responsive (Hero, Features, Form, FAQ, CTA, Footer)
+- [x] Make image lightbox responsive for mobile
+- [x] Make canvas and preview responsive

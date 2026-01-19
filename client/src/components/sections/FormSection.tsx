@@ -130,18 +130,18 @@ export function FormSection({ id, content, styles = {}, chatId }: FormSectionPro
         selectSection(id);
       }}
       className={cn(
-        "relative py-16 px-4 sm:px-6 lg:px-8 transition-all duration-200",
+        "relative py-10 md:py-16 px-4 sm:px-6 lg:px-8 transition-all duration-200",
         isSelected && "ring-2 ring-primary ring-offset-2",
         styles?.backgroundColor || "bg-gray-50"
       )}
     >
       <div className="max-w-2xl mx-auto">
         {(content?.title || content?.subtitle) && (
-          <div className="text-center mb-10">
+          <div className="text-center mb-6 md:mb-10">
             {content?.title && (
               <h2 
                 className={cn(
-                  "text-3xl font-bold tracking-tight sm:text-4xl",
+                  "text-2xl md:text-3xl font-bold tracking-tight sm:text-4xl",
                   styles?.textColor || "text-gray-900"
                 )}
               >
@@ -164,7 +164,7 @@ export function FormSection({ id, content, styles = {}, chatId }: FormSectionPro
 
         <div 
           className={cn(
-            "rounded-xl shadow-lg p-8",
+            "rounded-xl shadow-lg p-4 md:p-8",
             styles?.cardBackground || "bg-white"
           )}
         >

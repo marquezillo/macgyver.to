@@ -19,7 +19,7 @@ export function FeaturesSection({ id, content, styles = {} }: FeaturesSectionPro
         selectSection(id);
       }}
       className={cn(
-        "py-16 px-4 sm:px-6 lg:px-8 transition-all duration-200",
+        "py-10 md:py-16 px-4 sm:px-6 lg:px-8 transition-all duration-200",
         isSelected && "ring-2 ring-primary ring-offset-2",
         styles?.backgroundColor || "bg-gray-50"
       )}
@@ -27,13 +27,13 @@ export function FeaturesSection({ id, content, styles = {} }: FeaturesSectionPro
       <div className="max-w-7xl mx-auto">
         <div className="text-center">
           <h2 className={cn(
-            "text-3xl font-extrabold tracking-tight sm:text-4xl",
+            "text-2xl md:text-3xl font-extrabold tracking-tight sm:text-4xl",
             styles?.textColor || "text-gray-900"
           )}>
             {content?.title || "Features"}
           </h2>
           <p className={cn(
-            "mt-4 max-w-2xl mx-auto text-xl",
+            "mt-3 md:mt-4 max-w-2xl mx-auto text-base md:text-xl",
             styles?.textColor ? "opacity-80" : "text-gray-500"
           )}
           style={{ color: styles?.textColor }}
@@ -42,7 +42,7 @@ export function FeaturesSection({ id, content, styles = {} }: FeaturesSectionPro
           </p>
         </div>
 
-        <div className="mt-12 grid gap-8 grid-cols-1 md:grid-cols-3">
+        <div className="mt-8 md:mt-12 grid gap-4 md:gap-8 grid-cols-1 md:grid-cols-3">
           {(content?.items || []).map((item: any, index: number) => (
             <div 
               key={index}

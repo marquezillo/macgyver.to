@@ -46,11 +46,11 @@ export function EditorHeader({ viewMode, setViewMode, compact = false }: EditorH
       <div className="flex items-center gap-4">
         {!compact && <h1 className="font-bold text-xl">Landing Editor</h1>}
         {!compact && <div className="h-6 w-px bg-gray-200" />}
-        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+        <div className="flex items-center gap-0.5 md:gap-1 bg-gray-100 p-0.5 md:p-1 rounded-lg">
           <Button
             variant="ghost"
             size="icon"
-            className={cn("h-8 w-8", viewMode === 'desktop' && "bg-white shadow-sm")}
+            className={cn("h-7 w-7 md:h-8 md:w-8", viewMode === 'desktop' && "bg-white shadow-sm")}
             onClick={() => setViewMode('desktop')}
           >
             <Monitor className="h-4 w-4" />
@@ -58,7 +58,7 @@ export function EditorHeader({ viewMode, setViewMode, compact = false }: EditorH
           <Button
             variant="ghost"
             size="icon"
-            className={cn("h-8 w-8", viewMode === 'tablet' && "bg-white shadow-sm")}
+            className={cn("h-7 w-7 md:h-8 md:w-8", viewMode === 'tablet' && "bg-white shadow-sm")}
             onClick={() => setViewMode('tablet')}
           >
             <Tablet className="h-4 w-4" />
@@ -66,7 +66,7 @@ export function EditorHeader({ viewMode, setViewMode, compact = false }: EditorH
           <Button
             variant="ghost"
             size="icon"
-            className={cn("h-8 w-8", viewMode === 'mobile' && "bg-white shadow-sm")}
+            className={cn("h-7 w-7 md:h-8 md:w-8", viewMode === 'mobile' && "bg-white shadow-sm")}
             onClick={() => setViewMode('mobile')}
           >
             <Smartphone className="h-4 w-4" />

@@ -411,7 +411,7 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
     <div 
       className={cn(
         "flex flex-col h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out shrink-0",
-        isOpen ? "w-[260px]" : "w-0 overflow-hidden border-none"
+        "w-[85vw] max-w-[280px] md:w-[260px]"
       )}
     >
       {/* Header: New Chat */}

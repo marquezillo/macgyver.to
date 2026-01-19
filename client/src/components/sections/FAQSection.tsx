@@ -41,16 +41,16 @@ export function FAQSection({ id, content, styles = {} }: FAQSectionProps) {
         selectSection(id);
       }}
       className={cn(
-        "relative py-16 px-4 sm:px-6 lg:px-8 transition-all duration-200",
+        "relative py-10 md:py-16 px-4 sm:px-6 lg:px-8 transition-all duration-200",
         isSelected && "ring-2 ring-primary ring-offset-2",
         styles?.backgroundColor || "bg-white"
       )}
     >
       <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 md:mb-12">
           <h2 
             className={cn(
-              "text-3xl font-bold tracking-tight sm:text-4xl",
+              "text-2xl md:text-3xl font-bold tracking-tight sm:text-4xl",
               styles?.textColor || "text-gray-900"
             )}
           >
@@ -81,7 +81,7 @@ export function FAQSection({ id, content, styles = {} }: FAQSectionProps) {
                   setOpenIndex(openIndex === index ? null : index);
                 }}
                 className={cn(
-                  "w-full flex items-center justify-between px-6 py-4 text-left transition-colors",
+                  "w-full flex items-center justify-between px-4 md:px-6 py-3 md:py-4 text-left transition-colors text-sm md:text-base",
                   openIndex === index 
                     ? (styles?.accentColor || "bg-primary/5") 
                     : "bg-white hover:bg-gray-50"

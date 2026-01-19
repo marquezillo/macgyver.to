@@ -33,7 +33,7 @@ export function CTASection({ id, content, styles = {} }: CTASectionProps) {
         selectSection(id);
       }}
       className={cn(
-        "relative py-16 px-4 sm:px-6 lg:px-8 transition-all duration-200",
+        "relative py-10 md:py-16 px-4 sm:px-6 lg:px-8 transition-all duration-200",
         isSelected && "ring-2 ring-primary ring-offset-2",
         !hasGradient && (styles?.backgroundColor || "bg-primary")
       )}
@@ -44,7 +44,7 @@ export function CTASection({ id, content, styles = {} }: CTASectionProps) {
       <div className="max-w-4xl mx-auto text-center">
         <h2 
           className={cn(
-            "text-3xl font-bold tracking-tight sm:text-4xl",
+            "text-2xl md:text-3xl font-bold tracking-tight sm:text-4xl",
             styles?.textColor || "text-white"
           )}
         >
@@ -53,7 +53,7 @@ export function CTASection({ id, content, styles = {} }: CTASectionProps) {
         {content?.subtitle && (
           <p 
             className={cn(
-              "mt-4 text-lg max-w-2xl mx-auto",
+              "mt-3 md:mt-4 text-base md:text-lg max-w-2xl mx-auto",
               styles?.textColor ? "opacity-90" : "text-white/90"
             )}
             style={{ color: styles?.textColor }}

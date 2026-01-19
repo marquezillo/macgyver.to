@@ -128,48 +128,48 @@ export function ImageLightbox({ src, alt = 'Imagen', isOpen, onClose }: ImageLig
     >
       {/* Toolbar */}
       <div 
-        className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-full px-4 py-2 z-10"
+        className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1 md:gap-2 bg-white/10 backdrop-blur-md rounded-full px-2 md:px-4 py-1.5 md:py-2 z-10"
         onClick={e => e.stopPropagation()}
       >
         <button
           onClick={handleZoomOut}
-          className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+          className="p-1.5 md:p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
           title="Alejar (-)"
         >
-          <ZoomOut size={20} />
+          <ZoomOut className="w-4 h-4 md:w-5 md:h-5" />
         </button>
-        <span className="text-white/80 text-sm min-w-[60px] text-center">
+        <span className="text-white/80 text-xs md:text-sm min-w-[50px] md:min-w-[60px] text-center">
           {Math.round(scale * 100)}%
         </span>
         <button
           onClick={handleZoomIn}
-          className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+          className="p-1.5 md:p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
           title="Acercar (+)"
         >
-          <ZoomIn size={20} />
+          <ZoomIn className="w-4 h-4 md:w-5 md:h-5" />
         </button>
         <div className="w-px h-6 bg-white/20 mx-1" />
         <button
           onClick={handleRotate}
-          className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+          className="p-1.5 md:p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
           title="Rotar (R)"
         >
-          <RotateCw size={20} />
+          <RotateCw className="w-4 h-4 md:w-5 md:h-5" />
         </button>
         <button
           onClick={handleReset}
-          className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+          className="p-1.5 md:p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
           title="Restablecer (0)"
         >
-          <Maximize2 size={20} />
+          <Maximize2 className="w-4 h-4 md:w-5 md:h-5" />
         </button>
         <div className="w-px h-6 bg-white/20 mx-1" />
         <button
           onClick={handleDownload}
-          className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+          className="p-1.5 md:p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
           title="Descargar"
         >
-          <Download size={20} />
+          <Download className="w-4 h-4 md:w-5 md:h-5" />
         </button>
       </div>
 
@@ -206,7 +206,7 @@ export function ImageLightbox({ src, alt = 'Imagen', isOpen, onClose }: ImageLig
       </div>
 
       {/* Keyboard shortcuts hint */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs hidden md:block">
         Esc: cerrar · +/-: zoom · R: rotar · 0: restablecer · Scroll: zoom
       </div>
     </div>
@@ -282,7 +282,7 @@ export function ChatImagePreview({ src, alt = 'Imagen generada' }: ChatImagePrev
               {/* Hover overlay */}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                 <div className="flex items-center gap-2 text-white text-sm font-medium">
-                  <ZoomIn size={20} />
+                  <ZoomIn className="w-4 h-4 md:w-5 md:h-5" />
                   <span>Ver imagen</span>
                 </div>
               </div>

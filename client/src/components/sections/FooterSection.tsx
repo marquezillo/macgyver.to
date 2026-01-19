@@ -79,18 +79,18 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
         selectSection(id);
       }}
       className={cn(
-        "relative py-12 px-4 sm:px-6 lg:px-8 transition-all duration-200",
+        "relative py-8 md:py-12 px-4 sm:px-6 lg:px-8 transition-all duration-200",
         isSelected && "ring-2 ring-primary ring-offset-2",
         styles?.backgroundColor || "bg-gray-900"
       )}
     >
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
           {/* Company Info */}
           <div className="lg:col-span-1">
             <h3 
               className={cn(
-                "text-xl font-bold mb-4",
+                "text-lg md:text-xl font-bold mb-3 md:mb-4",
                 styles?.textColor || "text-white"
               )}
             >
@@ -217,7 +217,7 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
         {/* Copyright */}
         <div 
           className={cn(
-            "mt-12 pt-8 border-t text-center text-sm",
+            "mt-8 md:mt-12 pt-6 md:pt-8 border-t text-center text-xs md:text-sm",
             styles?.textColor ? "opacity-60 border-current/20" : "text-gray-400 border-gray-800"
           )}
           style={{ color: styles?.textColor }}

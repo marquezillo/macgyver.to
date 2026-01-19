@@ -42,10 +42,10 @@ export function Canvas() {
 
   return (
     <div 
-      className="flex-1 bg-gray-100 overflow-y-auto p-8"
+      className="flex-1 bg-gray-100 overflow-y-auto p-2 md:p-8"
       onClick={() => selectSection(null)}
     >
-      <div className="max-w-5xl mx-auto bg-white shadow-lg min-h-[800px] rounded-lg overflow-hidden">
+      <div className="max-w-5xl mx-auto bg-white shadow-lg min-h-[400px] md:min-h-[800px] rounded-lg overflow-hidden">
         <DndContext 
           sensors={sensors} 
           collisionDetection={closestCenter} 
@@ -62,7 +62,7 @@ export function Canvas() {
         </DndContext>
         
         {sections.length === 0 && (
-          <div className="h-full flex items-center justify-center text-gray-400 p-20">
+          <div className="h-full flex items-center justify-center text-gray-400 p-8 md:p-20 text-center text-sm md:text-base">
             Drag and drop sections here or click to add
           </div>
         )}

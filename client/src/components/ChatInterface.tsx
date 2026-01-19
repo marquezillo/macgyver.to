@@ -540,19 +540,19 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       >
         {isEmptyChat ? (
           /* Welcome Screen with Suggestions */
-          <div className="h-full flex flex-col items-center justify-center p-8">
+          <div className="h-full flex flex-col items-center justify-center p-4 md:p-8">
             <div className="max-w-2xl w-full text-center space-y-8">
               {/* Logo/Title */}
               <div className="space-y-3">
                 <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-200">
                   <Bot className="w-8 h-8 text-white" />
                 </div>
-                <h1 className="text-2xl font-semibold text-gray-900">¿En qué puedo ayudarte?</h1>
+                <h1 className="text-xl md:text-2xl font-semibold text-gray-900">¿En qué puedo ayudarte?</h1>
                 <p className="text-gray-500 text-sm">Selecciona una sugerencia o escribe tu mensaje</p>
               </div>
 
               {/* Suggestion Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
                 {SUGGESTIONS.map((suggestion, index) => {
                   const Icon = suggestion.icon;
                   const colorClasses: Record<string, string> = {
@@ -579,21 +579,21 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                     <button
                       key={index}
                       onClick={() => handleSuggestionClick(suggestion.prompt, (suggestion as any).isResearch, (suggestion as any).isImage, (suggestion as any).isFileUpload, (suggestion as any).isCodeExec)}
-                      className={`group p-4 rounded-xl border border-gray-200 bg-white text-left transition-all duration-200 ${colorClasses[suggestion.color]}`}
+                      className={`group p-3 md:p-4 rounded-xl border border-gray-200 bg-white text-left transition-all duration-200 ${colorClasses[suggestion.color]}`}
                     >
-                      <Icon className={`w-5 h-5 text-gray-400 mb-2 transition-colors ${iconColorClasses[suggestion.color]}`} />
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{suggestion.label}</span>
+                      <Icon className={`w-4 h-4 md:w-5 md:h-5 text-gray-400 mb-1.5 md:mb-2 transition-colors ${iconColorClasses[suggestion.color]}`} />
+                      <span className="text-xs md:text-sm font-medium text-gray-700 group-hover:text-gray-900 block">{suggestion.label}</span>
                       {(suggestion as any).isResearch && (
-                        <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded-full font-medium">Deep</span>
+                        <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded-full font-medium">Deep</span>
                       )}
                       {(suggestion as any).isImage && (
-                        <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-pink-100 text-pink-600 rounded-full font-medium">AI</span>
+                        <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 bg-pink-100 text-pink-600 rounded-full font-medium">AI</span>
                       )}
                       {(suggestion as any).isFileUpload && (
-                        <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-cyan-100 text-cyan-600 rounded-full font-medium">PDF</span>
+                        <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 bg-cyan-100 text-cyan-600 rounded-full font-medium">PDF</span>
                       )}
                       {(suggestion as any).isCodeExec && (
-                        <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded-full font-medium">Python</span>
+                        <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded-full font-medium">Python</span>
                       )}
                     </button>
                   );
@@ -603,7 +603,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
           </div>
         ) : (
           /* Conversation Messages */
-          <div className="p-4 md:p-8">
+          <div className="p-3 md:p-8">
             <div className="max-w-2xl mx-auto space-y-6 pb-4">
               {messagesLoading && chatId ? (
                 <div className="flex items-center justify-center py-8">
@@ -754,7 +754,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       </div>
 
       {/* Input Area - Fixed at bottom */}
-      <div className="p-4 bg-white border-t border-gray-100 flex-shrink-0">
+      <div className="p-3 md:p-4 bg-white border-t border-gray-100 flex-shrink-0">
         <div className="max-w-2xl mx-auto">
           {/* File attachment preview */}
           {uploadedFile && (
@@ -794,7 +794,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
               type="button"
               size="icon"
               variant="outline"
-              className="h-12 w-12 rounded-xl border-gray-200 hover:bg-gray-50"
+              className="h-10 w-10 md:h-12 md:w-12 rounded-xl border-gray-200 hover:bg-gray-50"
               onClick={() => fileInputRef.current?.click()}
               disabled={isProcessing || isUploading}
             >
@@ -809,13 +809,13 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={uploadedFile ? "Describe qué quieres analizar del archivo..." : "Escribe un mensaje..."}
-              className="flex-1 h-12 px-4 rounded-xl border-gray-200 focus-visible:ring-violet-500"
+              className="flex-1 h-10 md:h-12 px-3 md:px-4 rounded-xl border-gray-200 focus-visible:ring-violet-500 text-sm md:text-base"
               disabled={isProcessing}
             />
             <Button 
               type="submit" 
               size="icon" 
-              className="h-12 w-12 rounded-xl bg-gray-900 hover:bg-gray-800"
+              className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gray-900 hover:bg-gray-800"
               disabled={isProcessing || (!input.trim() && !uploadedFile)}
             >
               <Send className="w-4 h-4" />

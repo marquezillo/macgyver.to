@@ -19,7 +19,7 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
         selectSection(id);
       }}
       className={cn(
-        "relative py-20 px-4 sm:px-6 lg:px-8 transition-all duration-200",
+        "relative py-12 md:py-20 px-4 sm:px-6 lg:px-8 transition-all duration-200",
         isSelected && "ring-2 ring-primary ring-offset-2",
         styles?.backgroundColor || "bg-white"
       )}
@@ -36,7 +36,7 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
       <div className="relative max-w-7xl mx-auto text-center">
         <h1 
           className={cn(
-            "text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl",
+            "text-2xl sm:text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl",
             styles?.textColor || "text-gray-900"
           )}
         >
@@ -44,7 +44,7 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
         </h1>
         <p 
           className={cn(
-            "mt-6 max-w-2xl mx-auto text-xl",
+            "mt-4 md:mt-6 max-w-2xl mx-auto text-base md:text-xl",
             styles?.textColor ? "opacity-90" : "text-gray-500"
           )}
           style={{ color: styles?.textColor }}
