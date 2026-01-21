@@ -156,10 +156,10 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
     setResearchSources([]);
     
     try {
-      const response = await fetch('/api/research', {
+      const response = await fetch('/api/research/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, chatId: currentChatId }),
+        body: JSON.stringify({ question: query, chatId: currentChatId }),
       });
 
       if (!response.ok) {
@@ -250,6 +250,9 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       let fullContent = '';
       let hasArtifact = false;
 
+      let finalContent = '';
+      let isGeneratingLanding = false;
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -261,20 +264,45 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              if (data.content) {
+              
+              // Handle done event - this contains the clean message
+              if (data.type === 'done') {
+                // Use the clean content from done event
+                if (data.content) {
+                  finalContent = data.content;
+                }
+                // Handle artifact
+                if (data.artifactData) {
+                  hasArtifact = true;
+                  setSections(data.artifactData.sections || []);
+                  
+                  // Save artifact to database
+                  if (currentChatId) {
+                    updateChatArtifact.mutate({
+                      chatId: currentChatId,
+                      artifactData: data.artifactData
+                    });
+                  }
+                }
+              } else if (data.type === 'chunk' && data.content) {
+                // Regular streaming chunk
                 fullContent += data.content;
-                setStreamingContent(fullContent);
-              }
-              if (data.artifact) {
-                hasArtifact = true;
-                setSections(data.artifact.sections || []);
                 
-                // Save artifact to database
-                if (currentChatId) {
-                  updateChatArtifact.mutate({
-                    chatId: currentChatId,
-                    artifactData: data.artifact
-                  });
+                // Check if this looks like a landing JSON being generated
+                if (fullContent.includes('"type": "landing"') || fullContent.includes('"type":"landing"') || 
+                    fullContent.includes('```json') && fullContent.includes('"sections"')) {
+                  isGeneratingLanding = true;
+                  // Show a friendly message instead of JSON
+                  setStreamingContent('🎨 Generando tu landing page...\n\nEstoy diseñando las secciones, colores y contenido para tu página. En unos segundos podrás ver el preview a la derecha.');
+                } else if (!isGeneratingLanding) {
+                  // Only show content if not generating a landing
+                  setStreamingContent(fullContent);
+                }
+              } else if (data.content && !data.type) {
+                // Legacy format support
+                fullContent += data.content;
+                if (!isGeneratingLanding) {
+                  setStreamingContent(fullContent);
                 }
               }
             } catch {
@@ -284,7 +312,9 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
         }
       }
 
-      return { content: fullContent, hasArtifact };
+      // Use finalContent if we got a clean message from done event, otherwise use accumulated content
+      const resultContent = finalContent || (isGeneratingLanding ? 'He creado tu landing page. Puedes ver el preview a la derecha.' : fullContent);
+      return { content: resultContent, hasArtifact };
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
         return { content: streamingContent, hasArtifact: false };
@@ -393,6 +423,9 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
         });
       }
 
+      // Check if this is a research request (auto-detect "Investiga [" pattern)
+      const isResearchRequest = isResearch || messageContent.toLowerCase().startsWith('investiga [') || messageContent.toLowerCase().startsWith('investiga:') || messageContent.toLowerCase().includes('investiga sobre');
+
       // Check if this is an image generation request
       if (isImage || messageContent.toLowerCase().includes('genera una imagen') || messageContent.toLowerCase().includes('crea una imagen')) {
         // Generate image
@@ -425,7 +458,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
         } else {
           throw new Error(result.error || 'Error generating image');
         }
-      } else if (isResearch) {
+      } else if (isResearchRequest) {
         // Use deep research
         const result = await streamResearch(messageContent, currentChatId ?? null);
         

@@ -6,13 +6,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
 interface FormField {
   id: string;
   label: string;
   type: 'text' | 'email' | 'tel' | 'date' | 'select' | 'textarea' | 'number';
   placeholder?: string;
   required?: boolean;
-  options?: string[]; // For select fields
+  options?: (string | SelectOption)[]; // For select fields - can be strings or {value, label} objects
 }
 
 interface FormSectionProps {
@@ -212,9 +217,14 @@ export function FormSection({ id, content, styles = {}, chatId }: FormSectionPro
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="">{field.placeholder || 'Selecciona una opción'}</option>
-                      {field.options?.map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
+                      {field.options?.map((option, idx) => {
+                        // Handle both string options and {value, label} objects
+                        const optionValue = typeof option === 'string' ? option : option.value;
+                        const optionLabel = typeof option === 'string' ? option : option.label;
+                        return (
+                          <option key={`${optionValue}-${idx}`} value={optionValue}>{optionLabel}</option>
+                        );
+                      })}
                     </select>
                   ) : (
                     <Input

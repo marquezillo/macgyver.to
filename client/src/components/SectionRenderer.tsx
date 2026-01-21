@@ -5,6 +5,7 @@ import { FormSection } from './sections/FormSection';
 import { FAQSection } from './sections/FAQSection';
 import { CTASection } from './sections/CTASection';
 import { FooterSection } from './sections/FooterSection';
+import { TestimonialsSection } from './sections/TestimonialsSection';
 
 interface SectionRendererProps {
   section: Section;
@@ -24,6 +25,8 @@ export function SectionRenderer({ section }: SectionRendererProps) {
       return <CTASection id={section.id} content={section.content} styles={section.styles || {}} />;
     case 'footer':
       return <FooterSection id={section.id} content={section.content} styles={section.styles || {}} />;
+    case 'testimonials':
+      return <TestimonialsSection id={section.id} content={section.content} styles={section.styles || {}} />;
     default:
       return (
         <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">

@@ -1,6 +1,6 @@
 import { useEditorStore } from '@/store/editorStore';
 import { cn } from '@/lib/utils';
-import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, Youtube, Globe, Mail, Phone, MapPin } from 'lucide-react';
 
 interface FooterLink {
   label: string;
@@ -13,7 +13,7 @@ interface FooterColumn {
 }
 
 interface SocialLink {
-  platform: 'facebook' | 'twitter' | 'instagram' | 'linkedin';
+  platform: string; // Allow any platform name
   href: string;
 }
 
@@ -36,11 +36,15 @@ interface FooterSectionProps {
   };
 }
 
-const socialIcons = {
+const socialIcons: Record<string, typeof Facebook> = {
   facebook: Facebook,
   twitter: Twitter,
   instagram: Instagram,
   linkedin: Linkedin,
+  youtube: Youtube,
+  tiktok: Globe, // Fallback for tiktok
+  whatsapp: Globe, // Fallback for whatsapp
+  pinterest: Globe, // Fallback for pinterest
 };
 
 export function FooterSection({ id, content, styles = {} }: FooterSectionProps) {
@@ -193,7 +197,7 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
             </h4>
             <div className="flex gap-4">
               {socialLinks.map((social: SocialLink, index: number) => {
-                const Icon = socialIcons[social.platform];
+                const Icon = socialIcons[social.platform.toLowerCase()] || Globe;
                 return (
                   <a
                     key={index}

@@ -11,6 +11,7 @@ import { invokeLLMStream } from "./llm";
 import { sdk } from "./sdk";
 import { performDeepResearchStream } from "../deepResearch";
 import { storagePut } from "../storage";
+import { generateImage } from "./imageGeneration";
 import { getMemoriesForContext, getUserByOpenId, createFormSubmission } from "../db";
 import { extractMemoriesFromConversation } from "../memoryExtraction";
 import { analyzeUrlStream } from "../urlAnalysis";
@@ -91,7 +92,8 @@ Cuando el usuario te pida crear una landing page, página web, o diseño web, ge
       "type": "features",
       "content": {
         "title": "¿Por qué elegirnos?",
-        "features": [
+        "subtitle": "Descubre nuestras ventajas",
+        "items": [
           { "title": "Característica 1", "description": "Descripción detallada" },
           { "title": "Característica 2", "description": "Descripción detallada" },
           { "title": "Característica 3", "description": "Descripción detallada" }
@@ -132,15 +134,22 @@ Cuando el usuario te pida crear una landing page, página web, o diseño web, ge
       "type": "footer",
       "content": {
         "companyName": "Nombre de la empresa",
-        "links": [
-          { "title": "Inicio", "url": "#" },
-          { "title": "Servicios", "url": "#features" },
-          { "title": "Contacto", "url": "#form" }
+        "description": "Descripción breve de la empresa",
+        "columns": [
+          {
+            "title": "Servicios",
+            "links": [
+              { "label": "Inicio", "href": "#" },
+              { "label": "Características", "href": "#features" },
+              { "label": "Contacto", "href": "#form" }
+            ]
+          }
         ],
         "socialLinks": [
-          { "platform": "facebook", "url": "#" },
-          { "platform": "instagram", "url": "#" }
-        ]
+          { "platform": "facebook", "href": "#" },
+          { "platform": "instagram", "href": "#" }
+        ],
+        "copyright": "© 2025 Todos los derechos reservados."
       }
     }
   ],
@@ -234,17 +243,32 @@ async function startServer() {
       let displayMessage = fullContent;
 
       try {
-        const jsonMatch = fullContent.match(/\{[\s\S]*"type"\s*:\s*"landing"[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
+        // First try to extract JSON from markdown code blocks
+        const codeBlockMatch = fullContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+        let jsonString = '';
+        
+        if (codeBlockMatch) {
+          jsonString = codeBlockMatch[1].trim();
+        } else {
+          // Fallback: try to find raw JSON
+          const jsonMatch = fullContent.match(/\{[\s\S]*"type"\s*:\s*"landing"[\s\S]*\}/);
+          if (jsonMatch) {
+            jsonString = jsonMatch[0];
+          }
+        }
+        
+        if (jsonString) {
+          const parsed = JSON.parse(jsonString);
           if (parsed?.type === 'landing') {
             hasArtifact = true;
             artifactData = { sections: parsed.sections };
-            displayMessage = parsed.message || fullContent;
+            // Use the message from JSON or generate a friendly message
+            displayMessage = parsed.message || 'He creado tu landing page. Puedes ver el preview a la derecha y editar las secciones haciendo clic en ellas.';
           }
         }
-      } catch {
-        // Not a JSON response
+      } catch (parseError) {
+        console.error('[AI Stream] JSON parse error:', parseError);
+        // Not a JSON response, keep original content
       }
 
       // Extract memories in the background (non-blocking)
@@ -314,6 +338,47 @@ async function startServer() {
     } catch (error) {
       console.error("File upload error:", error);
       res.status(500).json({ error: "Failed to upload file" });
+    }
+  });
+
+  // Image generation endpoint
+  app.post("/api/generate-image", async (req, res) => {
+    try {
+      // Verify authentication
+      let user;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        user = null;
+      }
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { prompt } = req.body as { prompt: string };
+      
+      if (!prompt || typeof prompt !== "string") {
+        res.status(400).json({ error: "Prompt string required" });
+        return;
+      }
+
+      console.log("[Image Generation] Generating image for prompt:", prompt);
+
+      const result = await generateImage({ prompt });
+      
+      console.log("[Image Generation] Image generated successfully:", result.url);
+
+      res.json({
+        success: true,
+        url: result.url,
+      });
+    } catch (error) {
+      console.error("Image generation error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Failed to generate image" 
+      });
     }
   });
 

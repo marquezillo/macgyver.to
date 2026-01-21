@@ -106,3 +106,20 @@
 - [x] Configurar API key de Gemini (2.0 Flash)
 - [x] Sistema de fallback entre proveedores
 - [x] Crear archivo env.example con documentación
+
+
+## Componentes Faltantes
+- [x] Implementar TestimonialsSection component
+- [ ] Implementar PricingSection component (opcional)
+
+## Testing de Funcionalidades
+- [x] Probar chat básico con Claude - FUNCIONA
+- [x] Probar generación de landing completa - FUNCIONA (mensaje amigable + preview)
+- [x] Probar Deep Research - NO FUNCIONA (APIs de búsqueda no disponibles en Manus)
+- [x] Probar generación de imágenes - FUNCIONA (DALL-E 3)
+- [ ] Probar análisis de archivos - PENDIENTE
+- [ ] Probar ejecución de código - PENDIENTE
+- [x] Probar sistema de proyectos - FUNCIONA (crear, ver, pestañas)
+- [x] Probar memoria/contexto - FUNCIONA (ver, editar, eliminar memorias)
+- [x] Probar carpetas/organización - FUNCIONA (crear carpetas)
+- [x] Probar modo oscuro - FUNCIONA (toggle dark/light)

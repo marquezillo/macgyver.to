@@ -121,8 +121,14 @@ ${assistantResponse.substring(0, 500)}...
         ? responseContent.find(c => c.type === 'text')?.text || ''
         : '';
 
-    // Parse the JSON response
-    const parsed: ExtractionResult = JSON.parse(textContent);
+    // Parse the JSON response - clean markdown code blocks if present
+    let cleanedContent = textContent.trim();
+    if (cleanedContent.startsWith('```json')) {
+      cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanedContent.startsWith('```')) {
+      cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    const parsed: ExtractionResult = JSON.parse(cleanedContent);
 
     if (!parsed.shouldExtract || !parsed.memories || parsed.memories.length === 0) {
       return [];
