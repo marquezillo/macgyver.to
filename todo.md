@@ -98,3 +98,11 @@
 - [x] Make landing sections responsive (Hero, Features, Form, FAQ, CTA, Footer)
 - [x] Make image lightbox responsive for mobile
 - [x] Make canvas and preview responsive
+
+## Configuración de APIs
+
+- [x] Configurar API key de Anthropic (Claude Sonnet 4)
+- [x] Configurar API key de OpenAI (GPT-4o + DALL-E 3)
+- [x] Configurar API key de Gemini (2.0 Flash)
+- [x] Sistema de fallback entre proveedores
+- [x] Crear archivo env.example con documentación

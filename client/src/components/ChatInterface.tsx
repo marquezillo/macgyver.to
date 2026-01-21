@@ -226,7 +226,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
     abortControllerRef.current = new AbortController();
     
     try {
-      const response = await fetch('/api/chat/stream', {
+      const response = await fetch('/api/ai/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
