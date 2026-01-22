@@ -58,6 +58,22 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // Serve generated images from dist/generated-images
+  const generatedImagesPath =
+    process.env.NODE_ENV === "development"
+      ? path.resolve(import.meta.dirname, "../..", "dist", "generated-images")
+      : path.resolve(import.meta.dirname, "generated-images");
+  
+  if (fs.existsSync(generatedImagesPath)) {
+    app.use("/generated-images", express.static(generatedImagesPath));
+    console.log(`[Static] Serving generated images from: ${generatedImagesPath}`);
+  } else {
+    // Create the directory if it doesn't exist
+    fs.mkdirSync(generatedImagesPath, { recursive: true });
+    app.use("/generated-images", express.static(generatedImagesPath));
+    console.log(`[Static] Created and serving generated images from: ${generatedImagesPath}`);
+  }
+
   app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist
