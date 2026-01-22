@@ -150,14 +150,13 @@ ${assistantResponse.substring(0, 500)}...
 
     // Save new memories to database
     for (const memory of newMemories) {
-      await createMemory(
-        userId,
-        memory.category,
-        memory.content,
-        'auto',
-        chatId,
-        memory.importance
-      );
+      await createMemory(userId, {
+        category: memory.category,
+        content: memory.content,
+        source: 'auto',
+        sourceChatId: chatId,
+        importance: memory.importance
+      });
     }
 
     return newMemories;

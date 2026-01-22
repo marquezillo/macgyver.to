@@ -125,10 +125,13 @@ async function startServer() {
       }
 
       // Get user's long-term memory context
-      const dbUser = await getUserByOpenId(user.openId);
       let memoryContext = '';
-      if (dbUser) {
-        memoryContext = await getMemoriesForContext(dbUser.id);
+      if (user.openId) {
+        const dbUser = await getUserByOpenId(user.openId);
+        if (dbUser) {
+          const memories = await getMemoriesForContext(dbUser.id);
+          memoryContext = memories.map(m => `- ${m.content}`).join('\n');
+        }
       }
 
       // Build conversation history for LLM with memory context
@@ -205,12 +208,15 @@ async function startServer() {
 
       // Extract memories in the background (non-blocking)
       const lastUserMessage = messages.filter(m => m.role === 'user').pop();
-      if (lastUserMessage && dbUser?.id) {
-        extractMemoriesFromConversation(
-          dbUser.id,
-          lastUserMessage.content,
-          displayMessage
-        ).catch(err => console.error('[MemoryExtraction] Background extraction failed:', err));
+      if (lastUserMessage && user.openId) {
+        const memoryUser = await getUserByOpenId(user.openId);
+        if (memoryUser?.id) {
+          extractMemoriesFromConversation(
+            memoryUser.id,
+            lastUserMessage.content,
+            displayMessage
+          ).catch(err => console.error('[MemoryExtraction] Background extraction failed:', err));
+        }
       }
 
       // Log artifact data for debugging

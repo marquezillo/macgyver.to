@@ -41,7 +41,16 @@ import {
   deleteProjectFile,
   createProjectDbTable,
   getProjectDbTables,
+  // Auth functions
+  createUser,
+  authenticateUser,
+  getUserById,
+  getUserByEmail,
+  updateUserProfile,
+  changeUserPassword,
+  deleteUserAccount,
 } from "./db";
+import { SignJWT, jwtVerify } from 'jose';
 import { generateProject, generateProjectWithAI } from "./projectGenerator";
 import { deployProject, stopProject, getProjectStatus } from "./projectDeployment";
 import { startDevServer, stopDevServer, getDevServerStatus, getDevServerLogs, refreshProjectFiles, listRunningDevServers } from "./projectDevServer";
@@ -208,7 +217,85 @@ Para cualquier otra consulta, responde de forma natural y útil en español.`;
 export const appRouter = router({
   system: systemRouter,
   auth: router({
+    // Get current user
     me: publicProcedure.query(opts => opts.ctx.user),
+    
+    // Register new user
+    register: publicProcedure
+      .input(z.object({
+        name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
+        email: z.string().email('Email inválido'),
+        password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const user = await createUser({
+            name: input.name,
+            email: input.email,
+            password: input.password,
+          });
+          
+          // Create JWT token
+          const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret');
+          const token = await new SignJWT({ userId: user.id, email: user.email })
+            .setProtectedHeader({ alg: 'HS256' })
+            .setExpirationTime('365d')
+            .sign(secret);
+          
+          // Set cookie
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: 365 * 24 * 60 * 60 * 1000 });
+          
+          return {
+            success: true,
+            user: {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+            },
+          };
+        } catch (error: any) {
+          throw new Error(error.message || 'Error al registrar usuario');
+        }
+      }),
+    
+    // Login user
+    login: publicProcedure
+      .input(z.object({
+        email: z.string().email('Email inválido'),
+        password: z.string().min(1, 'La contraseña es requerida'),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const user = await authenticateUser(input.email, input.password);
+        
+        if (!user) {
+          throw new Error('Email o contraseña incorrectos');
+        }
+        
+        // Create JWT token
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret');
+        const token = await new SignJWT({ userId: user.id, email: user.email })
+          .setProtectedHeader({ alg: 'HS256' })
+          .setExpirationTime('365d')
+          .sign(secret);
+        
+        // Set cookie
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: 365 * 24 * 60 * 60 * 1000 });
+        
+        return {
+          success: true,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+          },
+        };
+      }),
+    
+    // Logout user
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -216,6 +303,61 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+    
+    // Update profile
+    updateProfile: protectedProcedure
+      .input(z.object({
+        name: z.string().min(2).optional(),
+        theme: z.enum(['light', 'dark', 'system']).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const user = await updateUserProfile(ctx.user.id, input);
+        return {
+          success: true,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            theme: user.theme,
+          },
+        };
+      }),
+    
+    // Change password
+    changePassword: protectedProcedure
+      .input(z.object({
+        currentPassword: z.string().min(1, 'La contraseña actual es requerida'),
+        newPassword: z.string().min(6, 'La nueva contraseña debe tener al menos 6 caracteres'),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await changeUserPassword(ctx.user.id, input.currentPassword, input.newPassword);
+          return { success: true };
+        } catch (error: any) {
+          throw new Error(error.message || 'Error al cambiar contraseña');
+        }
+      }),
+    
+    // Delete account
+    deleteAccount: protectedProcedure
+      .input(z.object({
+        password: z.string().min(1, 'La contraseña es requerida para confirmar'),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Verify password first
+        const user = await authenticateUser(ctx.user.email || '', input.password);
+        if (!user) {
+          throw new Error('Contraseña incorrecta');
+        }
+        
+        await deleteUserAccount(ctx.user.id);
+        
+        // Clear cookie
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+        
+        return { success: true };
+      }),
   }),
 
   // AI/LLM operations
@@ -345,7 +487,11 @@ export const appRouter = router({
         return chat;
       }),
 
-    list: protectedProcedure.query(async ({ ctx }) => {
+    list: publicProcedure.query(async ({ ctx }) => {
+      // Return empty array if not authenticated
+      if (!ctx.user) {
+        return [];
+      }
       const chatList = await getChatsByUserId(ctx.user.id);
       return chatList;
     }),
@@ -359,16 +505,18 @@ export const appRouter = router({
 
     updateTitle: protectedProcedure
       .input(z.object({ chatId: z.number(), title: z.string() }))
-      .mutation(async ({ input }) => {
-        await updateChatTitle(input.chatId, input.title);
+      .mutation(async ({ ctx, input }) => {
+        await updateChatTitle(input.chatId, ctx.user.id, input.title);
         return { success: true };
       }),
 
     updateArtifact: publicProcedure
       .input(z.object({ chatId: z.number(), artifactData: z.unknown() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         console.log('[updateArtifact] Saving artifact for chat:', input.chatId);
-        await updateChatArtifact(input.chatId, input.artifactData);
+        // Note: This is public procedure, so ctx.user might be null
+        const userId = ctx.user?.id || 1; // Fallback for anonymous users
+        await updateChatArtifact(input.chatId, userId, input.artifactData);
         console.log('[updateArtifact] Artifact saved successfully');
         return { success: true };
       }),
@@ -380,7 +528,7 @@ export const appRouter = router({
         if (!chat) {
           throw new Error("Chat not found or access denied");
         }
-        await deleteChat(input.chatId);
+        await deleteChat(input.chatId, ctx.user.id);
         return { success: true };
       }),
 
@@ -391,7 +539,7 @@ export const appRouter = router({
         if (!chat) {
           throw new Error("Chat not found or access denied");
         }
-        await toggleChatFavorite(input.chatId, input.isFavorite);
+        await toggleChatFavorite(input.chatId, ctx.user.id, input.isFavorite);
         return { success: true };
       }),
 
@@ -402,14 +550,14 @@ export const appRouter = router({
         if (!chat) {
           throw new Error("Chat not found or access denied");
         }
-        await moveChatToFolder(input.chatId, input.folderId);
+        await moveChatToFolder(input.chatId, ctx.user.id, input.folderId);
         return { success: true };
       }),
 
     listByFolder: protectedProcedure
       .input(z.object({ folderId: z.number() }))
-      .query(async ({ input }) => {
-        const chatList = await getChatsByFolderId(input.folderId);
+      .query(async ({ ctx, input }) => {
+        const chatList = await getChatsByFolderId(input.folderId, ctx.user.id);
         return chatList;
       }),
   }),
@@ -462,7 +610,11 @@ export const appRouter = router({
         return folder;
       }),
 
-    list: protectedProcedure.query(async ({ ctx }) => {
+    list: publicProcedure.query(async ({ ctx }) => {
+      // Return empty array if not authenticated
+      if (!ctx.user) {
+        return [];
+      }
       const folderList = await getFoldersByUserId(ctx.user.id);
       return folderList;
     }),
@@ -474,15 +626,15 @@ export const appRouter = router({
         color: z.string().optional(),
         icon: z.string().optional()
       }))
-      .mutation(async ({ input }) => {
-        await updateFolder(input.folderId, input.name, input.color, input.icon);
+      .mutation(async ({ ctx, input }) => {
+        await updateFolder(input.folderId, ctx.user.id, { name: input.name, color: input.color, icon: input.icon });
         return { success: true };
       }),
 
     delete: protectedProcedure
       .input(z.object({ folderId: z.number() }))
-      .mutation(async ({ input }) => {
-        await deleteFolder(input.folderId);
+      .mutation(async ({ ctx, input }) => {
+        await deleteFolder(input.folderId, ctx.user.id);
         return { success: true };
       }),
   }),
@@ -535,14 +687,12 @@ export const appRouter = router({
         importance: z.number().min(1).max(10).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const memory = await createMemory(
-          ctx.user.id,
-          input.category,
-          input.content,
-          'manual',
-          undefined,
-          input.importance || 5
-        );
+        const memory = await createMemory(ctx.user.id, {
+          category: input.category,
+          content: input.content,
+          source: 'manual',
+          importance: input.importance || 5
+        });
         return memory;
       }),
 
@@ -560,26 +710,26 @@ export const appRouter = router({
         importance: z.number().min(1).max(10).optional(),
         category: z.enum(['preference', 'fact', 'context', 'instruction']).optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const updates: { content?: string; importance?: number; category?: 'preference' | 'fact' | 'context' | 'instruction' } = {};
         if (input.content) updates.content = input.content;
         if (input.importance) updates.importance = input.importance;
         if (input.category) updates.category = input.category;
-        await updateMemory(input.memoryId, updates);
+        await updateMemory(input.memoryId, ctx.user.id, updates);
         return { success: true };
       }),
 
     delete: protectedProcedure
       .input(z.object({ memoryId: z.number() }))
-      .mutation(async ({ input }) => {
-        await deleteMemory(input.memoryId);
+      .mutation(async ({ ctx, input }) => {
+        await deleteMemory(input.memoryId, ctx.user.id);
         return { success: true };
       }),
 
     toggle: protectedProcedure
       .input(z.object({ memoryId: z.number(), isActive: z.boolean() }))
-      .mutation(async ({ input }) => {
-        await toggleMemoryActive(input.memoryId, input.isActive);
+      .mutation(async ({ ctx, input }) => {
+        await toggleMemoryActive(input.memoryId, ctx.user.id, input.isActive);
         return { success: true };
       }),
 
@@ -599,12 +749,11 @@ export const appRouter = router({
         type: z.enum(['landing', 'webapp', 'api']).default('webapp')
       }))
       .mutation(async ({ ctx, input }) => {
-        const project = await createProject(
-          ctx.user.id,
-          input.name,
-          input.description,
-          input.type
-        );
+        const project = await createProject(ctx.user.id, {
+          name: input.name,
+          description: input.description,
+          type: input.type
+        });
         return project;
       }),
 
@@ -634,7 +783,7 @@ export const appRouter = router({
         if (!project) {
           throw new Error('Project not found or access denied');
         }
-        await updateProject(input.projectId, {
+        await updateProject(input.projectId, ctx.user.id, {
           name: input.name,
           description: input.description
         });
@@ -649,7 +798,7 @@ export const appRouter = router({
           throw new Error('Project not found or access denied');
         }
         await stopProject(input.projectId);
-        await deleteProject(input.projectId);
+        await deleteProject(input.projectId, ctx.user.id);
         return { success: true };
       }),
 
@@ -670,7 +819,7 @@ export const appRouter = router({
 
         // Save files to database
         for (const file of files) {
-          await createProjectFile(input.projectId, file.path, file.content, file.fileType);
+          await createProjectFile(input.projectId, { path: file.path, content: file.content, fileType: file.fileType });
         }
 
         return { success: true, fileCount: files.length };
@@ -735,7 +884,7 @@ export const appRouter = router({
         content: z.string()
       }))
       .mutation(async ({ input }) => {
-        await updateProjectFile(input.fileId, input.content);
+        await updateProjectFile(input.fileId, { content: input.content });
         return { success: true };
       }),
 
@@ -752,7 +901,7 @@ export const appRouter = router({
           throw new Error('Project not found or access denied');
         }
 
-        const table = await createProjectDbTable(input.projectId, input.tableName, input.schema as Record<string, unknown>);
+        const table = await createProjectDbTable(input.projectId, { tableName: input.tableName, schema: input.schema as Record<string, unknown> });
         return table;
       }),
 

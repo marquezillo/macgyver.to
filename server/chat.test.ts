@@ -146,7 +146,7 @@ describe("chat.delete", () => {
     const result = await caller.chat.delete({ chatId: 1 });
 
     expect(getChatById).toHaveBeenCalledWith(1, 1);
-    expect(deleteChat).toHaveBeenCalledWith(1);
+    expect(deleteChat).toHaveBeenCalledWith(1, 1);
     expect(result).toEqual({ success: true });
   });
 

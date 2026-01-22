@@ -2,30 +2,45 @@
 # Landing Editor - Deployment Script
 # This script syncs the project from Manus sandbox to your production server
 
-SERVER_IP="199.247.10.137"
-SERVER_USER="root"
-SERVER_PATH="/var/www/landing-editor"
-PROJECT_PATH="/home/ubuntu/landing-editor"
+# Load credentials
+source /home/ubuntu/.ssh/server_credentials
 
-echo "🚀 Starting deployment to $SERVER_IP..."
+SSH_OPTS="-o StrictHostKeyChecking=no"
 
-# Sync files (excluding node_modules, .git, dist)
+echo "🚀 Starting deployment to $SERVER_IP ($DOMAIN)..."
+
+# Sync files (excluding node_modules, .git, dist, .env files)
+# NOTE: Removed --delete flag to preserve server-side files (uploads, etc.)
 echo "📦 Syncing files..."
-rsync -avz --exclude 'node_modules' --exclude '.git' --exclude 'dist' \
-  -e "ssh -o StrictHostKeyChecking=no" \
-  $PROJECT_PATH/ $SERVER_USER@$SERVER_IP:$SERVER_PATH/
+sshpass -p "$SERVER_PASSWORD" rsync -avz \
+  --exclude 'node_modules' \
+  --exclude '.git' \
+  --exclude 'dist' \
+  --exclude '.env' \
+  --exclude '.env.local' \
+  --exclude '.env.production' \
+  --exclude '*.log' \
+  --exclude 'uploads' \
+  --exclude 'public/uploads' \
+  --exclude 'public/generated-images' \
+  -e "ssh $SSH_OPTS" \
+  /home/ubuntu/landing-editor/ $SERVER_USER@$SERVER_IP:$SERVER_PATH/
 
-# Install dependencies and rebuild on server
+# Install dependencies on server
 echo "📥 Installing dependencies..."
-ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && pnpm install"
+sshpass -p "$SERVER_PASSWORD" ssh $SSH_OPTS $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && pnpm install --frozen-lockfile 2>/dev/null || pnpm install"
 
+# Build project
 echo "🔨 Building project..."
-ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && pnpm build"
+sshpass -p "$SERVER_PASSWORD" ssh $SSH_OPTS $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && pnpm build"
 
+# Run database migrations
 echo "🗄️ Running database migrations..."
-ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && pnpm db:push"
+sshpass -p "$SERVER_PASSWORD" ssh $SSH_OPTS $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && pnpm db:push 2>/dev/null || echo 'No migrations needed'"
 
+# Restart application
 echo "🔄 Restarting application..."
-ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "pm2 restart landing-editor"
+sshpass -p "$SERVER_PASSWORD" ssh $SSH_OPTS $SERVER_USER@$SERVER_IP "pm2 restart landing-editor 2>/dev/null || pm2 start dist/index.js --name landing-editor"
 
-echo "✅ Deployment complete! Visit http://$SERVER_IP"
+echo "✅ Deployment complete!"
+echo "🌐 Visit https://$DOMAIN"

@@ -11,14 +11,22 @@ export const users = mysqlTable("users", {
    * Use this for relations between tables.
    */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
+  /** Optional: Manus OAuth identifier (openId) - only used if OAuth is enabled */
+  openId: varchar("openId", { length: 64 }).unique(),
+  /** User's display name */
+  name: varchar("name", { length: 100 }).notNull(),
+  /** User's email - required and unique for local auth */
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  /** Hashed password for local authentication */
+  passwordHash: varchar("passwordHash", { length: 255 }),
+  /** Login method: local, oauth, google */
+  loginMethod: mysqlEnum("loginMethod", ["local", "oauth", "google"]).default("local").notNull(),
+  /** User role: user, admin */
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   /** User's preferred theme */
   theme: mysqlEnum("theme", ["light", "dark", "system"]).default("light").notNull(),
+  /** Whether the user's email is verified */
+  emailVerified: int("emailVerified").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

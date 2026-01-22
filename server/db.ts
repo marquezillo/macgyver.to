@@ -1,7 +1,8 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, and, desc, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, chats, messages, folders, memories, formSubmissions, projects, projectFiles, projectDbTables, InsertChat, InsertMessage, InsertFolder, InsertMemory, InsertFormSubmission, Chat, Message, Folder, Memory, FormSubmission, Project, InsertProject, ProjectFile, InsertProjectFile, ProjectDbTable, InsertProjectDbTable } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import bcrypt from 'bcryptjs';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -18,11 +19,161 @@ export async function getDb() {
   return _db;
 }
 
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
+// ============================================
+// USER AUTHENTICATION FUNCTIONS
+// ============================================
+
+/**
+ * Create a new user with email and password (local auth)
+ */
+export async function createUser(data: {
+  name: string;
+  email: string;
+  password: string;
+  role?: 'user' | 'admin';
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Check if email already exists
+  const existing = await db.select().from(users).where(eq(users.email, data.email)).limit(1);
+  if (existing.length > 0) {
+    throw new Error("Email already registered");
   }
 
+  // Hash password
+  const passwordHash = await bcrypt.hash(data.password, 12);
+
+  // Insert user
+  const result = await db.insert(users).values({
+    name: data.name,
+    email: data.email,
+    passwordHash,
+    loginMethod: 'local',
+    role: data.role || 'user',
+    lastSignedIn: new Date(),
+  });
+
+  const userId = result[0].insertId;
+  
+  // Return the created user (without password)
+  const [user] = await db.select().from(users).where(eq(users.id, userId));
+  return user;
+}
+
+/**
+ * Authenticate user with email and password
+ */
+export async function authenticateUser(email: string, password: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  
+  if (!user) {
+    return null;
+  }
+
+  if (!user.passwordHash) {
+    // User registered via OAuth, no password set
+    return null;
+  }
+
+  const isValid = await bcrypt.compare(password, user.passwordHash);
+  if (!isValid) {
+    return null;
+  }
+
+  // Update last signed in
+  await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
+
+  return user;
+}
+
+/**
+ * Get user by ID
+ */
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return user || null;
+}
+
+/**
+ * Get user by email
+ */
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return user || null;
+}
+
+/**
+ * Update user profile
+ */
+export async function updateUserProfile(userId: number, data: {
+  name?: string;
+  theme?: 'light' | 'dark' | 'system';
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(users).set(data).where(eq(users.id, userId));
+  
+  const [user] = await db.select().from(users).where(eq(users.id, userId));
+  return user;
+}
+
+/**
+ * Change user password
+ */
+export async function changeUserPassword(userId: number, currentPassword: string, newPassword: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [user] = await db.select().from(users).where(eq(users.id, userId));
+  if (!user || !user.passwordHash) {
+    throw new Error("User not found or no password set");
+  }
+
+  const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!isValid) {
+    throw new Error("Current password is incorrect");
+  }
+
+  const newPasswordHash = await bcrypt.hash(newPassword, 12);
+  await db.update(users).set({ passwordHash: newPasswordHash }).where(eq(users.id, userId));
+
+  return true;
+}
+
+/**
+ * Delete user account
+ */
+export async function deleteUserAccount(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Delete all user's data
+  await db.delete(memories).where(eq(memories.userId, userId));
+  await db.delete(messages).where(
+    sql`chatId IN (SELECT id FROM chats WHERE userId = ${userId})`
+  );
+  await db.delete(chats).where(eq(chats.userId, userId));
+  await db.delete(folders).where(eq(folders.userId, userId));
+  await db.delete(users).where(eq(users.id, userId));
+
+  return true;
+}
+
+/**
+ * Legacy: Upsert user from OAuth (for backwards compatibility)
+ */
+export async function upsertUser(user: Partial<InsertUser> & { openId: string }): Promise<void> {
   const db = await getDb();
   if (!db) {
     console.warn("[Database] Cannot upsert user: database not available");
@@ -30,47 +181,26 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 
   try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
+    // Check if user exists by openId
+    const [existing] = await db.select().from(users).where(eq(users.openId, user.openId)).limit(1);
+    
+    if (existing) {
+      // Update existing user
+      await db.update(users).set({
+        name: user.name || existing.name,
+        lastSignedIn: new Date(),
+      }).where(eq(users.id, existing.id));
+    } else {
+      // Create new user from OAuth
+      await db.insert(users).values({
+        openId: user.openId,
+        name: user.name || 'Usuario',
+        email: user.email || `${user.openId}@oauth.local`,
+        loginMethod: 'oauth',
+        role: user.openId === ENV.ownerOpenId ? 'admin' : 'user',
+        lastSignedIn: new Date(),
+      });
     }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -79,421 +209,263 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
+  if (!db) return null;
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  return result[0] || null;
 }
 
 // ============================================
-// Chat CRUD Operations
+// CHAT FUNCTIONS
 // ============================================
 
-export async function createChat(userId: number, title?: string): Promise<Chat | null> {
+export async function createChat(userId: number, title: string = "Nueva conversación"): Promise<Chat> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot create chat: database not available");
-    return null;
-  }
+  if (!db) throw new Error("Database not available");
 
-  const chatData: InsertChat = {
+  const result = await db.insert(chats).values({
     userId,
-    title: title || "Nueva conversación",
-  };
+    title,
+  });
 
-  const result = await db.insert(chats).values(chatData);
-  const insertId = result[0].insertId;
-
-  // Fetch and return the created chat
-  const created = await db.select().from(chats).where(eq(chats.id, insertId)).limit(1);
-  return created[0] || null;
+  const chatId = result[0].insertId;
+  const [chat] = await db.select().from(chats).where(eq(chats.id, chatId));
+  return chat;
 }
 
 export async function getChatsByUserId(userId: number): Promise<Chat[]> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get chats: database not available");
-    return [];
-  }
+  if (!db) return [];
 
   return db.select().from(chats).where(eq(chats.userId, userId)).orderBy(desc(chats.updatedAt));
 }
 
 export async function getChatById(chatId: number, userId: number): Promise<Chat | null> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get chat: database not available");
-    return null;
-  }
+  if (!db) return null;
 
-  const result = await db.select().from(chats)
-    .where(eq(chats.id, chatId))
-    .limit(1);
-
-  const chat = result[0];
-  // Verify ownership
-  if (chat && chat.userId !== userId) {
-    return null;
-  }
-  return chat || null;
+  const result = await db.select().from(chats).where(
+    and(eq(chats.id, chatId), eq(chats.userId, userId))
+  ).limit(1);
+  return result[0] || null;
 }
 
-export async function updateChatTitle(chatId: number, title: string): Promise<void> {
+export async function updateChatTitle(chatId: number, userId: number, title: string): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot update chat: database not available");
-    return;
-  }
+  if (!db) return;
 
-  await db.update(chats).set({ title }).where(eq(chats.id, chatId));
+  await db.update(chats).set({ title }).where(
+    and(eq(chats.id, chatId), eq(chats.userId, userId))
+  );
 }
 
-export async function updateChatArtifact(chatId: number, artifactData: unknown): Promise<void> {
+export async function updateChatArtifact(chatId: number, userId: number, artifactData: unknown): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot update chat artifact: database not available");
-    return;
-  }
+  if (!db) return;
 
-  await db.update(chats).set({ artifactData }).where(eq(chats.id, chatId));
+  await db.update(chats).set({ artifactData }).where(
+    and(eq(chats.id, chatId), eq(chats.userId, userId))
+  );
 }
 
-export async function deleteChat(chatId: number): Promise<void> {
+export async function deleteChat(chatId: number, userId: number): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot delete chat: database not available");
-    return;
-  }
+  if (!db) return;
 
-  // Delete messages first (cascade)
+  // First delete all messages in the chat
   await db.delete(messages).where(eq(messages.chatId, chatId));
   // Then delete the chat
-  await db.delete(chats).where(eq(chats.id, chatId));
+  await db.delete(chats).where(
+    and(eq(chats.id, chatId), eq(chats.userId, userId))
+  );
+}
+
+export async function toggleChatFavorite(chatId: number, userId: number, isFavorite: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(chats).set({ isFavorite: isFavorite ? 1 : 0 }).where(
+    and(eq(chats.id, chatId), eq(chats.userId, userId))
+  );
+}
+
+export async function moveChatToFolder(chatId: number, userId: number, folderId: number | null): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(chats).set({ folderId }).where(
+    and(eq(chats.id, chatId), eq(chats.userId, userId))
+  );
+}
+
+export async function getChatsByFolderId(folderId: number, userId: number): Promise<Chat[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(chats).where(
+    and(eq(chats.folderId, folderId), eq(chats.userId, userId))
+  ).orderBy(desc(chats.updatedAt));
 }
 
 // ============================================
-// Message CRUD Operations
+// MESSAGE FUNCTIONS
 // ============================================
 
-export async function createMessage(chatId: number, role: 'user' | 'assistant', content: string, hasArtifact: boolean = false): Promise<Message | null> {
+export async function createMessage(chatId: number, role: "user" | "assistant", content: string, hasArtifact: boolean = false): Promise<Message> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot create message: database not available");
-    return null;
-  }
+  if (!db) throw new Error("Database not available");
 
-  const messageData: InsertMessage = {
+  const result = await db.insert(messages).values({
     chatId,
     role,
     content,
     hasArtifact: hasArtifact ? 1 : 0,
-  };
+  });
 
-  const result = await db.insert(messages).values(messageData);
-  const insertId = result[0].insertId;
+  // Update chat's updatedAt
+  await db.update(chats).set({ updatedAt: new Date() }).where(eq(chats.id, chatId));
 
-  // Fetch and return the created message
-  const created = await db.select().from(messages).where(eq(messages.id, insertId)).limit(1);
-  return created[0] || null;
+  const messageId = result[0].insertId;
+  const [message] = await db.select().from(messages).where(eq(messages.id, messageId));
+  return message;
 }
 
 export async function getMessagesByChatId(chatId: number): Promise<Message[]> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get messages: database not available");
-    return [];
-  }
+  if (!db) return [];
 
   return db.select().from(messages).where(eq(messages.chatId, chatId)).orderBy(messages.createdAt);
 }
 
-
 // ============================================
-// Folder CRUD Operations
+// FOLDER FUNCTIONS
 // ============================================
 
-export async function createFolder(userId: number, name: string, color?: string, icon?: string): Promise<Folder | null> {
+export async function createFolder(userId: number, name: string, color?: string, icon?: string): Promise<Folder> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot create folder: database not available");
-    return null;
-  }
+  if (!db) throw new Error("Database not available");
 
-  const folderData: InsertFolder = {
+  const result = await db.insert(folders).values({
     userId,
     name,
     color: color || 'gray',
     icon: icon || 'folder',
-  };
+  });
 
-  const result = await db.insert(folders).values(folderData);
-  const insertId = result[0].insertId;
-
-  const created = await db.select().from(folders).where(eq(folders.id, insertId)).limit(1);
-  return created[0] || null;
+  const folderId = result[0].insertId;
+  const [folder] = await db.select().from(folders).where(eq(folders.id, folderId));
+  return folder;
 }
 
 export async function getFoldersByUserId(userId: number): Promise<Folder[]> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get folders: database not available");
-    return [];
-  }
+  if (!db) return [];
 
   return db.select().from(folders).where(eq(folders.userId, userId)).orderBy(folders.name);
 }
 
-export async function updateFolder(folderId: number, name: string, color?: string, icon?: string): Promise<void> {
+export async function updateFolder(folderId: number, userId: number, data: { name?: string; color?: string; icon?: string }): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot update folder: database not available");
-    return;
-  }
+  if (!db) return;
 
-  const updateData: Partial<InsertFolder> = { name };
-  if (color) updateData.color = color;
-  if (icon) updateData.icon = icon;
-
-  await db.update(folders).set(updateData).where(eq(folders.id, folderId));
+  await db.update(folders).set(data).where(
+    and(eq(folders.id, folderId), eq(folders.userId, userId))
+  );
 }
 
-export async function deleteFolder(folderId: number): Promise<void> {
+export async function deleteFolder(folderId: number, userId: number): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot delete folder: database not available");
-    return;
-  }
+  if (!db) return;
 
-  // Remove folder reference from chats
+  // Move all chats in this folder to no folder
   await db.update(chats).set({ folderId: null }).where(eq(chats.folderId, folderId));
   // Delete the folder
-  await db.delete(folders).where(eq(folders.id, folderId));
+  await db.delete(folders).where(
+    and(eq(folders.id, folderId), eq(folders.userId, userId))
+  );
 }
 
 // ============================================
-// Chat Favorite & Folder Operations
+// MEMORY FUNCTIONS
 // ============================================
 
-export async function toggleChatFavorite(chatId: number, isFavorite: boolean): Promise<void> {
+export async function createMemory(userId: number, data: Omit<InsertMemory, 'userId'>): Promise<Memory> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot toggle favorite: database not available");
-    return;
-  }
+  if (!db) throw new Error("Database not available");
 
-  await db.update(chats).set({ isFavorite: isFavorite ? 1 : 0 }).where(eq(chats.id, chatId));
-}
-
-export async function moveChatToFolder(chatId: number, folderId: number | null): Promise<void> {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot move chat: database not available");
-    return;
-  }
-
-  await db.update(chats).set({ folderId }).where(eq(chats.id, chatId));
-}
-
-export async function getChatsByFolderId(folderId: number): Promise<Chat[]> {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get chats by folder: database not available");
-    return [];
-  }
-
-  return db.select().from(chats).where(eq(chats.folderId, folderId)).orderBy(desc(chats.updatedAt));
-}
-
-export async function getFavoriteChats(userId: number): Promise<Chat[]> {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get favorite chats: database not available");
-    return [];
-  }
-
-  return db.select().from(chats).where(eq(chats.userId, userId)).orderBy(desc(chats.updatedAt));
-}
-
-
-// ============================================
-// Memory CRUD Operations (Long-term Memory)
-// ============================================
-
-export async function createMemory(
-  userId: number,
-  category: 'preference' | 'fact' | 'context' | 'instruction',
-  content: string,
-  source: 'manual' | 'auto' = 'auto',
-  sourceChatId?: number,
-  importance: number = 5
-): Promise<Memory | null> {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot create memory: database not available");
-    return null;
-  }
-
-  const memoryData: InsertMemory = {
+  const result = await db.insert(memories).values({
+    ...data,
     userId,
-    category,
-    content,
-    source,
-    sourceChatId: sourceChatId || null,
-    importance,
-    isActive: 1,
-  };
+  });
 
-  const result = await db.insert(memories).values(memoryData);
-  const insertId = result[0].insertId;
-
-  const created = await db.select().from(memories).where(eq(memories.id, insertId)).limit(1);
-  return created[0] || null;
+  const memoryId = result[0].insertId;
+  const [memory] = await db.select().from(memories).where(eq(memories.id, memoryId));
+  return memory;
 }
 
 export async function getMemoriesByUserId(userId: number, activeOnly: boolean = true): Promise<Memory[]> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get memories: database not available");
-    return [];
-  }
+  if (!db) return [];
 
-  let query = db.select().from(memories).where(eq(memories.userId, userId));
-  
-  const results = await query.orderBy(desc(memories.importance), desc(memories.createdAt));
-  
   if (activeOnly) {
-    return results.filter(m => m.isActive === 1);
+    return db.select().from(memories).where(
+      and(eq(memories.userId, userId), eq(memories.isActive, 1))
+    ).orderBy(desc(memories.importance), desc(memories.createdAt));
   }
-  return results;
+
+  return db.select().from(memories).where(eq(memories.userId, userId)).orderBy(desc(memories.importance), desc(memories.createdAt));
 }
 
-export async function getMemoriesByCategory(
-  userId: number,
-  category: 'preference' | 'fact' | 'context' | 'instruction'
-): Promise<Memory[]> {
+export async function getMemoriesForContext(userId: number, limit: number = 10): Promise<Memory[]> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get memories: database not available");
-    return [];
-  }
+  if (!db) return [];
 
-  const results = await db.select().from(memories)
-    .where(eq(memories.userId, userId))
-    .orderBy(desc(memories.importance));
-  
-  return results.filter(m => m.category === category && m.isActive === 1);
+  return db.select().from(memories).where(
+    and(eq(memories.userId, userId), eq(memories.isActive, 1))
+  ).orderBy(desc(memories.importance), desc(memories.createdAt)).limit(limit);
 }
 
-export async function updateMemory(
-  memoryId: number,
-  updates: { content?: string; importance?: number; isActive?: number; category?: 'preference' | 'fact' | 'context' | 'instruction' }
-): Promise<void> {
+export async function updateMemory(memoryId: number, userId: number, data: Partial<InsertMemory>): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot update memory: database not available");
-    return;
-  }
+  if (!db) return;
 
-  await db.update(memories).set(updates).where(eq(memories.id, memoryId));
+  await db.update(memories).set(data).where(
+    and(eq(memories.id, memoryId), eq(memories.userId, userId))
+  );
 }
 
-export async function deleteMemory(memoryId: number): Promise<void> {
+export async function deleteMemory(memoryId: number, userId: number): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot delete memory: database not available");
-    return;
-  }
+  if (!db) return;
 
-  await db.delete(memories).where(eq(memories.id, memoryId));
+  await db.delete(memories).where(
+    and(eq(memories.id, memoryId), eq(memories.userId, userId))
+  );
 }
 
-export async function toggleMemoryActive(memoryId: number, isActive: boolean): Promise<void> {
+export async function toggleMemoryActive(memoryId: number, userId: number, isActive: boolean): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot toggle memory: database not available");
-    return;
-  }
+  if (!db) return;
 
-  await db.update(memories).set({ isActive: isActive ? 1 : 0 }).where(eq(memories.id, memoryId));
+  await db.update(memories).set({ isActive: isActive ? 1 : 0 }).where(
+    and(eq(memories.id, memoryId), eq(memories.userId, userId))
+  );
 }
 
-/**
- * Get formatted memories for LLM context injection.
- * Returns memories formatted as a string to be included in the system prompt.
- */
-export async function getMemoriesForContext(userId: number): Promise<string> {
-  const memories = await getMemoriesByUserId(userId, true);
-  
-  if (memories.length === 0) {
-    return '';
-  }
+// ============================================
+// FORM SUBMISSION FUNCTIONS
+// ============================================
 
-  const grouped = {
-    preference: memories.filter(m => m.category === 'preference'),
-    fact: memories.filter(m => m.category === 'fact'),
-    context: memories.filter(m => m.category === 'context'),
-    instruction: memories.filter(m => m.category === 'instruction'),
-  };
-
-  let contextString = '\n\n## Información del usuario (memoria a largo plazo):\n';
-  
-  if (grouped.preference.length > 0) {
-    contextString += '\n### Preferencias:\n';
-    grouped.preference.forEach(m => {
-      contextString += `- ${m.content}\n`;
-    });
-  }
-  
-  if (grouped.fact.length > 0) {
-    contextString += '\n### Datos personales:\n';
-    grouped.fact.forEach(m => {
-      contextString += `- ${m.content}\n`;
-    });
-  }
-  
-  if (grouped.context.length > 0) {
-    contextString += '\n### Contexto:\n';
-    grouped.context.forEach(m => {
-      contextString += `- ${m.content}\n`;
-    });
-  }
-  
-  if (grouped.instruction.length > 0) {
-    contextString += '\n### Instrucciones especiales:\n';
-    grouped.instruction.forEach(m => {
-      contextString += `- ${m.content}\n`;
-    });
-  }
-
-  return contextString;
-}
-
-
-// ============================================================================
-// Form Submissions
-// ============================================================================
-
-/**
- * Create a new form submission
- */
-export async function createFormSubmission(submission: InsertFormSubmission): Promise<number | null> {
+export async function createFormSubmission(data: InsertFormSubmission): Promise<FormSubmission> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot create form submission: database not available");
-    return null;
-  }
+  if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(formSubmissions).values(submission);
-  return result[0].insertId;
+  const result = await db.insert(formSubmissions).values(data);
+  const submissionId = result[0].insertId;
+  const [submission] = await db.select().from(formSubmissions).where(eq(formSubmissions.id, submissionId));
+  return submission;
 }
 
-/**
- * Get all form submissions, optionally filtered by chatId or landingIdentifier
- */
 export async function getFormSubmissions(filters?: {
   chatId?: number;
   landingIdentifier?: string;
@@ -501,268 +473,148 @@ export async function getFormSubmissions(filters?: {
   status?: 'pending' | 'processed' | 'refunded';
 }): Promise<FormSubmission[]> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get form submissions: database not available");
-    return [];
+  if (!db) return [];
+
+  let query = db.select().from(formSubmissions);
+  
+  const conditions = [];
+  if (filters?.chatId) conditions.push(eq(formSubmissions.chatId, filters.chatId));
+  if (filters?.landingIdentifier) conditions.push(eq(formSubmissions.landingIdentifier, filters.landingIdentifier));
+  if (filters?.country) conditions.push(eq(formSubmissions.country, filters.country));
+  if (filters?.status) conditions.push(eq(formSubmissions.status, filters.status));
+
+  if (conditions.length > 0) {
+    return db.select().from(formSubmissions).where(and(...conditions)).orderBy(desc(formSubmissions.createdAt));
   }
 
-  let query = db.select().from(formSubmissions).orderBy(desc(formSubmissions.createdAt));
-  
-  // Note: For complex filtering, you'd use .where() with conditions
-  // This is a simplified version - in production you'd build dynamic conditions
-  const results = await query;
-  
-  // Apply filters in memory for now (in production, use SQL WHERE clauses)
-  let filtered = results;
-  if (filters?.chatId) {
-    filtered = filtered.filter(s => s.chatId === filters.chatId);
-  }
-  if (filters?.landingIdentifier) {
-    filtered = filtered.filter(s => s.landingIdentifier === filters.landingIdentifier);
-  }
-  if (filters?.country) {
-    filtered = filtered.filter(s => s.country === filters.country);
-  }
-  if (filters?.status) {
-    filtered = filtered.filter(s => s.status === filters.status);
-  }
-  
-  return filtered;
+  return db.select().from(formSubmissions).orderBy(desc(formSubmissions.createdAt));
 }
 
-/**
- * Update form submission status
- */
-export async function updateFormSubmissionStatus(
-  submissionId: number, 
-  status: 'pending' | 'processed' | 'refunded'
-): Promise<void> {
+export async function updateFormSubmissionStatus(submissionId: number, status: 'pending' | 'processed' | 'refunded'): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot update form submission: database not available");
-    return;
-  }
+  if (!db) return;
 
   await db.update(formSubmissions).set({ status }).where(eq(formSubmissions.id, submissionId));
 }
 
-/**
- * Get form submission statistics
- */
-export async function getFormSubmissionStats(filters?: {
-  landingIdentifier?: string;
-  country?: string;
-}): Promise<{
-  total: number;
-  pending: number;
-  processed: number;
-  refunded: number;
-  byCountry: Record<string, number>;
-}> {
-  const submissions = await getFormSubmissions(filters);
-  
-  const stats = {
-    total: submissions.length,
-    pending: submissions.filter(s => s.status === 'pending').length,
-    processed: submissions.filter(s => s.status === 'processed').length,
-    refunded: submissions.filter(s => s.status === 'refunded').length,
-    byCountry: {} as Record<string, number>,
-  };
-  
-  submissions.forEach(s => {
-    const country = s.country || 'unknown';
-    stats.byCountry[country] = (stats.byCountry[country] || 0) + 1;
-  });
-  
-  return stats;
-}
-
-
 // ============================================
-// Project CRUD Operations (Full-Stack Projects)
+// PROJECT FUNCTIONS
 // ============================================
 
-export async function createProject(
-  userId: number,
-  name: string,
-  description?: string,
-  type: 'landing' | 'webapp' | 'api' = 'webapp'
-): Promise<Project | null> {
+export async function createProject(userId: number, data: Omit<InsertProject, 'userId'>): Promise<Project> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot create project: database not available");
-    return null;
-  }
+  if (!db) throw new Error("Database not available");
 
-  // Generate unique database schema name for this project
-  const dbSchema = `project_${userId}_${Date.now()}`;
-
-  const projectData: InsertProject = {
+  const result = await db.insert(projects).values({
+    ...data,
     userId,
-    name,
-    description: description || null,
-    type,
-    status: 'draft',
-    dbSchema,
-  };
+  });
 
-  const result = await db.insert(projects).values(projectData);
-  const insertId = result[0].insertId;
-
-  const created = await db.select().from(projects).where(eq(projects.id, insertId)).limit(1);
-  return created[0] || null;
+  const projectId = result[0].insertId;
+  const [project] = await db.select().from(projects).where(eq(projects.id, projectId));
+  return project;
 }
 
 export async function getProjectsByUserId(userId: number): Promise<Project[]> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get projects: database not available");
-    return [];
-  }
+  if (!db) return [];
 
   return db.select().from(projects).where(eq(projects.userId, userId)).orderBy(desc(projects.updatedAt));
 }
 
 export async function getProjectById(projectId: number, userId: number): Promise<Project | null> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get project: database not available");
-    return null;
-  }
+  if (!db) return null;
 
-  const result = await db.select().from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
-
-  const project = result[0];
-  if (project && project.userId !== userId) {
-    return null; // Ownership check
-  }
-  return project || null;
+  const result = await db.select().from(projects).where(
+    and(eq(projects.id, projectId), eq(projects.userId, userId))
+  ).limit(1);
+  return result[0] || null;
 }
 
-export async function updateProject(
-  projectId: number,
-  updates: Partial<Pick<Project, 'name' | 'description' | 'status' | 'port' | 'pid' | 'buildLog' | 'lastError' | 'publicUrl' | 'config'>>
-): Promise<void> {
+export async function updateProject(projectId: number, userId: number, data: Partial<InsertProject>): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot update project: database not available");
-    return;
-  }
+  if (!db) return;
 
-  await db.update(projects).set(updates).where(eq(projects.id, projectId));
+  await db.update(projects).set(data).where(
+    and(eq(projects.id, projectId), eq(projects.userId, userId))
+  );
 }
 
-export async function deleteProject(projectId: number): Promise<void> {
+export async function deleteProject(projectId: number, userId: number): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot delete project: database not available");
-    return;
-  }
+  if (!db) return;
 
   // Delete project files first
   await db.delete(projectFiles).where(eq(projectFiles.projectId, projectId));
   // Delete project db tables
   await db.delete(projectDbTables).where(eq(projectDbTables.projectId, projectId));
   // Delete the project
-  await db.delete(projects).where(eq(projects.id, projectId));
+  await db.delete(projects).where(
+    and(eq(projects.id, projectId), eq(projects.userId, userId))
+  );
 }
 
 // ============================================
-// Project Files CRUD Operations
+// PROJECT FILE FUNCTIONS
 // ============================================
 
-export async function createProjectFile(
-  projectId: number,
-  path: string,
-  content: string,
-  fileType?: string
-): Promise<ProjectFile | null> {
+export async function createProjectFile(projectId: number, data: Omit<InsertProjectFile, 'projectId'>): Promise<ProjectFile> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot create project file: database not available");
-    return null;
-  }
+  if (!db) throw new Error("Database not available");
 
-  const fileData: InsertProjectFile = {
+  const result = await db.insert(projectFiles).values({
+    ...data,
     projectId,
-    path,
-    content,
-    fileType: fileType || path.split('.').pop() || 'txt',
-  };
+  });
 
-  const result = await db.insert(projectFiles).values(fileData);
-  const insertId = result[0].insertId;
-
-  const created = await db.select().from(projectFiles).where(eq(projectFiles.id, insertId)).limit(1);
-  return created[0] || null;
+  const fileId = result[0].insertId;
+  const [file] = await db.select().from(projectFiles).where(eq(projectFiles.id, fileId));
+  return file;
 }
 
 export async function getProjectFiles(projectId: number): Promise<ProjectFile[]> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get project files: database not available");
-    return [];
-  }
+  if (!db) return [];
 
   return db.select().from(projectFiles).where(eq(projectFiles.projectId, projectId)).orderBy(projectFiles.path);
 }
 
-export async function updateProjectFile(fileId: number, content: string): Promise<void> {
+export async function updateProjectFile(fileId: number, data: Partial<InsertProjectFile>): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot update project file: database not available");
-    return;
-  }
+  if (!db) return;
 
-  await db.update(projectFiles).set({ content, isGenerated: 0 }).where(eq(projectFiles.id, fileId));
+  await db.update(projectFiles).set(data).where(eq(projectFiles.id, fileId));
 }
 
 export async function deleteProjectFile(fileId: number): Promise<void> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot delete project file: database not available");
-    return;
-  }
+  if (!db) return;
 
   await db.delete(projectFiles).where(eq(projectFiles.id, fileId));
 }
 
 // ============================================
-// Project Database Tables CRUD
+// PROJECT DB TABLE FUNCTIONS
 // ============================================
 
-export async function createProjectDbTable(
-  projectId: number,
-  tableName: string,
-  schema: Record<string, unknown>
-): Promise<ProjectDbTable | null> {
+export async function createProjectDbTable(projectId: number, data: Omit<InsertProjectDbTable, 'projectId'>): Promise<ProjectDbTable> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot create project db table: database not available");
-    return null;
-  }
+  if (!db) throw new Error("Database not available");
 
-  const tableData: InsertProjectDbTable = {
+  const result = await db.insert(projectDbTables).values({
+    ...data,
     projectId,
-    tableName,
-    schema,
-  };
+  });
 
-  const result = await db.insert(projectDbTables).values(tableData);
-  const insertId = result[0].insertId;
-
-  const created = await db.select().from(projectDbTables).where(eq(projectDbTables.id, insertId)).limit(1);
-  return created[0] || null;
+  const tableId = result[0].insertId;
+  const [table] = await db.select().from(projectDbTables).where(eq(projectDbTables.id, tableId));
+  return table;
 }
 
 export async function getProjectDbTables(projectId: number): Promise<ProjectDbTable[]> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get project db tables: database not available");
-    return [];
-  }
+  if (!db) return [];
 
-  return db.select().from(projectDbTables).where(eq(projectDbTables.projectId, projectId));
+  return db.select().from(projectDbTables).where(eq(projectDbTables.projectId, projectId)).orderBy(projectDbTables.tableName);
 }

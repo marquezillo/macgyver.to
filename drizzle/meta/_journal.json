@@ -43,6 +43,13 @@
       "when": 1768400698953,
       "tag": "0005_wild_tusk",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1769091692383,
+      "tag": "0006_right_chat",
+      "breakpoints": true
     }
   ]
 }

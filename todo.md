@@ -362,3 +362,37 @@
 - [x] Eliminar botón "Iniciar Sesión" del sidebar
 - [x] Probar que la app funciona completamente sin autenticación
 - NOTA: El historial ahora se carga sin requerir autenticación. El botón de login se eliminó.
+
+
+## Sistema de Usuarios Propio (Sin OAuth Manus)
+
+### Backend - Autenticación
+- [ ] Modificar schema de users para incluir email y passwordHash
+- [ ] Crear endpoint de registro (POST /api/auth/register)
+- [ ] Crear endpoint de login (POST /api/auth/login)
+- [ ] Crear endpoint de logout (POST /api/auth/logout)
+- [ ] Implementar JWT en cookies HttpOnly
+- [ ] Hashear contraseñas con bcrypt
+- [ ] Middleware de autenticación propio
+
+### Frontend - Páginas de Auth
+- [ ] Página de Login (/login)
+- [ ] Página de Registro (/register)
+- [ ] Redirección automática si no está autenticado
+- [ ] Formularios con validación
+
+### Frontend - Secciones de Usuario
+- [ ] Página de Configuración (/settings)
+  - [ ] Configuración general
+  - [ ] Preferencias de tema
+  - [ ] Notificaciones
+- [ ] Página de Cuenta (/account)
+  - [ ] Información del perfil
+  - [ ] Cambiar contraseña
+  - [ ] Eliminar cuenta
+- [ ] Actualizar Sidebar con nuevas secciones
+
+### Protección de Rutas
+- [ ] Proteger todas las rutas excepto /login y /register
+- [ ] Restaurar funcionalidad de chat.list para usuarios autenticados
+- [ ] Crear usuario admin inicial

@@ -208,11 +208,12 @@ describe("memoryExtraction", () => {
       expect(result[0].category).toBe("fact");
       expect(createMemory).toHaveBeenCalledWith(
         1,
-        "fact",
-        "Es desarrollador de software especializado en React y TypeScript",
-        "auto",
-        undefined,
-        8
+        expect.objectContaining({
+          category: "fact",
+          content: "Es desarrollador de software especializado en React y TypeScript",
+          source: "auto",
+          importance: 8,
+        })
       );
     });
   });
