@@ -289,3 +289,19 @@
 - [ ] Implementar lógica para regenerar con el mismo prompt
 - [ ] Mostrar indicador de carga durante la regeneración
 - [ ] Actualizar la imagen en el chat sin crear nuevo mensaje
+
+
+## Integración de Imágenes en Landings
+- [x] Analizar el flujo actual de generación de landings
+- [x] Identificar qué secciones necesitan imágenes (Hero, Testimonios, Equipo, Galería)
+- [x] Crear función enrichLandingWithImages() para agregar imágenes automáticamente
+- [x] Hero: Buscar imagen relevante en bancos de stock
+- [x] Testimonios: Generar avatares con IA para cada persona
+- [x] Equipo: Generar fotos profesionales con IA
+- [x] Galería: Buscar imágenes relacionadas con el negocio
+- [x] About: Buscar imagen del equipo/oficina
+- [x] Features/Services: Buscar imágenes ilustrativas
+- [x] Integrar la función en el endpoint de streaming
+- [x] Tests pasando (8/8)
+- [ ] Probar generación de landings con imágenes automáticas
+- [ ] Desplegar y verificar en producción

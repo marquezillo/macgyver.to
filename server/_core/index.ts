@@ -18,6 +18,7 @@ import { getMemoriesForContext, getUserByOpenId, createFormSubmission } from "..
 import { extractMemoriesFromConversation } from "../memoryExtraction";
 import { analyzeUrlStream } from "../urlAnalysis";
 import { extractTextFromImage, translateTextStream, detectLanguage } from "../ocrTranslation";
+import { enrichLandingWithImages } from "../landingImageEnricher";
 import { createDiagram, suggestDiagramType } from "../diagramGeneration";
 import { compareDocumentsStream } from "../documentComparison";
 import { summarizeVideoStream } from "../videoSummary";
@@ -269,9 +270,29 @@ async function startServer() {
           const parsed = JSON.parse(jsonString);
           if (parsed?.type === 'landing') {
             hasArtifact = true;
-            artifactData = { sections: parsed.sections };
+            
+            // Enriquecer las secciones con imágenes automáticas
+            console.log('[AI Stream] Enriching landing with images...');
+            res.write(`data: ${JSON.stringify({ type: "status", content: "Buscando imágenes para tu landing..." })}\n\n`);
+            
+            try {
+              const businessType = parsed.businessType || 'business';
+              const businessName = parsed.businessName || 'Company';
+              const enrichedSections = await enrichLandingWithImages(
+                parsed.sections,
+                businessType,
+                businessName
+              );
+              artifactData = { sections: enrichedSections };
+              console.log('[AI Stream] Landing enriched with images successfully');
+            } catch (enrichError) {
+              console.error('[AI Stream] Error enriching landing with images:', enrichError);
+              // Usar las secciones originales si falla el enriquecimiento
+              artifactData = { sections: parsed.sections };
+            }
+            
             // Use the message from JSON or generate a friendly message
-            displayMessage = parsed.message || 'He creado tu landing page. Puedes ver el preview a la derecha y editar las secciones haciendo clic en ellas.';
+            displayMessage = parsed.message || 'He creado tu landing page con imágenes. Puedes ver el preview a la derecha y editar las secciones haciendo clic en ellas.';
           }
         }
       } catch (parseError) {
