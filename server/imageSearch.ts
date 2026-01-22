@@ -353,16 +353,16 @@ export async function searchImages(
 ): Promise<ImageResult[]> {
   const { count = 5, forceAI = false, orientation = "landscape" } = options;
   
-  // Si se fuerza AI, generar directamente con Pollinations (gratis) o Gemini
+  // Si se fuerza AI, generar directamente con Gemini (más rápido) o Pollinations
   if (forceAI && count === 1) {
-    console.log("[ImageSearch] Force AI mode - generating with Pollinations.ai");
-    const pollinationsImage = await generatePollinationsImage(query);
-    if (pollinationsImage) return [pollinationsImage];
-    
-    // Fallback a Gemini si Pollinations falla
-    console.log("[ImageSearch] Pollinations failed, trying Gemini");
+    console.log("[ImageSearch] Force AI mode - generating with Gemini");
     const aiImage = await generateAIImage(query, 'forced');
     if (aiImage) return [aiImage];
+    
+    // Fallback a Pollinations si Gemini falla
+    console.log("[ImageSearch] Gemini failed, trying Pollinations.ai");
+    const pollinationsImage = await generatePollinationsImage(query);
+    if (pollinationsImage) return [pollinationsImage];
   }
   
   let results: ImageResult[] = [];
@@ -391,18 +391,18 @@ export async function searchImages(
     results = [...results, ...pixabayResults];
   }
   
-  // 4. Si no hay resultados, intentar Pollinations.ai (gratis)
+  // 4. Si no hay resultados, intentar Gemini AI primero (más rápido y confiable)
   if (results.length === 0) {
-    console.log("[ImageSearch] No stock images found, trying Pollinations.ai");
-    const pollinationsImage = await generatePollinationsImage(query);
-    if (pollinationsImage) results.push(pollinationsImage);
-  }
-  
-  // 5. Si Pollinations falla, intentar Gemini AI
-  if (results.length === 0) {
-    console.log("[ImageSearch] Pollinations failed, falling back to Gemini AI");
+    console.log("[ImageSearch] No stock images found, trying Gemini AI");
     const aiImage = await generateAIImage(query, 'fallback');
     if (aiImage) results.push(aiImage);
+  }
+  
+  // 5. Si Gemini falla, intentar Pollinations.ai (gratis, sin API key)
+  if (results.length === 0) {
+    console.log("[ImageSearch] Gemini failed, trying Pollinations.ai");
+    const pollinationsImage = await generatePollinationsImage(query);
+    if (pollinationsImage) results.push(pollinationsImage);
   }
   
   // 6. Si todo falla, usar fallback de Unsplash Source
@@ -531,17 +531,21 @@ export async function getImagesForGallery(
  */
 export async function generateChatImage(prompt: string): Promise<string | null> {
   try {
-    // 1. Intentar con Pollinations.ai primero (gratis, sin API key)
-    console.log("[ImageSearch] Generating chat image with Pollinations.ai:", prompt.substring(0, 50) + "...");
+    // 1. Intentar con Gemini primero (más rápido y confiable)
+    console.log("[ImageSearch] Generating chat image with Gemini:", prompt.substring(0, 50) + "...");
+    const imageUrl = await generateCustomImage(prompt, 'chat');
+    if (imageUrl) {
+      return imageUrl;
+    }
+    
+    // 2. Fallback a Pollinations.ai si Gemini falla (gratis, sin API key)
+    console.log("[ImageSearch] Gemini failed, trying Pollinations.ai:", prompt.substring(0, 50) + "...");
     const pollinationsResult = await generatePollinationsImage(prompt, { width: 1024, height: 1024 });
     if (pollinationsResult) {
       return pollinationsResult.url;
     }
     
-    // 2. Fallback a Gemini si Pollinations falla
-    console.log("[ImageSearch] Pollinations failed, trying Gemini:", prompt.substring(0, 50) + "...");
-    const imageUrl = await generateCustomImage(prompt, 'chat');
-    return imageUrl;
+    return null;
   } catch (error) {
     console.error("[ImageSearch] Chat image generation failed:", error);
     return null;

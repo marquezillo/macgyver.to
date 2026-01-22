@@ -270,7 +270,8 @@
 - [ ] Probar generación de imágenes desde el chat
 
 ## Mejora - Detección Automática de Intención de Imágenes en Chat
-- [ ] Ampliar patrones de detección para incluir todos los sinónimos
-- [ ] Detectar: genera/crea/hazme/dibuja/genérame + imagen/foto/ilustración/dibujo
-- [ ] El chat debe funcionar sin depender de botones
+- [x] Ampliar patrones de detección para incluir todos los sinónimos
+- [x] Detectar: genera/crea/hazme/dibuja/genérame + imagen/foto/ilustración/dibujo
+- [x] El chat debe funcionar sin depender de botones
+- [x] Cambiar orden: Gemini primero, Pollinations como fallback
 - [ ] Probar con múltiples variantes de petición
