@@ -221,6 +221,34 @@ async function startServer() {
       res.setHeader("Connection", "keep-alive");
       res.setHeader("X-Accel-Buffering", "no");
 
+      // Check if the last user message should trigger autonomous mode
+      const lastUserMessageContent = messages.filter(m => m.role === 'user').pop()?.content || '';
+      if (shouldUseAutonomousMode(lastUserMessageContent)) {
+        console.log('[AI Stream] Autonomous mode triggered for:', lastUserMessageContent.substring(0, 100));
+        res.write(`data: ${JSON.stringify({ type: "status", content: "Activando modo autónomo..." })}\n\n`);
+        
+        try {
+          for await (const event of runAutonomousTaskStream(lastUserMessageContent)) {
+            const eventData = event.data as { tool?: string; output?: string } | undefined;
+            if (event.type === 'step_start') {
+              res.write(`data: ${JSON.stringify({ type: "status", content: `Ejecutando: ${eventData?.tool || 'tarea'}...` })}\n\n`);
+            } else if (event.type === 'step_complete') {
+              res.write(`data: ${JSON.stringify({ type: "chunk", content: `\n\n**${eventData?.tool || 'Paso'}:** ${eventData?.output?.substring(0, 500) || 'Completado'}\n\n` })}\n\n`);
+            } else if (event.type === 'done') {
+              res.write(`data: ${JSON.stringify({ type: "done", content: "Tarea autónoma completada", hasArtifact: false })}\n\n`);
+            } else if (event.type === 'error') {
+              res.write(`data: ${JSON.stringify({ type: "chunk", content: `\n\n**Error:** ${event.data}\n\n` })}\n\n`);
+            }
+          }
+          res.end();
+          return;
+        } catch (autonomousError) {
+          console.error('[AI Stream] Autonomous mode error:', autonomousError);
+          res.write(`data: ${JSON.stringify({ type: "chunk", content: "\n\nError en modo autónomo. Continuando con respuesta normal...\n\n" })}\n\n`);
+          // Fall through to normal LLM response
+        }
+      }
+
       // Get user's long-term memory context
       const dbUser = await getUserByOpenId(user.openId);
       let memoryContext = '';

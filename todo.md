@@ -314,3 +314,19 @@
 - [x] Detectar URLs en el mensaje y activar modo autónomo automáticamente
 - [x] Tests pasando (10/10)
 - [ ] Probar con peticiones como "clona https://ejemplo.com"
+
+
+## CRÍTICO - Modo Autónomo No Se Activa
+- [x] Diagnosticar por qué shouldUseAutonomousMode no se activa en producción
+- [x] Verificar que el código actualizado está en el servidor
+- [x] Revisar dónde se llama shouldUseAutonomousMode en el flujo del chat
+- [x] Corregir la integración para que active el modo autónomo
+- [x] Integrado en /api/ai/stream endpoint
+- [ ] Probar con URLs y clonación de páginas
+
+## CRÍTICO - Mejorar Calidad de Landings
+- [ ] Las landings generadas son de baja calidad
+- [ ] Mejorar el SYSTEM_PROMPT con ejemplos de alta calidad
+- [ ] Agregar más secciones y variedad de diseños
+- [ ] Incluir imágenes automáticamente en todas las secciones
+- [ ] Mejorar la estructura y el contenido del texto
