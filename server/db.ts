@@ -1,4 +1,4 @@
-import { eq, and, desc, isNull, sql } from "drizzle-orm";
+import { eq, and, desc, isNull, sql, gte, or, like, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, chats, messages, folders, memories, formSubmissions, projects, projectFiles, projectDbTables, InsertChat, InsertMessage, InsertFolder, InsertMemory, InsertFormSubmission, Chat, Message, Folder, Memory, FormSubmission, Project, InsertProject, ProjectFile, InsertProjectFile, ProjectDbTable, InsertProjectDbTable } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -617,4 +617,249 @@ export async function getProjectDbTables(projectId: number): Promise<ProjectDbTa
   if (!db) return [];
 
   return db.select().from(projectDbTables).where(eq(projectDbTables.projectId, projectId)).orderBy(projectDbTables.tableName);
+}
+
+
+// ============================================
+// ADMIN FUNCTIONS
+// ============================================
+
+/**
+ * Get admin dashboard statistics
+ */
+export async function getAdminStats() {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Get total users
+  const [usersResult] = await db.select({ count: sql<number>`COUNT(*)` }).from(users);
+  const totalUsers = usersResult?.count || 0;
+
+  // Get users by role
+  const usersByRole = await db
+    .select({ role: users.role, count: sql<number>`COUNT(*)` })
+    .from(users)
+    .groupBy(users.role);
+
+  // Get total chats
+  const [chatsResult] = await db.select({ count: sql<number>`COUNT(*)` }).from(chats);
+  const totalChats = chatsResult?.count || 0;
+
+  // Get total messages
+  const [messagesResult] = await db.select({ count: sql<number>`COUNT(*)` }).from(messages);
+  const totalMessages = messagesResult?.count || 0;
+
+  // Get total projects
+  const [projectsResult] = await db.select({ count: sql<number>`COUNT(*)` }).from(projects);
+  const totalProjects = projectsResult?.count || 0;
+
+  // Get users created today
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [newUsersToday] = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(users)
+    .where(gte(users.createdAt, today));
+
+  // Get chats created today
+  const [newChatsToday] = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(chats)
+    .where(gte(chats.createdAt, today));
+
+  // Get recent activity (last 7 days)
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  const recentChats = await db
+    .select({
+      date: sql<string>`DATE(createdAt)`,
+      count: sql<number>`COUNT(*)`
+    })
+    .from(chats)
+    .where(gte(chats.createdAt, sevenDaysAgo))
+    .groupBy(sql`DATE(createdAt)`)
+    .orderBy(sql`DATE(createdAt)`);
+
+  return {
+    totalUsers,
+    totalChats,
+    totalMessages,
+    totalProjects,
+    newUsersToday: newUsersToday?.count || 0,
+    newChatsToday: newChatsToday?.count || 0,
+    usersByRole: usersByRole.reduce((acc, { role, count }) => {
+      acc[role] = count;
+      return acc;
+    }, {} as Record<string, number>),
+    recentActivity: recentChats,
+  };
+}
+
+/**
+ * Get all users for admin panel
+ */
+export async function getAllUsers(page: number = 1, limit: number = 20, search?: string) {
+  const db = await getDb();
+  if (!db) return { users: [], total: 0 };
+
+  const offset = (page - 1) * limit;
+
+  let query = db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    role: users.role,
+    loginMethod: users.loginMethod,
+    emailVerified: users.emailVerified,
+    createdAt: users.createdAt,
+    lastSignedIn: users.lastSignedIn,
+  }).from(users);
+
+  if (search) {
+    query = query.where(
+      or(
+        like(users.name, `%${search}%`),
+        like(users.email, `%${search}%`)
+      )
+    ) as typeof query;
+  }
+
+  const usersList = await query.orderBy(desc(users.createdAt)).limit(limit).offset(offset);
+
+  // Get total count
+  let countQuery = db.select({ count: sql<number>`COUNT(*)` }).from(users);
+  if (search) {
+    countQuery = countQuery.where(
+      or(
+        like(users.name, `%${search}%`),
+        like(users.email, `%${search}%`)
+      )
+    ) as typeof countQuery;
+  }
+  const [countResult] = await countQuery;
+
+  return {
+    users: usersList,
+    total: countResult?.count || 0,
+  };
+}
+
+/**
+ * Update user role (admin only)
+ */
+export async function updateUserRole(userId: number, role: 'user' | 'admin') {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(users).set({ role }).where(eq(users.id, userId));
+}
+
+/**
+ * Delete user (admin only)
+ */
+export async function adminDeleteUser(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Delete user's data first
+  await db.delete(messages).where(
+    inArray(messages.chatId, db.select({ id: chats.id }).from(chats).where(eq(chats.userId, userId)))
+  );
+  await db.delete(chats).where(eq(chats.userId, userId));
+  await db.delete(folders).where(eq(folders.userId, userId));
+  await db.delete(memories).where(eq(memories.userId, userId));
+  await db.delete(projects).where(eq(projects.userId, userId));
+  
+  // Finally delete the user
+  await db.delete(users).where(eq(users.id, userId));
+}
+
+/**
+ * Get all chats for admin panel
+ */
+export async function getAllChats(page: number = 1, limit: number = 20, userId?: number) {
+  const db = await getDb();
+  if (!db) return { chats: [], total: 0 };
+
+  const offset = (page - 1) * limit;
+
+  let query = db.select({
+    id: chats.id,
+    title: chats.title,
+    userId: chats.userId,
+    isFavorite: chats.isFavorite,
+    createdAt: chats.createdAt,
+    updatedAt: chats.updatedAt,
+  }).from(chats);
+
+  if (userId) {
+    query = query.where(eq(chats.userId, userId)) as typeof query;
+  }
+
+  const chatsList = await query.orderBy(desc(chats.createdAt)).limit(limit).offset(offset);
+
+  // Get total count
+  let countQuery = db.select({ count: sql<number>`COUNT(*)` }).from(chats);
+  if (userId) {
+    countQuery = countQuery.where(eq(chats.userId, userId)) as typeof countQuery;
+  }
+  const [countResult] = await countQuery;
+
+  // Get user names for each chat
+  const userIds = Array.from(new Set(chatsList.map(c => c.userId)));
+  const usersMap: Record<number, string> = {};
+  
+  if (userIds.length > 0) {
+    const usersList = await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, userIds));
+    usersList.forEach(u => { usersMap[u.id] = u.name; });
+  }
+
+  return {
+    chats: chatsList.map(c => ({
+      ...c,
+      userName: usersMap[c.userId] || 'Unknown',
+    })),
+    total: countResult?.count || 0,
+  };
+}
+
+/**
+ * Get all projects for admin panel
+ */
+export async function getAllProjects(page: number = 1, limit: number = 20) {
+  const db = await getDb();
+  if (!db) return { projects: [], total: 0 };
+
+  const offset = (page - 1) * limit;
+
+  const projectsList = await db.select({
+    id: projects.id,
+    name: projects.name,
+    description: projects.description,
+    status: projects.status,
+    userId: projects.userId,
+    createdAt: projects.createdAt,
+    updatedAt: projects.updatedAt,
+  }).from(projects).orderBy(desc(projects.createdAt)).limit(limit).offset(offset);
+
+  // Get total count
+  const [countResult] = await db.select({ count: sql<number>`COUNT(*)` }).from(projects);
+
+  // Get user names for each project
+  const userIds = Array.from(new Set(projectsList.map(p => p.userId)));
+  const usersMap: Record<number, string> = {};
+  
+  if (userIds.length > 0) {
+    const usersList = await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, userIds));
+    usersList.forEach(u => { usersMap[u.id] = u.name; });
+  }
+
+  return {
+    projects: projectsList.map(p => ({
+      ...p,
+      userName: usersMap[p.userId] || 'Unknown',
+    })),
+    total: countResult?.count || 0,
+  };
 }

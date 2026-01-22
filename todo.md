@@ -396,3 +396,29 @@
 - [ ] Proteger todas las rutas excepto /login y /register
 - [ ] Restaurar funcionalidad de chat.list para usuarios autenticados
 - [ ] Crear usuario admin inicial
+
+
+## Sistema de Usuarios Propio (Completado)
+- [x] Modificar schema de users para incluir passwordHash
+- [x] Crear funciones de autenticación local (createUser, authenticateUser)
+- [x] Implementar endpoints de registro y login
+- [x] Crear página de Login
+- [x] Crear página de Registro
+- [x] Crear página de Configuración (tema, idioma, notificaciones)
+- [x] Crear página de Cuenta (perfil, cambio de contraseña, eliminar cuenta)
+- [x] Proteger rutas que requieren autenticación
+- [x] Agregar menú de usuario en sidebar con dropdown
+- [x] Deploy a producción (macgyver.to)
+- [x] 66 tests pasando
+
+
+## Panel de Administración
+- [x] Crear cuenta admin para soporte@jswebs.es
+- [x] Implementar endpoints de estadísticas (usuarios, chats, landings, visitas)
+- [x] Crear página Dashboard con métricas principales
+- [x] Crear página de gestión de Usuarios (listar, editar rol, eliminar)
+- [x] Crear página de gestión de Chats (ver todos los chats, filtrar por usuario)
+- [x] Crear página de gestión de Landings/Proyectos
+- [x] Proteger rutas de admin (solo rol admin puede acceder)
+- [x] Agregar enlace al panel de admin en el sidebar (solo para admins)
+- [ ] Deploy a producción

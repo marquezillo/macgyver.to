@@ -49,6 +49,13 @@ import {
   updateUserProfile,
   changeUserPassword,
   deleteUserAccount,
+  // Admin functions
+  getAdminStats,
+  getAllUsers,
+  updateUserRole,
+  adminDeleteUser,
+  getAllChats,
+  getAllProjects,
 } from "./db";
 import { SignJWT, jwtVerify } from 'jose';
 import { generateProject, generateProjectWithAI } from "./projectGenerator";
@@ -1021,6 +1028,91 @@ export const appRouter = router({
       }))
       .mutation(({ input }) => {
         const result = applyTemplateToLanding(input.landingJSON, input.templateId);
+        return result;
+      }),
+  }),
+
+  // Admin panel router (admin only)
+  admin: router({
+    // Get dashboard statistics
+    stats: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Acceso denegado: se requiere rol de administrador');
+      }
+      const stats = await getAdminStats();
+      return stats;
+    }),
+
+    // Get all users with pagination
+    users: protectedProcedure
+      .input(z.object({
+        page: z.number().default(1),
+        limit: z.number().default(20),
+        search: z.string().optional(),
+      }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Acceso denegado: se requiere rol de administrador');
+        }
+        const result = await getAllUsers(input.page, input.limit, input.search);
+        return result;
+      }),
+
+    // Update user role
+    updateUserRole: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        role: z.enum(['user', 'admin']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Acceso denegado: se requiere rol de administrador');
+        }
+        await updateUserRole(input.userId, input.role);
+        return { success: true };
+      }),
+
+    // Delete user
+    deleteUser: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Acceso denegado: se requiere rol de administrador');
+        }
+        // Prevent self-deletion
+        if (input.userId === ctx.user.id) {
+          throw new Error('No puedes eliminar tu propia cuenta desde el panel de admin');
+        }
+        await adminDeleteUser(input.userId);
+        return { success: true };
+      }),
+
+    // Get all chats with pagination
+    chats: protectedProcedure
+      .input(z.object({
+        page: z.number().default(1),
+        limit: z.number().default(20),
+        userId: z.number().optional(),
+      }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Acceso denegado: se requiere rol de administrador');
+        }
+        const result = await getAllChats(input.page, input.limit, input.userId);
+        return result;
+      }),
+
+    // Get all projects with pagination
+    projects: protectedProcedure
+      .input(z.object({
+        page: z.number().default(1),
+        limit: z.number().default(20),
+      }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Acceso denegado: se requiere rol de administrador');
+        }
+        const result = await getAllProjects(input.page, input.limit);
         return result;
       }),
   }),

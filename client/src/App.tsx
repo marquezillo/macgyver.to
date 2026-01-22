@@ -12,6 +12,10 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Settings from "./pages/Settings";
 import Account from "./pages/Account";
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminUsers from "./pages/admin/Users";
+import AdminChats from "./pages/admin/Chats";
+import AdminProjects from "./pages/admin/Projects";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
@@ -86,6 +90,20 @@ function Router() {
       </Route>
       <Route path="/projects">
         <ProtectedRoute component={Projects} />
+      </Route>
+      
+      {/* Admin routes */}
+      <Route path="/admin">
+        <ProtectedRoute component={AdminDashboard} />
+      </Route>
+      <Route path="/admin/users">
+        <ProtectedRoute component={AdminUsers} />
+      </Route>
+      <Route path="/admin/chats">
+        <ProtectedRoute component={AdminChats} />
+      </Route>
+      <Route path="/admin/projects">
+        <ProtectedRoute component={AdminProjects} />
       </Route>
       
       <Route path="/404" component={NotFound} />
