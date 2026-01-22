@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { invokeLLM } from "./_core/llm";
 import { generateCustomImage, generateLandingImages } from "./geminiImageGeneration";
+import { listTemplates, getTemplate, applyTemplateToLanding } from "./landingTemplates";
 import { generateChatImage, searchImages, getApiStatus } from "./imageSearch";
 import { extractMemoriesFromConversation } from "./memoryExtraction";
 import {
@@ -838,6 +839,40 @@ export const appRouter = router({
       .query(async () => {
         const servers = listRunningDevServers();
         return { servers };
+      }),
+  }),
+
+  // Templates for landing pages
+  templates: router({
+    // List all available templates
+    list: publicProcedure.query(() => {
+      const allTemplates = listTemplates();
+      return allTemplates.map(t => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        preview: t.preview,
+        colors: t.colors,
+      }));
+    }),
+
+    // Get a specific template by ID
+    get: publicProcedure
+      .input(z.object({ templateId: z.string() }))
+      .query(({ input }) => {
+        const template = getTemplate(input.templateId);
+        return template;
+      }),
+
+    // Apply a template to landing JSON
+    applyToLanding: protectedProcedure
+      .input(z.object({
+        landingJSON: z.record(z.string(), z.unknown()),
+        templateId: z.string(),
+      }))
+      .mutation(({ input }) => {
+        const result = applyTemplateToLanding(input.landingJSON, input.templateId);
+        return result;
       }),
   }),
 });
