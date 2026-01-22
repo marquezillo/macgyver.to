@@ -518,8 +518,39 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       // Check if this is a research request (auto-detect "Investiga [" pattern)
       const isResearchRequest = isResearch || messageContent.toLowerCase().startsWith('investiga [') || messageContent.toLowerCase().startsWith('investiga:') || messageContent.toLowerCase().includes('investiga sobre');
 
-      // Check if this is an image generation request
-      if (isImage || messageContent.toLowerCase().includes('genera una imagen') || messageContent.toLowerCase().includes('crea una imagen')) {
+      // Check if this is an image generation request - detect multiple patterns and synonyms
+      const lowerMessage = messageContent.toLowerCase();
+      const imageKeywords = [
+        // Verbos de generación
+        'genera', 'generar', 'generame', 'genérame',
+        'crea', 'crear', 'creame', 'créame',
+        'haz', 'hazme', 'hacer',
+        'dibuja', 'dibujar', 'dibujame', 'dibújame',
+        'diseña', 'diseñar', 'diseñame',
+        'produce', 'producir', 'produceme',
+        'muestra', 'mostrar', 'muestrame', 'muéstrame',
+        'dame', 'quiero', 'necesito',
+      ];
+      const imageNouns = [
+        'imagen', 'imagenes', 'imágenes',
+        'foto', 'fotos', 'fotografía', 'fotografías',
+        'ilustración', 'ilustracion', 'ilustraciones',
+        'dibujo', 'dibujos',
+        'gráfico', 'grafico', 'gráficos', 'graficos',
+        'arte', 'artwork',
+        'picture', 'image', 'photo',
+        'visual', 'visualización',
+        'retrato', 'retratos',
+        'poster', 'póster',
+        'banner', 'logo', 'icono',
+      ];
+      
+      // Check if message contains both a generation verb and an image noun
+      const hasImageVerb = imageKeywords.some(verb => lowerMessage.includes(verb));
+      const hasImageNoun = imageNouns.some(noun => lowerMessage.includes(noun));
+      const isImageRequest = isImage || (hasImageVerb && hasImageNoun);
+      
+      if (isImageRequest) {
         // Generate image
         const response = await fetch('/api/generate-image', {
           method: 'POST',

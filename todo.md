@@ -264,6 +264,13 @@
 - [ ] Probar botón "Generar imagen" del chat
 
 ## Bug Fix - Generación de Imágenes en Chat
-- [ ] Corregir detección de intención "genera imagen" en el chat
-- [ ] El LLM responde que no puede generar imágenes en lugar de usar generateChatImage
+- [x] Corregir detección de intención "genera imagen" en el chat
+- [x] El LLM responde que no puede generar imágenes en lugar de usar generateChatImage
+- [x] Actualizado endpoint /api/generate-image para usar sistema híbrido
 - [ ] Probar generación de imágenes desde el chat
+
+## Mejora - Detección Automática de Intención de Imágenes en Chat
+- [ ] Ampliar patrones de detección para incluir todos los sinónimos
+- [ ] Detectar: genera/crea/hazme/dibuja/genérame + imagen/foto/ilustración/dibujo
+- [ ] El chat debe funcionar sin depender de botones
+- [ ] Probar con múltiples variantes de petición
