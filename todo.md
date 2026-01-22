@@ -330,3 +330,35 @@
 - [ ] Agregar más secciones y variedad de diseños
 - [ ] Incluir imágenes automáticamente en todas las secciones
 - [ ] Mejorar la estructura y el contenido del texto
+
+
+## Templates Predefinidos (Dark/Light/Gradient)
+- [x] Crear archivo landingTemplates.ts con definiciones de estilos
+- [x] Template Dark Mode (fondo oscuro, texto claro)
+- [x] Template Light Mode (fondo claro, texto oscuro)
+- [x] Template Gradient (gradientes modernos)
+- [x] Template Minimal (ultra minimalista)
+- [x] Template Neon (cyberpunk con neón)
+- [x] Template Warm (tonos cálidos)
+- [x] Crear componente TemplateSelector.tsx
+- [x] Agregar router tRPC para templates (list, get, applyToLanding)
+- [x] Tests pasando (14/14 tests de templates)
+- [ ] Integrar selector de template en el chat
+- [ ] Aplicar template seleccionado al generar landing
+
+## Editor Visual de Secciones
+- [x] Crear componente SectionEditor.tsx con lista de secciones
+- [x] Implementar drag & drop para reordenar secciones
+- [x] Botones para mover arriba/abajo, duplicar, eliminar
+- [x] Menú para añadir nuevas secciones
+- [x] Indicador visual de sección seleccionada
+- [ ] Integrar SectionEditor en el panel de propiedades
+- [ ] Modal de edición para modificar contenido de secciones
+
+
+## BUG - Autenticación Obligatoria No Deseada
+- [x] La app muestra "Iniciar sesión" cuando no debería requerir login
+- [x] Modificar Sidebar.tsx para no mostrar "Inicia sesión para ver tu historial"
+- [x] Eliminar botón "Iniciar Sesión" del sidebar
+- [x] Probar que la app funciona completamente sin autenticación
+- NOTA: El historial ahora se carga sin requerir autenticación. El botón de login se eliminó.

@@ -10,7 +10,6 @@ import { Link } from 'wouter';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { getLoginUrl } from '@/const';
 import { isToday, isYesterday } from 'date-fns';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
@@ -78,14 +77,16 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
   const editInputRef = useRef<HTMLInputElement>(null);
   const newFolderInputRef = useRef<HTMLInputElement>(null);
   
-  // Fetch chats from database
+  // Fetch chats from database - always try to fetch, will return empty if not authenticated
   const { data: chats, isLoading: chatsLoading } = trpc.chat.list.useQuery(undefined, {
-    enabled: isAuthenticated,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch folders
   const { data: folders } = trpc.folder.list.useQuery(undefined, {
-    enabled: isAuthenticated,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   // Delete chat mutation
@@ -313,18 +314,20 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={(e) => handleToggleFavorite(e as any, chat.id, chat.isFavorite || 0)}>
                   <Star className={cn("h-3 w-3 mr-2", chat.isFavorite && "fill-yellow-500 text-yellow-500")} />
-                  {chat.isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+                  {chat.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
                 </DropdownMenuItem>
+                
+                {/* Move to folder submenu */}
                 {folders && folders.length > 0 && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem disabled className="text-xs text-gray-400">
+                    <DropdownMenuItem className="font-medium text-xs text-gray-500" disabled>
                       Mover a carpeta
                     </DropdownMenuItem>
                     {chat.folderId && (
                       <DropdownMenuItem onClick={() => handleMoveToFolder(chat.id, null)}>
                         <X className="h-3 w-3 mr-2" />
-                        Quitar de carpeta
+                        Sin carpeta
                       </DropdownMenuItem>
                     )}
                     {folders.map(folder => (
@@ -333,21 +336,26 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
                         onClick={() => handleMoveToFolder(chat.id, folder.id)}
                         disabled={chat.folderId === folder.id}
                       >
-                        <Folder className="h-3 w-3 mr-2" />
+                        <Folder className={cn("h-3 w-3 mr-2", FOLDER_COLORS.find(c => c.name === folder.color)?.text || 'text-gray-500')} />
                         {folder.name}
                       </DropdownMenuItem>
                     ))}
                   </>
                 )}
+                
                 <DropdownMenuSeparator />
+                <DropdownMenuItem className="font-medium text-xs text-gray-500" disabled>
+                  Exportar como
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExportChat(chat.id, 'markdown')}>
                   <Download className="h-3 w-3 mr-2" />
-                  Exportar Markdown
+                  Markdown (.md)
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExportChat(chat.id, 'json')}>
                   <Download className="h-3 w-3 mr-2" />
-                  Exportar JSON
+                  JSON (.json)
                 </DropdownMenuItem>
+                
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={(e) => handleDeleteChat(e as any, chat.id)}
@@ -364,31 +372,32 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
     );
   };
 
-  const renderFolderSection = (folder: { id: number; name: string; color?: string | null }) => {
+  const renderFolderSection = (folder: { id: number; name: string; color: string | null }) => {
     const isExpanded = expandedFolders.has(folder.id);
     const folderChats = getChatsForFolder(folder.id);
-    const colorConfig = FOLDER_COLORS.find(c => c.name === folder.color) || FOLDER_COLORS[0];
+    const colorClass = FOLDER_COLORS.find(c => c.name === folder.color) || FOLDER_COLORS[0];
 
     return (
-      <div key={folder.id} className="mb-2">
+      <div key={folder.id} className="mb-1">
         <div 
-          className="flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-gray-200/50 cursor-pointer group"
+          className={cn(
+            "flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer group",
+            "hover:bg-gray-200/50"
+          )}
           onClick={() => toggleFolderExpand(folder.id)}
         >
           {isExpanded ? (
-            <ChevronDown className="h-3 w-3 text-gray-400 shrink-0" />
+            <ChevronDown className="h-3 w-3 text-gray-400" />
           ) : (
-            <ChevronRight className="h-3 w-3 text-gray-400 shrink-0" />
+            <ChevronRight className="h-3 w-3 text-gray-400" />
           )}
-          <div className={cn("p-1 rounded", colorConfig.bg)}>
-            <Folder className={cn("h-3 w-3", colorConfig.text)} />
-          </div>
-          <span className="text-sm text-gray-700 flex-1 truncate">{folder.name}</span>
+          <Folder className={cn("h-3.5 w-3.5", colorClass.text)} />
+          <span className="text-sm text-gray-600 flex-1 truncate">{folder.name}</span>
           <span className="text-xs text-gray-400">{folderChats.length}</span>
           <Button
             variant="ghost"
             size="icon"
-            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-5 w-5 opacity-0 group-hover:opacity-100"
             onClick={(e) => handleDeleteFolder(e, folder.id)}
           >
             <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-500" />
@@ -406,6 +415,9 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
       </div>
     );
   };
+
+  // Check if we have any chats to show
+  const hasChats = chats && chats.length > 0;
 
   return (
     <div 
@@ -432,8 +444,8 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
         </Button>
       </div>
 
-      {/* Search Bar */}
-      {isAuthenticated && chats && chats.length > 0 && (
+      {/* Search Bar - show if there are chats */}
+      {hasChats && (
         <div className="px-3 mb-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
@@ -449,22 +461,11 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
 
       {/* History List */}
       <ScrollArea className="flex-1 px-3">
-        {!isAuthenticated ? (
-          <div className="text-center py-8 px-4">
-            <p className="text-sm text-gray-500 mb-4">Inicia sesión para ver tu historial</p>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => window.location.href = getLoginUrl()}
-            >
-              Iniciar Sesión
-            </Button>
-          </div>
-        ) : chatsLoading ? (
+        {chatsLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
           </div>
-        ) : chats && chats.length === 0 ? (
+        ) : !hasChats ? (
           <div className="text-center py-8 px-4">
             <p className="text-sm text-gray-500">No tienes conversaciones aún</p>
             <p className="text-xs text-gray-400 mt-1">Crea un nuevo chat para empezar</p>
@@ -548,11 +549,11 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
               </div>
             )}
 
-            {/* Add folder button if no folders exist */}
-            {(!folders || folders.length === 0) && isAuthenticated && (
+            {/* Show folder creation button if no folders yet but user is authenticated */}
+            {isAuthenticated && (!folders || folders.length === 0) && (
               <div className="px-2">
                 {showNewFolder ? (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 mb-2">
                     <Input
                       ref={newFolderInputRef}
                       value={newFolderName}
@@ -637,31 +638,27 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
 
       {/* Footer: User Profile */}
       <div className="p-3 border-t border-gray-200 dark:border-gray-700 mt-auto space-y-2">
-        {/* Projects */}
-        {isAuthenticated && (
-          <Link href="/projects">
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 px-2 h-9 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
-            >
-              <Boxes className="w-4 h-4 text-emerald-500" />
-              <span className="text-sm text-gray-600 dark:text-gray-300">Proyectos</span>
-            </Button>
-          </Link>
-        )}
+        {/* Projects - always visible */}
+        <Link href="/projects">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 px-2 h-9 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
+          >
+            <Boxes className="w-4 h-4 text-emerald-500" />
+            <span className="text-sm text-gray-600 dark:text-gray-300">Proyectos</span>
+          </Button>
+        </Link>
 
-        {/* Memory Settings */}
-        {isAuthenticated && (
-          <Link href="/settings/memory">
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 px-2 h-9 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
-            >
-              <Brain className="w-4 h-4 text-purple-500" />
-              <span className="text-sm text-gray-600 dark:text-gray-300">Memoria</span>
-            </Button>
-          </Link>
-        )}
+        {/* Memory Settings - always visible */}
+        <Link href="/settings/memory">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 px-2 h-9 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
+          >
+            <Brain className="w-4 h-4 text-purple-500" />
+            <span className="text-sm text-gray-600 dark:text-gray-300">Memoria</span>
+          </Button>
+        </Link>
 
         {/* Theme Toggle */}
         {switchable && (
@@ -681,7 +678,8 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
           </Button>
         )}
         
-        {isAuthenticated && user ? (
+        {/* User info - only show if authenticated */}
+        {isAuthenticated && user && (
           <Button variant="ghost" className="w-full justify-start gap-2 px-2 h-12 hover:bg-gray-200/50 dark:hover:bg-gray-700/50">
             <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium text-xs">
               {user.name?.substring(0, 2).toUpperCase() || 'US'}
@@ -691,14 +689,6 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
               <span className="text-[10px] text-gray-500 dark:text-gray-400">{user.role === 'admin' ? 'Admin' : 'Pro Plan'}</span>
             </div>
             <Settings className="w-4 h-4 text-gray-400 shrink-0" />
-          </Button>
-        ) : (
-          <Button 
-            variant="outline" 
-            className="w-full"
-            onClick={() => window.location.href = getLoginUrl()}
-          >
-            Iniciar Sesión
           </Button>
         )}
       </div>
