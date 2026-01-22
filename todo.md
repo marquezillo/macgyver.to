@@ -421,4 +421,4 @@
 - [x] Crear página de gestión de Landings/Proyectos
 - [x] Proteger rutas de admin (solo rol admin puede acceder)
 - [x] Agregar enlace al panel de admin en el sidebar (solo para admins)
-- [ ] Deploy a producción
+- [x] Deploy a producción

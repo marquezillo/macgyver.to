@@ -158,7 +158,7 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
                       if (parent) {
                         const fallback = document.createElement('div');
                         fallback.className = 'w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold';
-                        fallback.textContent = testimonial.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                        fallback.textContent = (testimonial.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase();
                         parent.insertBefore(fallback, target);
                       }
                     }}
@@ -171,7 +171,7 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
                     )}
                     style={{ backgroundColor: styles?.accentColor }}
                   >
-                    {testimonial.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                    {(testimonial.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                   </div>
                 )}
                 <div>

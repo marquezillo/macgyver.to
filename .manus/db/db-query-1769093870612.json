@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, email, passwordHash, loginMethod FROM users WHERE email = 'soporte@jswebs.es';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 34PJYedpVygExjM.e1ecfc4d4172 --database ZbHp7JpkjVz6yScGwQHTeE --execute SELECT id, email, passwordHash, loginMethod FROM users WHERE email = 'soporte@jswebs.es';",
+  "rows": [
+    {
+      "id": "1",
+      "email": "soporte@jswebs.es",
+      "passwordHash": "$2b$10$P4iRiTPdwaMmwLtUllcoZessQ4fA9N.DFzZdEUp111BtJ5LFwveri",
+      "loginMethod": "local"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tpasswordHash\tloginMethod\n1\tsoporte@jswebs.es\t$2b$10$P4iRiTPdwaMmwLtUllcoZessQ4fA9N.DFzZdEUp111BtJ5LFwveri\tlocal\n",
+  "stderr": "",
+  "execution_time_ms": 1520
+}

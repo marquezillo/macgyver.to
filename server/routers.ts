@@ -280,9 +280,18 @@ export const appRouter = router({
           throw new Error('Email o contraseña incorrectos');
         }
         
-        // Create JWT token
+        // Create JWT token with the format expected by sdk.ts (openId, appId, name)
         const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret');
-        const token = await new SignJWT({ userId: user.id, email: user.email })
+        // Use a unique identifier for local users (email-based openId)
+        const localOpenId = `local-${user.id}`;
+        const token = await new SignJWT({ 
+          openId: localOpenId,
+          appId: process.env.VITE_APP_ID || 'landing-editor',
+          name: user.name || user.email || 'Usuario',
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+        })
           .setProtectedHeader({ alg: 'HS256' })
           .setExpirationTime('365d')
           .sign(secret);

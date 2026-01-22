@@ -268,6 +268,17 @@ class SDKServer {
 
     const sessionUserId = session.openId;
     const signedInAt = new Date();
+    
+    // Check if this is a local user (created via email/password registration)
+    if (sessionUserId.startsWith('local-')) {
+      const userId = parseInt(sessionUserId.replace('local-', ''), 10);
+      const user = await db.getUserById(userId);
+      if (!user) {
+        throw ForbiddenError("User not found");
+      }
+      return user;
+    }
+    
     let user = await db.getUserByOpenId(sessionUserId);
 
     // If user not in DB, sync from OAuth server automatically
