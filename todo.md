@@ -262,3 +262,8 @@
 - [x] Tests de búsqueda híbrida (5/5 pasando)
 - [ ] Probar generación de landing con imágenes híbridas
 - [ ] Probar botón "Generar imagen" del chat
+
+## Bug Fix - Generación de Imágenes en Chat
+- [ ] Corregir detección de intención "genera imagen" en el chat
+- [ ] El LLM responde que no puede generar imágenes en lugar de usar generateChatImage
+- [ ] Probar generación de imágenes desde el chat

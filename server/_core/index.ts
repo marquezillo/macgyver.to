@@ -13,6 +13,7 @@ import { ENV } from "./env";
 import { performDeepResearchStream } from "../deepResearch";
 import { storagePut } from "../storage";
 import { generateImage } from "./imageGeneration";
+import { generateChatImage } from "../imageSearch";
 import { getMemoriesForContext, getUserByOpenId, createFormSubmission } from "../db";
 import { extractMemoriesFromConversation } from "../memoryExtraction";
 import { analyzeUrlStream } from "../urlAnalysis";
@@ -390,13 +391,25 @@ async function startServer() {
 
       console.log("[Image Generation] Generating image for prompt:", prompt);
 
-      const result = await generateImage({ prompt });
+      // Usar el sistema híbrido: Pollinations.ai primero, luego Gemini, luego DALL-E
+      let imageUrl = await generateChatImage(prompt);
       
-      console.log("[Image Generation] Image generated successfully:", result.url);
+      // Fallback a DALL-E si el sistema híbrido falla
+      if (!imageUrl) {
+        console.log("[Image Generation] Hybrid system failed, falling back to DALL-E");
+        const result = await generateImage({ prompt });
+        imageUrl = result.url || null;
+      }
+      
+      if (!imageUrl) {
+        throw new Error("No se pudo generar la imagen");
+      }
+      
+      console.log("[Image Generation] Image generated successfully:", imageUrl);
 
       res.json({
         success: true,
-        url: result.url,
+        url: imageUrl,
       });
     } catch (error) {
       console.error("Image generation error:", error);
