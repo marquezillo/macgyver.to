@@ -292,15 +292,35 @@ export async function* runAutonomousTaskStream(
 // Check if a request should trigger autonomous mode
 export function shouldUseAutonomousMode(message: string): boolean {
   const autonomousTriggers = [
+    // Investigación y creación
     /investiga.*y.*(?:crea|genera|escribe)/i,
     /busca.*(?:información|datos).*(?:y|para).*(?:crear|generar|analizar)/i,
     /analiza.*(?:y|para).*(?:crear|generar|resumir)/i,
     /(?:crea|genera).*(?:basado en|usando).*(?:investigación|búsqueda)/i,
+    
+    // Modo autónomo explícito
     /paso a paso/i,
     /automáticamente/i,
     /sin intervención/i,
     /agente/i,
+    
+    // Acceso a URLs y clonación de páginas
+    /(?:entra|accede|ve|visita|abre)\s+(?:a|en)?\s*(?:la)?\s*(?:página|web|url)?\s*https?:\/\//i,
+    /(?:clona|copia|replica|imita|duplica).*(?:página|web|landing|sitio)/i,
+    /(?:clona|copia|replica).*https?:\/\//i,
+    /https?:\/\/.*(?:clona|copia|replica|igual|parecida|similar)/i,
+    /(?:hazme|créame|genera).*(?:igual|parecida|similar|como).*https?:\/\//i,
+    /(?:analiza|extrae|scrape|scrapea).*https?:\/\//i,
+    /(?:captura|screenshot|pantallazo).*(?:de|la)?.*https?:\/\//i,
   ];
+  
+  // También detectar si hay una URL y palabras clave de acción
+  const hasUrl = /https?:\/\/[^\s]+/i.test(message);
+  const hasActionKeyword = /(?:clona|copia|replica|analiza|extrae|entra|accede|visita|abre|scrape|captura|igual|parecida|similar)/i.test(message);
+  
+  if (hasUrl && hasActionKeyword) {
+    return true;
+  }
 
   return autonomousTriggers.some(pattern => pattern.test(message));
 }

@@ -205,11 +205,20 @@ describe("Autonomous Agents", () => {
   it("detects autonomous mode triggers", async () => {
     const { shouldUseAutonomousMode } = await import("./autonomousAgents");
     
+    // Patrones originales
     expect(shouldUseAutonomousMode("Investiga sobre React y crea un resumen")).toBe(true);
     expect(shouldUseAutonomousMode("Busca información para crear un informe")).toBe(true);
     expect(shouldUseAutonomousMode("Hazlo paso a paso")).toBe(true);
     expect(shouldUseAutonomousMode("¿Qué hora es?")).toBe(false);
     expect(shouldUseAutonomousMode("Hola")).toBe(false);
+    
+    // Nuevos patrones para URLs y clonación
+    expect(shouldUseAutonomousMode("Entra a https://example.com y clona la página")).toBe(true);
+    expect(shouldUseAutonomousMode("Clona esta página https://example.com")).toBe(true);
+    expect(shouldUseAutonomousMode("Puedes clonarme una landing igual a https://example.com")).toBe(true);
+    expect(shouldUseAutonomousMode("Accede a https://example.com y analiza el contenido")).toBe(true);
+    expect(shouldUseAutonomousMode("Visita https://example.com")).toBe(true);
+    expect(shouldUseAutonomousMode("Hazme una landing parecida a https://example.com")).toBe(true);
   });
 
   it("plans task steps correctly", async () => {

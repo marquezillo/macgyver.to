@@ -305,3 +305,12 @@
 - [x] Tests pasando (8/8)
 - [ ] Probar generación de landings con imágenes automáticas
 - [ ] Desplegar y verificar en producción
+
+
+## Bug Fix - Detección de Modo Autónomo para URLs
+- [x] El chat dice que no puede acceder a páginas web cuando debería usar Playwright
+- [x] Revisar la función shouldUseAutonomousMode() en autonomousAgents.ts
+- [x] Agregar patrones de detección para: "entra a", "accede a", "clona", "copia esta página"
+- [x] Detectar URLs en el mensaje y activar modo autónomo automáticamente
+- [x] Tests pasando (10/10)
+- [ ] Probar con peticiones como "clona https://ejemplo.com"
