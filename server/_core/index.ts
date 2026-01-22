@@ -9,6 +9,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { invokeLLMStream } from "./llm";
 import { sdk } from "./sdk";
+import { ENV } from "./env";
 import { performDeepResearchStream } from "../deepResearch";
 import { storagePut } from "../storage";
 import { generateImage } from "./imageGeneration";
@@ -187,13 +188,19 @@ async function startServer() {
   // Streaming AI endpoint (SSE)
   app.post("/api/ai/stream", async (req, res) => {
     try {
-      // Verify authentication
+      // Verify authentication (skip in standalone mode)
       let user;
       try {
         user = await sdk.authenticateRequest(req);
       } catch {
         user = null;
       }
+      
+      // In standalone mode, create a default user if not authenticated
+      if (!user && ENV.standaloneMode) {
+        user = { id: "standalone-user", openId: "standalone-user", name: "Usuario", role: "admin" as const };
+      }
+      
       if (!user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -281,13 +288,19 @@ async function startServer() {
         ).catch(err => console.error('[MemoryExtraction] Background extraction failed:', err));
       }
 
+      // Log artifact data for debugging
+      console.log('[AI Stream] hasArtifact:', hasArtifact);
+      if (artifactData) {
+        console.log('[AI Stream] artifactData sections count:', artifactData.sections?.length || 0);
+      }
+
       // Send final message with metadata
-      res.write(`data: ${JSON.stringify({ 
-        type: "done", 
-        content: displayMessage,
-        hasArtifact,
-        artifactData
-      })}\n\n`);
+      const doneEvent = { type: "done", content: displayMessage, hasArtifact, artifactData };
+      const doneEventStr = JSON.stringify(doneEvent);
+      console.log("[AI Stream] Sending done event with", artifactData?.sections?.length || 0, "sections");
+      console.log("[AI Stream] Done event string length:", doneEventStr.length);
+      console.log("[AI Stream] Done event preview:", doneEventStr.substring(0, 500));
+      res.write(`data: ${doneEventStr}\n\n`);
       
       res.end();
     } catch (error) {
@@ -310,6 +323,9 @@ async function startServer() {
         user = await sdk.authenticateRequest(req);
       } catch {
         user = null;
+      }
+      if (!user && ENV.standaloneMode) {
+        user = { id: "standalone-user", openId: "standalone-user", name: "Usuario", role: "admin" as const };
       }
       if (!user) {
         res.status(401).json({ error: "Unauthorized" });
@@ -341,6 +357,12 @@ async function startServer() {
     }
   });
 
+  // Debug endpoint to verify frontend code execution
+  app.post("/api/debug-log", (req, res) => {
+    console.log('[DEBUG-LOG] Frontend message:', JSON.stringify(req.body));
+    res.json({ success: true });
+  });
+
   // Image generation endpoint
   app.post("/api/generate-image", async (req, res) => {
     try {
@@ -350,6 +372,9 @@ async function startServer() {
         user = await sdk.authenticateRequest(req);
       } catch {
         user = null;
+      }
+      if (!user && ENV.standaloneMode) {
+        user = { id: "standalone-user", openId: "standalone-user", name: "Usuario", role: "admin" as const };
       }
       if (!user) {
         res.status(401).json({ error: "Unauthorized" });
@@ -391,6 +416,9 @@ async function startServer() {
         user = await sdk.authenticateRequest(req);
       } catch {
         user = null;
+      }
+      if (!user && ENV.standaloneMode) {
+        user = { id: "standalone-user", openId: "standalone-user", name: "Usuario", role: "admin" as const };
       }
       if (!user) {
         res.status(401).json({ error: "Unauthorized" });
@@ -471,6 +499,9 @@ async function startServer() {
       } catch {
         user = null;
       }
+      if (!user && ENV.standaloneMode) {
+        user = { id: "standalone-user", openId: "standalone-user", name: "Usuario", role: "admin" as const };
+      }
       if (!user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -515,6 +546,9 @@ async function startServer() {
         user = await sdk.authenticateRequest(req);
       } catch {
         user = null;
+      }
+      if (!user && ENV.standaloneMode) {
+        user = { id: "standalone-user", openId: "standalone-user", name: "Usuario", role: "admin" as const };
       }
       if (!user) {
         res.status(401).json({ error: "Unauthorized" });
@@ -587,6 +621,9 @@ Responde SOLO con el output del código, como si fueras una terminal. No expliqu
       } catch {
         user = null;
       }
+      if (!user && ENV.standaloneMode) {
+        user = { id: "standalone-user", openId: "standalone-user", name: "Usuario", role: "admin" as const };
+      }
       if (!user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -627,6 +664,9 @@ Responde SOLO con el output del código, como si fueras una terminal. No expliqu
       } catch {
         user = null;
       }
+      if (!user && ENV.standaloneMode) {
+        user = { id: "standalone-user", openId: "standalone-user", name: "Usuario", role: "admin" as const };
+      }
       if (!user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -655,6 +695,9 @@ Responde SOLO con el output del código, como si fueras una terminal. No expliqu
         user = await sdk.authenticateRequest(req);
       } catch {
         user = null;
+      }
+      if (!user && ENV.standaloneMode) {
+        user = { id: "standalone-user", openId: "standalone-user", name: "Usuario", role: "admin" as const };
       }
       if (!user) {
         res.status(401).json({ error: "Unauthorized" });
@@ -696,6 +739,9 @@ Responde SOLO con el output del código, como si fueras una terminal. No expliqu
       } catch {
         user = null;
       }
+      if (!user && ENV.standaloneMode) {
+        user = { id: "standalone-user", openId: "standalone-user", name: "Usuario", role: "admin" as const };
+      }
       if (!user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -724,6 +770,9 @@ Responde SOLO con el output del código, como si fueras una terminal. No expliqu
         user = await sdk.authenticateRequest(req);
       } catch {
         user = null;
+      }
+      if (!user && ENV.standaloneMode) {
+        user = { id: "standalone-user", openId: "standalone-user", name: "Usuario", role: "admin" as const };
       }
       if (!user) {
         res.status(401).json({ error: "Unauthorized" });
@@ -765,6 +814,9 @@ Responde SOLO con el output del código, como si fueras una terminal. No expliqu
       } catch {
         user = null;
       }
+      if (!user && ENV.standaloneMode) {
+        user = { id: "standalone-user", openId: "standalone-user", name: "Usuario", role: "admin" as const };
+      }
       if (!user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -804,6 +856,9 @@ Responde SOLO con el output del código, como si fueras una terminal. No expliqu
         user = await sdk.authenticateRequest(req);
       } catch {
         user = null;
+      }
+      if (!user && ENV.standaloneMode) {
+        user = { id: "standalone-user", openId: "standalone-user", name: "Usuario", role: "admin" as const };
       }
       if (!user) {
         res.status(401).json({ error: "Unauthorized" });

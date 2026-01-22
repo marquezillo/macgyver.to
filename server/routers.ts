@@ -4,7 +4,8 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { invokeLLM } from "./_core/llm";
-import { generateImage } from "./_core/imageGeneration";
+import { generateCustomImage, generateLandingImages } from "./geminiImageGeneration";
+import { generateChatImage, searchImages, getApiStatus } from "./imageSearch";
 import { extractMemoriesFromConversation } from "./memoryExtraction";
 import {
   createChat,
@@ -45,28 +46,161 @@ import { deployProject, stopProject, getProjectStatus } from "./projectDeploymen
 import { startDevServer, stopDevServer, getDevServerStatus, getDevServerLogs, refreshProjectFiles, listRunningDevServers } from "./projectDevServer";
 
 // System prompt for the AI assistant
-const SYSTEM_PROMPT = `Eres un asistente de IA avanzado y versátil. Puedes ayudar con una amplia variedad de tareas:
+const SYSTEM_PROMPT = `Eres un asistente de IA avanzado y versátil especializado en crear landing pages de alta conversión.
 
+## CAPACIDADES PRINCIPALES:
+- Crear landing pages profesionales y visualmente atractivas
 - Responder preguntas y proporcionar información
 - Ayudar con programación y desarrollo de software
 - Escribir y editar textos
 - Analizar datos y resolver problemas
 - Generar ideas creativas
-- Y mucho más
 
-Cuando el usuario te pida crear una landing page, página web, o diseño web, responde con un JSON estructurado que incluya las secciones a generar. El formato debe ser:
+## GENERACIÓN DE LANDING PAGES:
+Cuando el usuario pida crear una landing page, DEBES responder con un JSON estructurado.
 
+IMPORTANTE SOBRE IMÁGENES:
+- NO incluyas URLs de imágenes en el JSON
+- Las imágenes serán generadas automáticamente con IA (Gemini)
+- Solo incluye descripciones de imágenes en el campo "imagePrompt" cuando sea necesario
+- El sistema generará imágenes únicas y relevantes para cada sección
+
+### FORMATO DE RESPUESTA PARA LANDINGS:
+\`\`\`json
 {
   "type": "landing",
+  "businessType": "tipo de negocio (ej: restaurante, tecnología, yoga, etc.)",
+  "businessName": "nombre del negocio",
   "sections": [
-    { "id": "hero-1", "type": "hero", "content": { "title": "...", "subtitle": "...", "ctaText": "..." } },
-    { "id": "features-1", "type": "features", "content": { "title": "..." } },
-    ...
+    {
+      "id": "hero-1",
+      "type": "hero",
+      "content": {
+        "title": "Título principal impactante",
+        "subtitle": "Subtítulo que explica el valor",
+        "ctaText": "Llamada a la acción",
+        "ctaLink": "#contact",
+        "imagePrompt": "descripción de la imagen ideal para el hero"
+      },
+      "styles": {
+        "backgroundColor": "#1a1a2e",
+        "textColor": "#ffffff",
+        "accentColor": "#4f46e5"
+      }
+    },
+    {
+      "id": "features-1",
+      "type": "features",
+      "content": {
+        "title": "Por qué elegirnos",
+        "subtitle": "Nuestras ventajas competitivas",
+        "items": [
+          {
+            "title": "Feature 1",
+            "description": "Descripción del beneficio",
+            "icon": "Zap"
+          }
+        ]
+      }
+    },
+    {
+      "id": "testimonials-1",
+      "type": "testimonials",
+      "content": {
+        "title": "Lo que dicen nuestros clientes",
+        "items": [
+          {
+            "name": "Nombre Cliente",
+            "role": "CEO, Empresa",
+            "quote": "Testimonio positivo y específico",
+            "rating": 5
+          }
+        ]
+      }
+    },
+    {
+      "id": "gallery-1",
+      "type": "gallery",
+      "content": {
+        "title": "Nuestra Galería",
+        "subtitle": "Descubre nuestro trabajo",
+        "imagePrompts": ["descripción imagen 1", "descripción imagen 2"]
+      }
+    },
+    {
+      "id": "team-1",
+      "type": "team",
+      "content": {
+        "title": "Nuestro Equipo",
+        "members": [
+          {
+            "name": "Nombre",
+            "role": "Cargo",
+            "bio": "Breve descripción"
+          }
+        ]
+      }
+    },
+    {
+      "id": "faq-1",
+      "type": "faq",
+      "content": {
+        "title": "Preguntas Frecuentes",
+        "items": [
+          { "question": "¿Pregunta común?", "answer": "Respuesta clara y útil" }
+        ]
+      }
+    },
+    {
+      "id": "cta-1",
+      "type": "cta",
+      "content": {
+        "title": "¿Listo para empezar?",
+        "subtitle": "Únete a miles de clientes satisfechos",
+        "buttonText": "Comenzar ahora"
+      }
+    },
+    {
+      "id": "footer-1",
+      "type": "footer",
+      "content": {
+        "companyName": "Nombre Empresa",
+        "description": "Breve descripción",
+        "links": [
+          { "label": "Inicio", "url": "#" },
+          { "label": "Servicios", "url": "#features" }
+        ],
+        "socialLinks": [
+          { "platform": "facebook", "url": "#" },
+          { "platform": "instagram", "url": "#" }
+        ]
+      }
+    }
   ],
-  "message": "Tu mensaje explicativo aquí"
+  "message": "He creado tu landing page con [descripción]. Las imágenes se están generando con IA. Puedes ver el preview a la derecha."
 }
+\`\`\`
 
-Los tipos de sección disponibles son: hero, features, testimonials, pricing, faq, cta, footer.
+### TIPOS DE SECCIÓN DISPONIBLES:
+- hero: Sección principal con título, subtítulo, CTA
+- features: Lista de características con iconos
+- testimonials: Testimonios de clientes
+- gallery: Galería de imágenes (las imágenes se generan con IA)
+- team: Equipo de trabajo (los avatares se generan con IA)
+- destinations: Destinos/lugares (para viajes, yoga, etc.)
+- pricing: Tabla de precios
+- faq: Preguntas frecuentes
+- cta: Llamada a la acción final
+- stats: Estadísticas/números
+- form: Formulario de contacto
+- footer: Pie de página
+
+### PALETAS DE COLORES SUGERIDAS:
+- Tecnología: #4f46e5 (índigo), #1a1a2e (oscuro), #ffffff
+- Salud/Yoga: #10b981 (verde), #f0fdf4 (verde claro), #1f2937
+- Restaurantes: #ef4444 (rojo), #fef2f2 (rojo claro), #1f2937
+- Viajes: #0ea5e9 (azul), #f0f9ff (azul claro), #1e293b
+- Lujo: #d4af37 (dorado), #1a1a1a (negro), #ffffff
 
 Para cualquier otra consulta, responde de forma natural y útil en español.`;
 
@@ -154,7 +288,7 @@ export const appRouter = router({
       }),
   }),
 
-  // Image generation
+  // Image generation - Usa Gemini directamente para el botón "generar imagen"
   image: router({
     generate: protectedProcedure
       .input(z.object({
@@ -163,24 +297,42 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         try {
-          const options: { prompt: string; originalImages?: Array<{ url: string; mimeType: string }> } = {
-            prompt: input.prompt,
-          };
+          // Usar Gemini directamente para generación explícita del usuario
+          console.log('[Image] Generating image with Gemini for prompt:', input.prompt.substring(0, 50) + '...');
+          const imageUrl = await generateChatImage(input.prompt);
           
-          if (input.originalImageUrl) {
-            options.originalImages = [{
-              url: input.originalImageUrl,
-              mimeType: 'image/png',
-            }];
+          if (!imageUrl) {
+            throw new Error('No se pudo generar la imagen');
           }
           
-          const result = await generateImage(options);
-          return { url: result.url };
+          return { url: imageUrl };
         } catch (error) {
           console.error('Image generation error:', error);
           throw new Error('Error al generar la imagen. Por favor, intenta de nuevo.');
         }
       }),
+    
+    // Buscar imágenes en bancos de stock (Unsplash, Pexels, Pixabay)
+    search: protectedProcedure
+      .input(z.object({
+        query: z.string(),
+        count: z.number().optional().default(5),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          console.log('[Image] Searching stock images for:', input.query);
+          const images = await searchImages(input.query, { count: input.count });
+          return { images };
+        } catch (error) {
+          console.error('Image search error:', error);
+          throw new Error('Error al buscar imágenes.');
+        }
+      }),
+    
+    // Obtener estado de las APIs de imágenes configuradas
+    status: publicProcedure.query(() => {
+      return getApiStatus();
+    }),
   }),
 
   // Chat operations
@@ -211,10 +363,12 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    updateArtifact: protectedProcedure
+    updateArtifact: publicProcedure
       .input(z.object({ chatId: z.number(), artifactData: z.unknown() }))
       .mutation(async ({ input }) => {
+        console.log('[updateArtifact] Saving artifact for chat:', input.chatId);
         await updateChatArtifact(input.chatId, input.artifactData);
+        console.log('[updateArtifact] Artifact saved successfully');
         return { success: true };
       }),
 

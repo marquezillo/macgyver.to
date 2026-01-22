@@ -103,7 +103,7 @@ export default function Editor() {
 
       {/* Column 2: Main Chat Area */}
       <div className={cn(
-        "flex-1 flex flex-col h-full relative z-0 min-w-0",
+        "flex-1 flex flex-col h-full relative z-0 min-w-0 overflow-hidden",
         // On mobile when preview is open, hide chat
         isMobile && showPreview && "hidden"
       )}>
@@ -129,9 +129,9 @@ export default function Editor() {
           </div>
         )}
 
-        <div className="flex-1 flex justify-center h-full overflow-hidden">
+        <div className="flex-1 flex justify-center min-h-0 overflow-hidden">
            <div className={cn(
-             "h-full transition-all duration-500 ease-in-out flex flex-col w-full",
+             "h-full transition-all duration-500 ease-in-out flex flex-col w-full overflow-hidden",
              !isMobile && showPreview ? "max-w-none border-r border-gray-200" : "max-w-3xl"
            )}>
              <ChatInterface 

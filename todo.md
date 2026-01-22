@@ -117,9 +117,148 @@
 - [x] Probar generación de landing completa - FUNCIONA (mensaje amigable + preview)
 - [x] Probar Deep Research - NO FUNCIONA (APIs de búsqueda no disponibles en Manus)
 - [x] Probar generación de imágenes - FUNCIONA (DALL-E 3)
-- [ ] Probar análisis de archivos - PENDIENTE
-- [ ] Probar ejecución de código - PENDIENTE
+- [ ] Probar análisis de archivos - PENDIENTE (requiere subir archivo)
+- [x] Probar ejecución de código - SIMULADO (LLM explica resultado, no ejecuta)
 - [x] Probar sistema de proyectos - FUNCIONA (crear, ver, pestañas)
 - [x] Probar memoria/contexto - FUNCIONA (ver, editar, eliminar memorias)
 - [x] Probar carpetas/organización - FUNCIONA (crear carpetas)
 - [x] Probar modo oscuro - FUNCIONA (toggle dark/light)
+
+
+## Despliegue en Servidor Propio
+- [x] Conectar al servidor 199.247.10.137
+- [x] Instalar Node.js, pnpm, PM2, Nginx
+- [x] Configurar base de datos MySQL
+- [x] Desplegar proyecto Landing Editor
+- [x] Configurar Nginx como reverse proxy (con proxy_buffering off para SSE)
+- [ ] Configurar SSL con Let's Encrypt
+- [ ] Configurar sincronización automática de checkpoints
+- [x] Probar despliegue completo - FUNCIONA
+
+## Pruebas Realizadas en VPS (21 Enero 2026)
+- [x] Chat con Claude streaming - FUNCIONA
+- [x] Generación de imágenes DALL-E 3 - FUNCIONA
+- [x] Generación de landings completas - FUNCIONA
+- [x] Sistema de proyectos full-stack - FUNCIONA
+- [x] Ayuda con código (JavaScript, Python) - FUNCIONA
+- [x] Memoria a largo plazo - FUNCIONA
+- [x] Carpetas y organización - FUNCIONA
+- [x] Modo oscuro/claro - FUNCIONA
+- [x] Diseño responsivo - FUNCIONA
+
+## Implementación Bing Search API para Deep Research
+- [ ] Crear función de búsqueda con Bing Search API
+- [ ] Reemplazar llamadas a BUILT_IN_FORGE_API_URL por Bing API
+- [ ] Configurar variable de entorno BING_SEARCH_API_KEY
+- [ ] Probar Deep Research con la nueva implementación
+
+
+## Bug Fix - Análisis de PDF
+- [x] Implementar pdf-parse para extraer contenido de PDFs
+- [x] Implementar chunking inteligente (como Manus) para documentos largos
+- [x] Frontend actualizado para usar endpoint con chunking
+
+
+## Configuración Dominio macgyver.to
+- [x] Configurar Nginx para dominio macgyver.to
+- [x] Instalar certificado SSL con Let's Encrypt
+- [x] Actualizar branding del proyecto a MacGyver
+- [x] Probar acceso por HTTPS - FUNCIONA
+
+
+## Sistema Híbrido de Patrones + LLM (Memoria Visual Infinita)
+
+### Fase 1: Base de Datos de Patrones
+- [x] Crear tabla DesignCategory (id, name, slug, description, icon, industryType)
+- [x] Crear tabla VisualPattern (id, categoryId, name, htmlStructure, tailwindConfig, metadataJson, previewImage)
+- [x] Crear tabla ComponentLibrary (id, name, type, code, isReusable, usageCount)
+- [x] Crear tabla PatternUsageLog (registro de uso)
+- [x] Ejecutar migraciones con pnpm db:push
+- [x] Poblar 43 categorías iniciales por industria (Technology, Food, Health, Services, etc.)
+
+### Fase 2: Sistema de Búsqueda Semántica
+- [x] Implementar función de búsqueda por categoría/industria (patternSearch.ts)
+- [x] Implementar búsqueda semántica con LLM para matching preciso
+- [x] Crear API tRPC para consultar patrones (patterns router)
+- [x] Implementar registro de uso de patrones
+### Fase 3: Integración RAG en el Chat
+- [x] Crear módulo ragIntegration.ts para contexto RAG
+- [x] Modificar endpoint /api/ai/stream para consultar patrones primero
+- [x] Implementar lógica híbrida: patrón existente → usar como base, no existe → LLM genera
+- [x] Añadir feedback visual al usuario ("Buscando patrones...")
+- [x] Integrar patrones como contexto adicional para el LLM
+
+### Fase 4: Auto-guardado de Componentes Exitosos
+- [x] Crear módulo patternAutoSave.ts
+- [x] Analizar estructura de landing para extraer patrones genéricos
+- [x] Guardar patrones con calidad >= 60 automáticamente
+- [x] Implementar deduplicación para evitar patrones duplicados
+- [x] Sistema de puntuación/calidad para filtrar patrones
+- [x] Crear router patterns con endpoints tRPC
+
+### Fase 5: Fuentes Legales para Ingesta de Patrones
+- [x] Documentar lista de fuentes open-source legales (14 fuentes MIT License)
+- [x] Crear sistema manual de ingesta de patrones curados (236 patrones insertados)
+- [x] Implementar anonimización de código (patrones normalizados)
+
+### Fase 6: Ingesta Masiva de Componentes (Completada)
+- [x] Extraer 50 componentes de Flowbite
+- [x] Extraer 55 componentes de DaisyUI
+- [x] Extraer 49 componentes de HyperUI
+- [x] Extraer 52 componentes de Preline UI
+- [x] Extraer 30 componentes de Meraki UI
+- [x] Extraer 6 templates de Awesome Landing Pages
+- [x] Insertar 236 patrones en la base de datos
+- [x] Verificar distribución por tipo de sección
+
+
+## Corrección de Secciones y Nuevos Componentes
+
+### Verificación del Sistema RAG
+- [ ] Verificar que el endpoint /api/ai/stream está consultando los patrones
+- [ ] Añadir logs para confirmar que se usan los patrones de la BD
+
+### Nuevas Secciones
+- [ ] Crear DestinationsSection (para mostrar destinos/lugares)
+- [ ] Crear GallerySection (para galería de imágenes)
+- [ ] Crear TeamSection (para mostrar equipo/miembros)
+- [ ] Actualizar SectionRenderer para reconocer los nuevos tipos
+- [ ] Actualizar SYSTEM_PROMPT para incluir los nuevos tipos de secciones
+
+### Corrección de Errores
+- [ ] Corregir error "Unknown section type: destinations"
+- [ ] Probar generación de landing con nuevas secciones
+
+
+## Sistema Híbrido de Imágenes (Bancos + IA)
+
+### Fase 1: Configuración de Bancos de Imágenes
+- [x] Crear cuenta y obtener API key de Unsplash
+- [x] Crear cuenta y obtener API key de Pexels
+- [x] Crear cuenta y obtener API key de Pixabay
+- [x] Configurar API keys como variables de entorno
+- [x] Validar API keys con tests automatizados
+
+### Fase 2: Módulo Híbrido de Imágenes (imageSearch.ts)
+- [x] Implementar búsqueda en Unsplash (50 req/hora)
+- [x] Implementar búsqueda en Pexels (200 req/hora)
+- [x] Implementar búsqueda en Pixabay (100 req/minuto)
+- [x] Implementar generación con Pollinations.ai (gratis, sin API key)
+- [x] Implementar fallback a Gemini AI
+- [x] Implementar fallback final a Unsplash Source
+
+### Fase 3: Flujo de Búsqueda Priorizado
+- [x] Orden: Unsplash → Pexels → Pixabay → Pollinations → Gemini → Fallback
+- [x] Función searchImages() con lógica híbrida
+- [x] Función generateChatImage() para botón "Generar imagen"
+- [x] Función getImageForSection() para landings
+
+### Fase 4: Integración en Routers
+- [x] Actualizar endpoint de generación de imágenes del chat
+- [ ] Integrar en flujo de creación de landings
+
+### Fase 5: Pruebas
+- [x] Tests de API keys (3/3 pasando)
+- [x] Tests de búsqueda híbrida (5/5 pasando)
+- [ ] Probar generación de landing con imágenes híbridas
+- [ ] Probar botón "Generar imagen" del chat

@@ -73,6 +73,11 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
   
   const { setSections, sections } = useEditorStore();
   const { isAuthenticated, user } = useAuth();
+  
+  // Check if running in standalone mode (no auth required)
+  // @ts-ignore - Runtime config injected by server
+  const isStandaloneMode = window.__RUNTIME_CONFIG__?.standaloneMode === true;
+  const canUseChat = isAuthenticated || isStandaloneMode;
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -81,13 +86,13 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
   // Fetch messages from database if we have a chatId
   const { data: dbMessages, isLoading: messagesLoading } = trpc.message.list.useQuery(
     { chatId: chatId! },
-    { enabled: !!chatId && isAuthenticated }
+    { enabled: !!chatId && canUseChat }
   );
 
   // Fetch chat data to restore artifact
   const { data: chatData } = trpc.chat.get.useQuery(
     { chatId: chatId! },
-    { enabled: !!chatId && isAuthenticated }
+    { enabled: !!chatId && canUseChat }
   );
 
   // Mutations
@@ -140,10 +145,11 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
     }
   }, [chatData, chatId, setSections]);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom - only within messages container
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current && scrollRef.current) {
+      // Scroll within the messages container only, not the whole page
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [localMessages, streamingContent]);
 
@@ -223,9 +229,11 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
     messages: Array<{ role: string; content: string }>,
     currentChatId: number | null
   ) => {
+    console.log('[ChatInterface] streamResponse called with chatId:', currentChatId);
     abortControllerRef.current = new AbortController();
     
     try {
+      console.log('[ChatInterface] Starting fetch to /api/ai/stream');
       const response = await fetch('/api/ai/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -236,12 +244,15 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
         signal: abortControllerRef.current.signal,
       });
 
+      console.log('[ChatInterface] Fetch response status:', response.status);
       if (!response.ok) {
+        console.log('[ChatInterface] Response not OK, status:', response.status);
         if (response.status === 401) {
           throw new Error('Debes iniciar sesión para usar el chat');
         }
         throw new Error('Stream request failed');
       }
+      console.log('[ChatInterface] Response OK, starting to read stream');
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No reader available');
@@ -252,38 +263,111 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
 
       let finalContent = '';
       let isGeneratingLanding = false;
+      
+      // Buffer to accumulate incomplete lines across chunks
+      let lineBuffer = '';
 
+      console.log('[ChatInterface] Starting to read stream');
+      // Debug: Send a request to server to verify stream is starting
+      fetch('/api/debug-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Stream starting', chatId: currentChatId })
+      }).catch(() => {});
+      let chunkCount = 0;
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        chunkCount++;
+        console.log('[ChatInterface] Read chunk', chunkCount, 'done:', done, 'valueLength:', value?.length || 0);
+        // Debug: Send chunk info to server
+        fetch('/api/debug-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'Chunk read', chunkCount, done, valueLength: value?.length || 0 })
+        }).catch(() => {});
+        if (done) {
+          console.log('[ChatInterface] Stream ended after', chunkCount, 'chunks');
+          break;
+        }
 
         const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        console.log('[ChatInterface] Decoded chunk:', chunk.substring(0, 200));
+        // Debug: Send large chunks to server for inspection
+        if (chunk.length > 500) {
+          fetch('/api/debug-log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: 'Large chunk', length: chunk.length, preview: chunk.substring(0, 500), hasDone: chunk.includes('"type":"done"') })
+          }).catch(() => {});
+        }
+        
+        // Accumulate chunk with buffer and split by newlines
+        lineBuffer += chunk;
+        const lines = lineBuffer.split('\n');
+        
+        // Keep the last incomplete line in the buffer
+        lineBuffer = lines.pop() || '';
 
         for (const line of lines) {
+          console.log('[ChatInterface] Processing line:', line.substring(0, 100));
           if (line.startsWith('data: ')) {
             try {
-              const data = JSON.parse(line.slice(6));
+              const jsonStr = line.slice(6);
+              console.log('[ChatInterface] Parsing JSON:', jsonStr.substring(0, 100));
+              // Debug: Send JSON string to server if it contains done
+              if (jsonStr.includes('"type":"done"')) {
+                fetch('/api/debug-log', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ message: 'Attempting to parse done JSON', length: jsonStr.length, preview: jsonStr.substring(0, 200) })
+                }).catch(() => {});
+              }
+              const data = JSON.parse(jsonStr);
+              console.log('[ChatInterface] Parsed data type:', data.type);
+              // Debug: Send parsed data type to server
+              fetch('/api/debug-log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: 'Parsed data', type: data.type, hasArtifact: !!data.artifactData })
+              }).catch(() => {});
               
-              // Handle done event - this contains the clean message
-              if (data.type === 'done') {
-                // Use the clean content from done event
-                if (data.content) {
-                  finalContent = data.content;
-                }
-                // Handle artifact
-                if (data.artifactData) {
-                  hasArtifact = true;
-                  setSections(data.artifactData.sections || []);
-                  
-                  // Save artifact to database
-                  if (currentChatId) {
-                    updateChatArtifact.mutate({
-                      chatId: currentChatId,
-                      artifactData: data.artifactData
-                    });
+                // Handle done event - this contains the clean message
+                if (data.type === 'done') {
+                  console.log('[ChatInterface] Received done event:', data);
+                  // Use the clean content from done event
+                  if (data.content) {
+                    finalContent = data.content;
                   }
-                }
+                  // Handle artifact
+                  if (data.artifactData) {
+                    hasArtifact = true;
+                    console.log('[ChatInterface] Received artifact data:', data.artifactData);
+                    console.log('[ChatInterface] Sections count:', data.artifactData.sections?.length || 0);
+                    console.log('[ChatInterface] Calling setSections with:', data.artifactData.sections);
+                    setSections(data.artifactData.sections || []);
+                    console.log('[ChatInterface] setSections called');
+                  
+                    // Save artifact to database
+                    console.log('[ChatInterface] currentChatId for artifact save:', currentChatId);
+                    // Debug: Send a request to server to verify this code is reached
+                    fetch('/api/debug-log', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ message: 'Frontend reached artifact save', currentChatId, sectionsCount: data.artifactData.sections?.length })
+                    }).catch(() => {});
+                    if (currentChatId) {
+                      console.log('[ChatInterface] Calling updateChatArtifact.mutate with chatId:', currentChatId);
+                      updateChatArtifact.mutate({
+                        chatId: currentChatId,
+                        artifactData: data.artifactData
+                      }, {
+                        onSuccess: () => console.log('[ChatInterface] Artifact saved successfully'),
+                        onError: (err) => console.error('[ChatInterface] Error saving artifact:', err)
+                      });
+                    } else {
+                      console.log('[ChatInterface] No currentChatId, skipping artifact save');
+                    }
+                  }
               } else if (data.type === 'chunk' && data.content) {
                 // Regular streaming chunk
                 fullContent += data.content;
@@ -305,7 +389,15 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                   setStreamingContent(fullContent);
                 }
               }
-            } catch {
+            } catch (parseError) {
+              // Debug: Send parse error to server
+              if (line.includes('"type":"done"')) {
+                fetch('/api/debug-log', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ message: 'Parse error for done JSON', error: String(parseError), lineLength: line.length, linePreview: line.substring(0, 300) })
+                }).catch(() => {});
+              }
               // Skip invalid JSON
             }
           }
@@ -405,7 +497,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
     try {
       // Create chat if needed
       let currentChatId = chatId;
-      if (!currentChatId && isAuthenticated) {
+      if (!currentChatId && canUseChat) {
         const title = fullContent.slice(0, 50) + (fullContent.length > 50 ? '...' : '');
         const chat = await createChat.mutateAsync({ title });
         if (chat) {
@@ -414,7 +506,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       }
 
       // Save user message to database
-      if (isAuthenticated && currentChatId) {
+      if (canUseChat && currentChatId) {
         await createMessage.mutateAsync({
           chatId: currentChatId,
           role: 'user',
@@ -447,7 +539,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
           setLocalMessages(prev => [...prev, assistantMessage]);
           
           // Save to database
-          if (isAuthenticated && currentChatId) {
+          if (canUseChat && currentChatId) {
             await createMessage.mutateAsync({
               chatId: currentChatId,
               role: 'assistant',
@@ -473,7 +565,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
         setResearchSources([]);
 
         // Save to database
-        if (isAuthenticated && currentChatId) {
+        if (canUseChat && currentChatId) {
           await createMessage.mutateAsync({
             chatId: currentChatId,
             role: 'assistant',
@@ -481,14 +573,88 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
             hasArtifact: false,
           });
         }
+      } else if (uploadedFile && (uploadedFile.type === 'application/pdf' || uploadedFile.filename.toLowerCase().endsWith('.pdf'))) {
+        // PDF file - use dedicated analysis endpoint with chunking
+        const formData = new FormData();
+        const blob = new Blob([Uint8Array.from(atob(uploadedFile.content), c => c.charCodeAt(0))], { type: uploadedFile.type });
+        formData.append('file', blob, uploadedFile.filename);
+        
+        const uploadResponse = await fetch('/api/files/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error('Error al subir el archivo');
+        }
+        
+        const uploadResult = await uploadResponse.json();
+        
+        const analyzeResponse = await fetch('/api/files/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileUrl: uploadResult.url,
+            mimeType: uploadedFile.type,
+            prompt: messageContent || 'Analiza este documento PDF y proporciona un resumen detallado.',
+          }),
+        });
+        
+        if (!analyzeResponse.ok) {
+          throw new Error('Error al analizar el archivo');
+        }
+        
+        const reader = analyzeResponse.body?.getReader();
+        const decoder = new TextDecoder();
+        let analysisContent = '';
+        
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  if (data.type === 'chunk') {
+                    analysisContent += data.content;
+                    setStreamingContent(analysisContent);
+                  } else if (data.type === 'done') {
+                    analysisContent = data.content;
+                  }
+                } catch (e) {}
+              }
+            }
+          }
+        }
+        
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: analysisContent,
+          hasArtifact: false,
+        };
+        setLocalMessages(prev => [...prev, assistantMessage]);
+        setStreamingContent('');
+        
+        if (canUseChat && currentChatId) {
+          await createMessage.mutateAsync({
+            chatId: currentChatId,
+            role: 'assistant',
+            content: analysisContent,
+            hasArtifact: false,
+          });
+        }
+        setUploadedFile(null);
       } else {
-        // Regular chat with streaming
+        // Regular chat with streaming (including non-PDF files)
         const messagesForAPI = [...localMessages, userMessage].map(m => ({
           role: m.role,
           content: m.content,
         }));
 
-        // Add file content if present
+        // Add file content if present (for images and other files)
         if (uploadedFile) {
           messagesForAPI[messagesForAPI.length - 1].content = JSON.stringify({
             text: messageContent || 'Analiza este archivo',
@@ -507,7 +673,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
         setStreamingContent('');
 
         // Save to database
-        if (isAuthenticated && currentChatId) {
+        if (canUseChat && currentChatId) {
           await createMessage.mutateAsync({
             chatId: currentChatId,
             role: 'assistant',
@@ -550,10 +716,10 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
   const isEmptyChat = localMessages.length === 0 && !chatId;
 
   return (
-    <div className="flex flex-col h-full bg-white w-full overflow-hidden">
+    <div className="flex flex-col h-full bg-white w-full" style={{ maxHeight: '100%', overflow: 'hidden' }}>
       {/* Header - only show when in conversation */}
       {!isEmptyChat && (
-        <div className="p-4 border-b border-gray-100 bg-white flex justify-between items-center flex-shrink-0">
+        <div className="p-4 border-b border-gray-100 bg-white flex justify-between items-center" style={{ flexShrink: 0 }}>
           <h2 className="font-semibold text-sm text-gray-700">
             Conversación
           </h2>
@@ -569,7 +735,8 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       {/* Messages Area or Welcome Screen - This is the scrollable area */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto min-h-0"
+        className="flex-1 overflow-y-auto"
+        style={{ minHeight: 0 }}
       >
         {isEmptyChat ? (
           /* Welcome Screen with Suggestions */
@@ -787,7 +954,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       </div>
 
       {/* Input Area - Fixed at bottom */}
-      <div className="p-3 md:p-4 bg-white border-t border-gray-100 flex-shrink-0">
+      <div className="p-3 md:p-4 bg-white border-t border-gray-100" style={{ flexShrink: 0 }}>
         <div className="max-w-2xl mx-auto">
           {/* File attachment preview */}
           {uploadedFile && (

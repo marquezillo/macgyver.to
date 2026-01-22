@@ -15,7 +15,7 @@
  *     }]
  *   });
  */
-import { storagePut } from "server/storage";
+import { localStoragePut } from "server/localStorage";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY_CUSTOM;
 
@@ -41,6 +41,8 @@ export async function generateImage(
   if (!OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY_CUSTOM is not configured");
   }
+
+  console.log(`[ImageGen] Starting image generation with prompt: ${options.prompt.substring(0, 50)}...`);
 
   let finalPrompt = options.prompt;
 
@@ -87,6 +89,8 @@ export async function generateImage(
     }
   }
 
+  console.log(`[ImageGen] Calling DALL-E 3 API...`);
+
   // Generate image with DALL-E 3
   const response = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
@@ -107,6 +111,7 @@ export async function generateImage(
 
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
+    console.error(`[ImageGen] DALL-E API error: ${response.status} ${response.statusText} - ${detail}`);
     throw new Error(
       `DALL-E image generation failed (${response.status} ${response.statusText})${detail ? `: ${detail}` : ""}`
     );
@@ -116,15 +121,19 @@ export async function generateImage(
     data: Array<{ b64_json: string; revised_prompt?: string }>;
   };
 
+  console.log(`[ImageGen] DALL-E response received, saving image...`);
+
   const base64Data = result.data[0].b64_json;
   const buffer = Buffer.from(base64Data, "base64");
 
-  // Save to S3
-  const { url } = await storagePut(
+  // Save to local storage
+  const { url } = await localStoragePut(
     `generated/${Date.now()}.png`,
     buffer,
     "image/png"
   );
+
+  console.log(`[ImageGen] Image saved successfully: ${url}`);
 
   return { url };
 }

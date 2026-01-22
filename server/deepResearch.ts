@@ -1,5 +1,8 @@
 import { invokeLLM, invokeLLMStream, type Message } from "./_core/llm";
-import { callDataApi } from "./_core/dataApi";
+
+// Google Custom Search API configuration
+const GOOGLE_SEARCH_API_KEY = process.env.GOOGLE_SEARCH_API_KEY || "";
+const GOOGLE_SEARCH_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_ID || "";
 
 export interface ResearchSource {
   title: string;
@@ -13,44 +16,48 @@ export interface ResearchResult {
   followUpQuestions: string[];
 }
 
-// Search the web using available APIs
+// Search the web using Google Custom Search API
 async function searchWeb(query: string): Promise<ResearchSource[]> {
+  // Check if Google Search is configured
+  if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_ENGINE_ID) {
+    console.warn("Google Search API not configured. Set GOOGLE_SEARCH_API_KEY and GOOGLE_SEARCH_ENGINE_ID environment variables.");
+    return [];
+  }
+
   try {
-    // Try to use Google Search API via Data API
-    const result = await callDataApi("Google/search", {
-      query: { q: query, num: 10 },
-    }) as any;
+    const url = new URL("https://www.googleapis.com/customsearch/v1");
+    url.searchParams.set("key", GOOGLE_SEARCH_API_KEY);
+    url.searchParams.set("cx", GOOGLE_SEARCH_ENGINE_ID);
+    url.searchParams.set("q", query);
+    url.searchParams.set("num", "10");
+
+    console.log("[Deep Research] Searching Google for:", query);
+
+    const response = await fetch(url.toString());
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Google Search API error:", response.status, errorText);
+      return [];
+    }
+
+    const result = await response.json() as any;
 
     if (result?.items && Array.isArray(result.items)) {
+      console.log("[Deep Research] Found", result.items.length, "results");
       return result.items.map((item: any) => ({
         title: item.title || "",
         url: item.link || "",
         snippet: item.snippet || "",
       }));
     }
+
+    console.log("[Deep Research] No items in response");
+    return [];
   } catch (error) {
-    console.warn("Google Search API failed, trying alternative:", error);
+    console.error("Google Search API failed:", error);
+    return [];
   }
-
-  try {
-    // Fallback to DuckDuckGo or similar
-    const result = await callDataApi("DuckDuckGo/search", {
-      query: { q: query },
-    }) as any;
-
-    if (result?.results && Array.isArray(result.results)) {
-      return result.results.slice(0, 10).map((item: any) => ({
-        title: item.title || "",
-        url: item.url || item.link || "",
-        snippet: item.description || item.snippet || "",
-      }));
-    }
-  } catch (error) {
-    console.warn("DuckDuckGo API failed:", error);
-  }
-
-  // Return empty if no search APIs work
-  return [];
 }
 
 // Generate search queries from the user's question
