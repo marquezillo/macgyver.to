@@ -37,6 +37,7 @@ interface Message {
   sources?: Array<{ title: string; url: string; snippet: string }>;
   isImage?: boolean;
   imageUrl?: string;
+  imagePrompt?: string;
 }
 
 interface ChatInterfaceProps {
@@ -115,6 +116,8 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       const mapped: Message[] = dbMessages.map(m => {
         // Parse image URL from stored content format: [Imagen generada: URL] or [Imagen generada: /path]
         const imageMatch = m.content.match(/\[Imagen generada:\s*(\/[^\]]+|https?:\/\/[^\]]+)\]/);
+        // Parse prompt for regeneration: [Prompt: text]
+        const promptMatch = m.content.match(/\[Prompt:\s*([^\]]+)\]/);
         const isImage = !!imageMatch;
         const imageUrl = imageMatch ? imageMatch[1] : undefined;
         
@@ -125,6 +128,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
           hasArtifact: m.hasArtifact === 1,
           isImage,
           imageUrl,
+          imagePrompt: promptMatch ? promptMatch[1] : undefined,
         };
       });
       setLocalMessages(mapped);
@@ -566,15 +570,16 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
             content: 'He generado esta imagen basada en tu descripción.',
             isImage: true,
             imageUrl: result.url,
+            imagePrompt: messageContent,
           };
           setLocalMessages(prev => [...prev, assistantMessage]);
           
-          // Save to database
+          // Save to database with prompt for regeneration
           if (canUseChat && currentChatId) {
             await createMessage.mutateAsync({
               chatId: currentChatId,
               role: 'assistant',
-              content: `[Imagen generada: ${result.url}]`,
+              content: `[Imagen generada: ${result.url}][Prompt: ${messageContent}]`,
               hasArtifact: false,
             });
           }
@@ -871,7 +876,28 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                         
                         {/* Generated Image */}
                         {msg.isImage && msg.imageUrl && (
-                          <ChatImagePreview src={msg.imageUrl} alt="Imagen generada por IA" />
+                          <ChatImagePreview 
+                            src={msg.imageUrl} 
+                            alt="Imagen generada por IA" 
+                            prompt={msg.imagePrompt}
+                            onRegenerate={async (prompt) => {
+                              try {
+                                const response = await fetch('/api/generate-image', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ prompt }),
+                                });
+                                const result = await response.json();
+                                if (result.success && result.url) {
+                                  return result.url;
+                                }
+                                return null;
+                              } catch (error) {
+                                console.error('Error regenerating image:', error);
+                                return null;
+                              }
+                            }}
+                          />
                         )}
                         
                         {/* Research Sources */}

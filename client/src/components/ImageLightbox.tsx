@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, ZoomIn, ZoomOut, Download, RotateCw, Maximize2 } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, Download, RotateCw, Maximize2, RefreshCw } from 'lucide-react';
 
 interface ImageLightboxProps {
   src: string;
@@ -217,17 +217,21 @@ export function ImageLightbox({ src, alt = 'Imagen', isOpen, onClose }: ImageLig
 interface ChatImagePreviewProps {
   src: string;
   alt?: string;
+  prompt?: string;
+  onRegenerate?: (prompt: string) => Promise<string | null>;
 }
 
-export function ChatImagePreview({ src, alt = 'Imagen generada' }: ChatImagePreviewProps) {
+export function ChatImagePreview({ src, alt = 'Imagen generada', prompt, onRegenerate }: ChatImagePreviewProps) {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState(src);
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const response = await fetch(src);
+      const response = await fetch(currentSrc);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -238,7 +242,27 @@ export function ChatImagePreview({ src, alt = 'Imagen generada' }: ChatImagePrev
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      window.open(src, '_blank');
+      window.open(currentSrc, '_blank');
+    }
+  };
+
+  const handleRegenerate = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!prompt || !onRegenerate || isRegenerating) return;
+    
+    setIsRegenerating(true);
+    setIsLoading(true);
+    setHasError(false);
+    
+    try {
+      const newUrl = await onRegenerate(prompt);
+      if (newUrl) {
+        setCurrentSrc(newUrl);
+      }
+    } catch (error) {
+      console.error('Error regenerating image:', error);
+    } finally {
+      setIsRegenerating(false);
     }
   };
 
@@ -259,7 +283,7 @@ export function ChatImagePreview({ src, alt = 'Imagen generada' }: ChatImagePrev
             <div className="p-8 text-center text-gray-500">
               <p className="text-sm">No se pudo cargar la imagen</p>
               <a 
-                href={src} 
+                href={currentSrc} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-xs text-indigo-600 hover:underline mt-2 inline-block"
@@ -270,7 +294,7 @@ export function ChatImagePreview({ src, alt = 'Imagen generada' }: ChatImagePrev
           ) : (
             <>
               <img 
-                src={src} 
+                src={currentSrc} 
                 alt={alt}
                 className={`w-full h-auto transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
                 onLoad={() => setIsLoading(false)}
@@ -295,9 +319,19 @@ export function ChatImagePreview({ src, alt = 'Imagen generada' }: ChatImagePrev
           <div className="p-2 bg-gray-50 flex justify-between items-center border-t border-gray-100">
             <span className="text-xs text-gray-500 flex items-center gap-1">
               <span className="w-2 h-2 bg-gradient-to-r from-violet-500 to-purple-500 rounded-full" />
-              Generada con IA
+              {isRegenerating ? 'Regenerando...' : 'Generada con IA'}
             </span>
             <div className="flex items-center gap-2">
+              {prompt && onRegenerate && (
+                <button
+                  onClick={handleRegenerate}
+                  disabled={isRegenerating}
+                  className="text-xs text-gray-600 hover:text-violet-600 flex items-center gap-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isRegenerating ? 'animate-spin' : ''}`} />
+                  Regenerar
+                </button>
+              )}
               <button
                 onClick={() => setIsLightboxOpen(true)}
                 className="text-xs text-gray-600 hover:text-indigo-600 flex items-center gap-1 transition-colors"
@@ -318,7 +352,7 @@ export function ChatImagePreview({ src, alt = 'Imagen generada' }: ChatImagePrev
       </div>
 
       <ImageLightbox
-        src={src}
+        src={currentSrc}
         alt={alt}
         isOpen={isLightboxOpen}
         onClose={() => setIsLightboxOpen(false)}

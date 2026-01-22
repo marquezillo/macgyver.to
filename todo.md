@@ -278,6 +278,14 @@
 
 
 ## Bug Fix - Renderizado de Imágenes en Chat
-- [ ] El chat muestra "[Imagen generada: /path...]" en lugar de la imagen
-- [ ] Modificar componente para detectar y renderizar imágenes inline
+- [x] El chat muestra "[Imagen generada: /path...]" en lugar de la imagen
+- [x] Modificar componente para detectar y renderizar imágenes inline
+- [x] Regex actualizado para detectar rutas relativas
 - [ ] Probar visualización de imágenes generadas
+
+
+## Mejora - Botón de Regenerar Imagen
+- [ ] Agregar botón "Regenerar" debajo de cada imagen generada
+- [ ] Implementar lógica para regenerar con el mismo prompt
+- [ ] Mostrar indicador de carga durante la regeneración
+- [ ] Actualizar la imagen en el chat sin crear nuevo mensaje
