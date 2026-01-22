@@ -113,8 +113,8 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
   useEffect(() => {
     if (dbMessages && dbMessages.length > 0) {
       const mapped: Message[] = dbMessages.map(m => {
-        // Parse image URL from stored content format: [Imagen generada: URL]
-        const imageMatch = m.content.match(/\[Imagen generada:\s*(https?:\/\/[^\]]+)\]/);
+        // Parse image URL from stored content format: [Imagen generada: URL] or [Imagen generada: /path]
+        const imageMatch = m.content.match(/\[Imagen generada:\s*(\/[^\]]+|https?:\/\/[^\]]+)\]/);
         const isImage = !!imageMatch;
         const imageUrl = imageMatch ? imageMatch[1] : undefined;
         

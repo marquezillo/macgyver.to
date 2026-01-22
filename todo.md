@@ -275,3 +275,9 @@
 - [x] El chat debe funcionar sin depender de botones
 - [x] Cambiar orden: Gemini primero, Pollinations como fallback
 - [ ] Probar con múltiples variantes de petición
+
+
+## Bug Fix - Renderizado de Imágenes en Chat
+- [ ] El chat muestra "[Imagen generada: /path...]" en lugar de la imagen
+- [ ] Modificar componente para detectar y renderizar imágenes inline
+- [ ] Probar visualización de imágenes generadas
