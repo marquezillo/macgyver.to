@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { arrayMove } from '@dnd-kit/sortable';
 import { nanoid } from 'nanoid';
 
-export type SectionType = 'hero' | 'features' | 'testimonials' | 'pricing' | 'cta' | 'stats' | 'faq' | 'form' | 'footer';
+export type SectionType = 'hero' | 'features' | 'testimonials' | 'pricing' | 'cta' | 'stats' | 'faq' | 'form' | 'footer' | 'process';
 
 export interface Section {
   id: string;
@@ -89,6 +89,15 @@ const defaultContent: Record<SectionType, Record<string, any>> = {
     companyName: "My Company",
     description: "Building amazing products for our customers.",
     copyright: `© ${new Date().getFullYear()} All rights reserved.`
+  },
+  process: {
+    title: "How It Works",
+    subtitle: "Simple steps to get started",
+    steps: [
+      { number: 1, title: "Step 1", description: "Description of the first step" },
+      { number: 2, title: "Step 2", description: "Description of the second step" },
+      { number: 3, title: "Step 3", description: "Description of the third step" }
+    ]
   }
 };
 

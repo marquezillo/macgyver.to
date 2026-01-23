@@ -480,3 +480,9 @@
 - [x] Probar generación de landing de Tailandia - FUNCIONA (imagen de templo, contenido específico)
 - [x] Probar generación de landing de restaurante japonés "Sakura Zen" - FUNCIONA (imagen de restaurante, menú omakase)
 - [x] Verificar FAQ funciona correctamente - FUNCIONA (múltiples items se abren/cierran)
+
+
+## Correcciones de Landings (23 Ene 2026)
+- [ ] Corregir error "Unknown section type: process" - Añadir componente ProcessSection
+- [ ] Corregir testimonios vacíos (solo muestran foto, no texto)
+- [ ] Implementar mejoras sugeridas para landings

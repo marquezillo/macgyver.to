@@ -183,6 +183,37 @@ Para una landing efectiva, incluye estas secciones en orden:
       }
     },
     {
+      "id": "testimonials-1",
+      "type": "testimonials",
+      "content": {
+        "title": "What Our Travelers Say",
+        "subtitle": "Real experiences from real adventurers",
+        "items": [
+          {
+            "name": "Sarah Johnson",
+            "text": "The temple tour was absolutely magical! Our guide knew every hidden corner of Bangkok. Best trip of my life!",
+            "rating": 5,
+            "role": "Travel Blogger",
+            "company": "Wanderlust Weekly"
+          },
+          {
+            "name": "Michael Chen",
+            "text": "From the beaches of Phuket to the mountains of Chiang Mai, every detail was perfectly planned. Highly recommend!",
+            "rating": 5,
+            "role": "Photographer",
+            "company": "National Geographic"
+          },
+          {
+            "name": "Emma Williams",
+            "text": "The cooking class in Bangkok was the highlight of our honeymoon. We still make Pad Thai every week!",
+            "rating": 5,
+            "role": "Food Enthusiast",
+            "company": "Culinary Adventures"
+          }
+        ]
+      }
+    },
+    {
       "id": "faq-1",
       "type": "faq",
       "content": {
@@ -214,7 +245,7 @@ Para una landing efectiva, incluye estas secciones en orden:
 |------|-------------|--------------|
 | hero | Sección principal | title, subtitle, ctaText, backgroundImage, stats |
 | features | Características | title, items (icon, title, description, image) |
-| testimonials | Testimonios | items (quote, author, role, company, avatar) |
+| testimonials | Testimonios | items (name, text, rating, role, company, image) |
 | pricing | Precios | plans (name, price, features, ctaText) |
 | faq | Preguntas frecuentes | items (question, answer) |
 | form | Formulario | fields, submitText, successMessage |

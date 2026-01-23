@@ -47,6 +47,7 @@ const sectionIcons: Record<SectionType, React.ReactNode> = {
   faq: <HelpCircle className="w-4 h-4" />,
   form: <Mail className="w-4 h-4" />,
   footer: <Layout className="w-4 h-4" />,
+  process: <Layout className="w-4 h-4" />,
 };
 
 const sectionLabels: Record<SectionType, string> = {
@@ -59,6 +60,7 @@ const sectionLabels: Record<SectionType, string> = {
   faq: 'FAQ',
   form: 'Contact Form',
   footer: 'Footer',
+  process: 'Process',
 };
 
 interface SortableSectionItemProps {

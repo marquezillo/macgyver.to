@@ -6,6 +6,7 @@ import { FAQSection } from './sections/FAQSection';
 import { CTASection } from './sections/CTASection';
 import { FooterSection } from './sections/FooterSection';
 import { TestimonialsSection } from './sections/TestimonialsSection';
+import { ProcessSection } from './sections/ProcessSection';
 
 interface SectionRendererProps {
   section: Section;
@@ -27,6 +28,8 @@ export function SectionRenderer({ section }: SectionRendererProps) {
       return <FooterSection id={section.id} content={section.content} styles={section.styles || {}} />;
     case 'testimonials':
       return <TestimonialsSection id={section.id} content={section.content} styles={section.styles || {}} />;
+    case 'process':
+      return <ProcessSection id={section.id} content={section.content} styles={section.styles || {}} />;
     default:
       return (
         <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
