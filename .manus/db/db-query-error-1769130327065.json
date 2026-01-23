@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, LEFT(artifact_data, 1000) as artifact_preview FROM chats WHERE id = 30028;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 34PJYedpVygExjM.e1ecfc4d4172 --database ZbHp7JpkjVz6yScGwQHTeE --execute SELECT id, LEFT(artifact_data, 1000) as artifact_preview FROM chats WHERE id = 30028;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'artifact_data' in 'field list'"
+  ]
+}

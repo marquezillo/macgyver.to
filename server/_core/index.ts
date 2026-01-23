@@ -223,6 +223,12 @@ async function startServer() {
       console.log('[AI Stream] hasArtifact:', hasArtifact);
       if (artifactData) {
         console.log('[AI Stream] artifactData sections count:', artifactData.sections?.length || 0);
+        // Log hero section to verify images
+        const heroSection = artifactData.sections?.find((s: any) => s.type === 'hero');
+        if (heroSection) {
+          console.log('[AI Stream] Hero section imageUrl:', heroSection.content?.imageUrl);
+          console.log('[AI Stream] Hero section backgroundImage:', heroSection.content?.backgroundImage);
+        }
       }
 
       // Send final message with metadata

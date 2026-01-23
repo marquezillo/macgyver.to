@@ -4,9 +4,11 @@ import { Star, Quote } from 'lucide-react';
 
 interface Testimonial {
   name: string;
-  text: string;
+  text?: string;
+  quote?: string;  // Alias de text
   rating?: number;
   image?: string;
+  avatar?: string;  // Alias de image
   role?: string;
   company?: string;
 }
@@ -17,6 +19,7 @@ interface TestimonialsSectionProps {
     title?: string;
     subtitle?: string;
     items?: Testimonial[];
+    testimonials?: Testimonial[];  // Alias de items
   };
   styles?: {
     backgroundColor?: string;
@@ -30,7 +33,9 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
   const { selectedSectionId, selectSection } = useEditorStore();
   const isSelected = selectedSectionId === id;
 
-  const testimonials = content?.items || [
+  // Los testimonials pueden venir como content.items, content.testimonials, o directamente en content
+  const rawTestimonials = content?.items || content?.testimonials || [];
+  const testimonials = (Array.isArray(rawTestimonials) && rawTestimonials.length > 0) ? rawTestimonials : [
     {
       name: 'María García',
       text: 'Excelente servicio, superó todas mis expectativas. Lo recomiendo totalmente.',
@@ -140,14 +145,14 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
                 )}
                 style={{ color: styles?.textColor }}
               >
-                "{testimonial.text}"
+                "{testimonial.text || testimonial.quote || 'Great experience!'}"
               </p>
 
               {/* Author Info */}
               <div className="flex items-center gap-4">
-                {testimonial.image ? (
+                {(testimonial.image || testimonial.avatar) ? (
                   <img
-                    src={testimonial.image}
+                    src={testimonial.image || testimonial.avatar}
                     alt={testimonial.name}
                     className="w-12 h-12 rounded-full object-cover"
                     onError={(e) => {

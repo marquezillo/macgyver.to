@@ -1,0 +1,14 @@
+{
+  "query": "SELECT id, LEFT(CAST(artifactData AS CHAR), 1000) as artifact_preview FROM chats WHERE id = 30028;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 34PJYedpVygExjM.e1ecfc4d4172 --database ZbHp7JpkjVz6yScGwQHTeE --execute SELECT id, LEFT(CAST(artifactData AS CHAR), 1000) as artifact_preview FROM chats WHERE id = 30028;",
+  "rows": [
+    {
+      "id": "30028",
+      "artifact_preview": "{\"sections\": [{\"content\": {\"backgroundImage\": \"https://images.pexels.com/photos/6326280/pexels-photo-6326280.jpeg?auto=compress&cs=tinysrgb&h=650&w=940\", \"ctaLink\": \"#form\", \"ctaText\": \"Reservar Clase Gratis\", \"imageUrl\": \"https://images.pexels.com/photos/6326280/pexels-photo-6326280.jpeg?auto=compress&cs=tinysrgb&h=650&w=940\", \"secondaryCtaLink\": \"#features\", \"secondaryCtaText\": \"Ver Horarios\", \"stats\": [{\"label\": \"Estudiantes\", \"value\": \"500+\"}, {\"label\": \"Experiencia\", \"value\": \"8 años\"}, {\"label\": \"Instructores\", \"value\": \"15+\"}], \"subtitle\": \"Descubre la paz y fortaleza a través del yoga. Clases para todos los niveles en un ambiente sereno y acogedor\", \"title\": \"Encuentra tu equilibrio interior con Zen Flow\"}, \"id\": \"hero-1\", \"styles\": {\"backgroundColor\": \"#2d3748\", \"buttonColor\": \"#38a169\", \"gradientFrom\": \"#4a5568\", \"gradientTo\": \"#2d3748\", \"textColor\": \"#ffffff\"}, \"type\": \"hero\"}, {\"content\": {\"items\": [{\"description\": \"Desde principiantes hasta avanzados, tenemos la clase perf"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tartifact_preview\n30028\t{\"sections\": [{\"content\": {\"backgroundImage\": \"https://images.pexels.com/photos/6326280/pexels-photo-6326280.jpeg?auto=compress&cs=tinysrgb&h=650&w=940\", \"ctaLink\": \"#form\", \"ctaText\": \"Reservar Clase Gratis\", \"imageUrl\": \"https://images.pexels.com/photos/6326280/pexels-photo-6326280.jpeg?auto=compress&cs=tinysrgb&h=650&w=940\", \"secondaryCtaLink\": \"#features\", \"secondaryCtaText\": \"Ver Horarios\", \"stats\": [{\"label\": \"Estudiantes\", \"value\": \"500+\"}, {\"label\": \"Experiencia\", \"value\": \"8 años\"}, {\"label\": \"Instructores\", \"value\": \"15+\"}], \"subtitle\": \"Descubre la paz y fortaleza a través del yoga. Clases para todos los niveles en un ambiente sereno y acogedor\", \"title\": \"Encuentra tu equilibrio interior con Zen Flow\"}, \"id\": \"hero-1\", \"styles\": {\"backgroundColor\": \"#2d3748\", \"buttonColor\": \"#38a169\", \"gradientFrom\": \"#4a5568\", \"gradientTo\": \"#2d3748\", \"textColor\": \"#ffffff\"}, \"type\": \"hero\"}, {\"content\": {\"items\": [{\"description\": \"Desde principiantes hasta avanzados, tenemos la clase perf\n",
+  "stderr": "",
+  "execution_time_ms": 1522
+}

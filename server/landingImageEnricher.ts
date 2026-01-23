@@ -206,11 +206,26 @@ async function enrichGallerySection(
   context: EnrichmentContext
 ): Promise<EnrichedSection> {
   const content = section.content as Record<string, unknown>;
-  let images = content.images as string[] | undefined;
+  let images = content.images as (string | { url: string })[] | undefined;
   
   // Si ya tiene imágenes válidas, no buscar más
-  if (images && Array.isArray(images) && images.length > 0 && images[0].startsWith('http')) {
-    return section as EnrichedSection;
+  // Las imágenes pueden ser strings o objetos con url
+  if (images && Array.isArray(images) && images.length > 0) {
+    const firstImage = images[0];
+    const firstUrl = typeof firstImage === 'string' ? firstImage : firstImage?.url;
+    if (firstUrl && typeof firstUrl === 'string' && firstUrl.startsWith('http')) {
+      // Normalizar a strings si son objetos
+      const normalizedImages = images.map(img => 
+        typeof img === 'string' ? img : img?.url
+      ).filter((url): url is string => typeof url === 'string');
+      return {
+        ...section,
+        content: {
+          ...content,
+          images: normalizedImages,
+        },
+      };
+    }
   }
   
   console.log(`[LandingEnricher] Searching gallery images for ${context.businessType}`);
@@ -219,11 +234,12 @@ async function enrichGallerySection(
     const query = `${context.businessType} showcase portfolio professional`;
     const results = await searchImages(query, { count: 6 });
     
+    let finalImages: string[];
     if (results.length > 0) {
-      images = results.map(r => r.url);
+      finalImages = results.map(r => r.url);
     } else {
       // Fallback: usar Unsplash Source
-      images = [
+      finalImages = [
         `https://source.unsplash.com/800x600/?${encodeURIComponent(context.businessType)},1`,
         `https://source.unsplash.com/800x600/?${encodeURIComponent(context.businessType)},2`,
         `https://source.unsplash.com/800x600/?${encodeURIComponent(context.businessType)},3`,
@@ -235,7 +251,7 @@ async function enrichGallerySection(
       ...section,
       content: {
         ...content,
-        images,
+        images: finalImages,
       },
     };
   } catch (error) {
@@ -267,15 +283,18 @@ async function enrichHeroSection(
     const query = `${context.businessType} business professional modern hero`;
     const results = await searchImages(query, { count: 1, orientation: 'landscape' });
     
+    console.log(`[LandingEnricher] Hero search results:`, JSON.stringify(results, null, 2));
+    
     let imageUrl: string;
     if (results.length > 0) {
       imageUrl = results[0].url;
+      console.log(`[LandingEnricher] Hero image URL found: ${imageUrl}`);
     } else {
       // Fallback
       imageUrl = `https://source.unsplash.com/1920x1080/?${encodeURIComponent(context.businessType)},business`;
     }
     
-    return {
+    const enrichedSection = {
       ...section,
       content: {
         ...content,
@@ -283,6 +302,8 @@ async function enrichHeroSection(
         imageUrl: imageUrl,
       },
     };
+    console.log(`[LandingEnricher] Hero section enriched:`, JSON.stringify(enrichedSection.content, null, 2));
+    return enrichedSection;
   } catch (error) {
     console.error('[LandingEnricher] Error searching hero image:', error);
     return section as EnrichedSection;
