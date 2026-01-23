@@ -243,18 +243,27 @@ Para una landing efectiva, incluye estas secciones en orden:
 
 | Tipo | Descripción | Campos Clave |
 |------|-------------|--------------|
-| hero | Sección principal | title, subtitle, ctaText, backgroundImage, stats |
-| features | Características | title, items (icon, title, description, image) |
-| testimonials | Testimonios | items (name, text, rating, role, company, image) |
-| pricing | Precios | plans (name, price, features, ctaText) |
-| faq | Preguntas frecuentes | items (question, answer) |
-| form | Formulario | fields, submitText, successMessage |
+| header | Navegación sticky | logoText, logoImage, navItems (label, href), ctaText |
+| hero | Sección principal | title, subtitle, ctaText, backgroundImage, variant (centered/split/minimal/asymmetric), badge, stats, secondaryCtaText |
+| features | Características | title, badge, items (icon, title, description, image), layout (grid/list/alternating) |
+| stats | Estadísticas animadas | title, items (value, label, icon, prefix, suffix) |
+| testimonials | Testimonios | title, badge, items (name, text, rating, role, company, image), layout (grid/featured) |
+| pricing | Precios | title, plans (name, price, period, features, ctaText, popular, description), showToggle |
+| process | Proceso/Pasos | title, steps (number, title, description, icon) |
+| about | Sobre nosotros | title, description, image, mission, vision, team (name, role, image, bio) |
+| gallery | Galería | title, images (src, alt, caption), columns |
+| logocloud | Logos de clientes | title, subtitle, logos (name, image), marquee (true/false) |
+| faq | Preguntas frecuentes | title, items (question, answer) |
+| form | Formulario | title, fields, submitText, successMessage |
 | cta | Llamada a la acción | title, subtitle, ctaText |
 | footer | Pie de página | columns, socialLinks, copyright |
-| about | Sobre nosotros | title, description, image, team |
-| gallery | Galería | images (src, alt, caption) |
-| process | Proceso/Pasos | steps (number, title, description) |
-| stats | Estadísticas | items (value, label, icon) |
+
+### VARIANTES DE HERO
+
+- **centered**: Texto centrado con imagen de fondo (clásico)
+- **split**: 50/50 con imagen a un lado, ideal para productos
+- **minimal**: Solo texto, muy limpio y moderno
+- **asymmetric**: Layout asimétrico con efecto glow, ideal para tech/SaaS
 
 ### REGLAS IMPORTANTES
 

@@ -1,14 +1,15 @@
 import { useEditorStore } from '@/store/editorStore';
 import { cn } from '@/lib/utils';
 import { Star, Quote } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface Testimonial {
   name: string;
   text?: string;
-  quote?: string;  // Alias de text
+  quote?: string;
   rating?: number;
   image?: string;
-  avatar?: string;  // Alias de image
+  avatar?: string;
   role?: string;
   company?: string;
 }
@@ -18,8 +19,10 @@ interface TestimonialsSectionProps {
   content: {
     title?: string;
     subtitle?: string;
+    badge?: string;
     items?: Testimonial[];
-    testimonials?: Testimonial[];  // Alias de items
+    testimonials?: Testimonial[];
+    layout?: 'grid' | 'carousel' | 'featured';
   };
   styles?: {
     backgroundColor?: string;
@@ -33,7 +36,6 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
   const { selectedSectionId, selectSection } = useEditorStore();
   const isSelected = selectedSectionId === id;
 
-  // Los testimonials pueden venir como content.items, content.testimonials, o directamente en content
   const rawTestimonials = content?.items || content?.testimonials || [];
   const testimonials = (Array.isArray(rawTestimonials) && rawTestimonials.length > 0) ? rawTestimonials : [
     {
@@ -59,6 +61,21 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
     }
   ];
 
+  const layout = content?.layout || 'grid';
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+  };
+
   const renderStars = (rating: number = 5) => {
     return (
       <div className="flex gap-1">
@@ -75,6 +92,96 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
     );
   };
 
+  const renderTestimonialCard = (testimonial: Testimonial, index: number, featured = false) => (
+    <motion.div
+      key={index}
+      variants={itemVariants}
+      className={cn(
+        "relative rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300",
+        featured ? "p-8 md:p-10" : "p-6",
+        styles?.cardBackground || "bg-white"
+      )}
+    >
+      {/* Quote Icon */}
+      <Quote 
+        className={cn(
+          "absolute top-4 right-4 opacity-10",
+          featured ? "w-12 h-12" : "w-8 h-8"
+        )}
+        style={{ color: styles?.accentColor || '#6366f1' }}
+      />
+
+      {/* Rating */}
+      {testimonial.rating && (
+        <div className="mb-4">
+          {renderStars(testimonial.rating)}
+        </div>
+      )}
+
+      {/* Testimonial Text */}
+      <p
+        className={cn(
+          "mb-6 leading-relaxed",
+          featured ? "text-lg md:text-xl" : "text-base",
+          styles?.textColor ? "opacity-80" : "text-gray-600"
+        )}
+        style={{ color: styles?.textColor }}
+      >
+        "{testimonial.text || testimonial.quote || 'Great experience!'}"
+      </p>
+
+      {/* Author Info */}
+      <div className="flex items-center gap-4">
+        {(testimonial.image || testimonial.avatar) ? (
+          <img
+            src={testimonial.image || testimonial.avatar}
+            alt={testimonial.name}
+            className={cn(
+              "rounded-full object-cover ring-2 ring-white shadow",
+              featured ? "w-14 h-14" : "w-12 h-12"
+            )}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+          />
+        ) : (
+          <div 
+            className={cn(
+              "rounded-full flex items-center justify-center font-semibold text-white",
+              featured ? "w-14 h-14 text-lg" : "w-12 h-12"
+            )}
+            style={{ backgroundColor: styles?.accentColor || '#6366f1' }}
+          >
+            {(testimonial.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+          </div>
+        )}
+        <div>
+          <p
+            className={cn(
+              "font-semibold",
+              featured ? "text-lg" : "",
+              styles?.textColor || "text-gray-900"
+            )}
+          >
+            {testimonial.name}
+          </p>
+          {(testimonial.role || testimonial.company) && (
+            <p
+              className={cn(
+                "text-sm",
+                styles?.textColor ? "opacity-60" : "text-gray-500"
+              )}
+              style={{ color: styles?.textColor }}
+            >
+              {testimonial.role}{testimonial.role && testimonial.company && ', '}{testimonial.company}
+            </p>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+
   return (
     <div
       onClick={(e) => {
@@ -82,17 +189,33 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
         selectSection(id);
       }}
       className={cn(
-        "relative py-10 md:py-16 px-4 sm:px-6 lg:px-8 transition-all duration-200",
-        isSelected && "ring-2 ring-primary ring-offset-2",
-        styles?.backgroundColor || "bg-gray-50"
+        "relative py-16 md:py-24 px-4 sm:px-6 lg:px-8 transition-all duration-200",
+        isSelected && "ring-2 ring-primary ring-offset-2"
       )}
+      style={{ backgroundColor: styles?.backgroundColor || '#f9fafb' }}
     >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8 md:mb-12">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-12"
+        >
+          {content?.badge && (
+            <span 
+              className="inline-block px-4 py-1.5 rounded-full text-sm font-medium mb-4"
+              style={{ 
+                backgroundColor: styles?.accentColor ? `${styles.accentColor}20` : '#6366f120',
+                color: styles?.accentColor || '#6366f1'
+              }}
+            >
+              {content.badge}
+            </span>
+          )}
           <h2
             className={cn(
-              "text-2xl md:text-3xl font-bold tracking-tight sm:text-4xl",
+              "text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight",
               styles?.textColor || "text-gray-900"
             )}
           >
@@ -102,108 +225,52 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
             <p
               className={cn(
                 "mt-4 text-lg max-w-2xl mx-auto",
-                styles?.textColor ? "opacity-80" : "text-gray-600"
+                styles?.textColor ? "opacity-70" : "text-gray-600"
               )}
               style={{ color: styles?.textColor }}
             >
               {content.subtitle}
             </p>
           )}
-        </div>
+        </motion.div>
 
-        {/* Testimonials Grid */}
-        <div className="grid gap-6 md:gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {testimonials.map((testimonial: Testimonial, index: number) => (
-            <div
-              key={index}
-              className={cn(
-                "relative p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300",
-                styles?.cardBackground || "bg-white"
-              )}
-            >
-              {/* Quote Icon */}
-              <Quote 
-                className={cn(
-                  "absolute top-4 right-4 w-8 h-8 opacity-10",
-                  styles?.accentColor || "text-primary"
-                )}
-                style={{ color: styles?.accentColor }}
-              />
-
-              {/* Rating */}
-              {testimonial.rating && (
-                <div className="mb-4">
-                  {renderStars(testimonial.rating)}
-                </div>
-              )}
-
-              {/* Testimonial Text */}
-              <p
-                className={cn(
-                  "text-base mb-6 leading-relaxed",
-                  styles?.textColor ? "opacity-80" : "text-gray-600"
-                )}
-                style={{ color: styles?.textColor }}
-              >
-                "{testimonial.text || testimonial.quote || 'Great experience!'}"
-              </p>
-
-              {/* Author Info */}
-              <div className="flex items-center gap-4">
-                {(testimonial.image || testimonial.avatar) ? (
-                  <img
-                    src={testimonial.image || testimonial.avatar}
-                    alt={testimonial.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                    onError={(e) => {
-                      // Fallback to initials if image fails
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const parent = target.parentElement;
-                      if (parent) {
-                        const fallback = document.createElement('div');
-                        fallback.className = 'w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold';
-                        fallback.textContent = (testimonial.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase();
-                        parent.insertBefore(fallback, target);
-                      }
-                    }}
-                  />
-                ) : (
-                  <div 
-                    className={cn(
-                      "w-12 h-12 rounded-full flex items-center justify-center font-semibold text-white",
-                      styles?.accentColor ? "" : "bg-primary"
-                    )}
-                    style={{ backgroundColor: styles?.accentColor }}
-                  >
-                    {(testimonial.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                  </div>
-                )}
-                <div>
-                  <p
-                    className={cn(
-                      "font-semibold",
-                      styles?.textColor || "text-gray-900"
-                    )}
-                  >
-                    {testimonial.name}
-                  </p>
-                  {(testimonial.role || testimonial.company) && (
-                    <p
-                      className={cn(
-                        "text-sm",
-                        styles?.textColor ? "opacity-60" : "text-gray-500"
-                      )}
-                      style={{ color: styles?.textColor }}
-                    >
-                      {testimonial.role}{testimonial.role && testimonial.company && ', '}{testimonial.company}
-                    </p>
-                  )}
-                </div>
-              </div>
+        {/* Testimonials */}
+        {layout === 'featured' && testimonials.length >= 3 ? (
+          // Featured layout: 1 large + 2 small
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="grid lg:grid-cols-2 gap-6"
+          >
+            <div className="lg:row-span-2">
+              {renderTestimonialCard(testimonials[0], 0, true)}
             </div>
-          ))}
-        </div>
+            <div className="space-y-6">
+              {renderTestimonialCard(testimonials[1], 1)}
+              {renderTestimonialCard(testimonials[2], 2)}
+            </div>
+          </motion.div>
+        ) : (
+          // Grid layout
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className={cn(
+              "grid gap-6 md:gap-8",
+              testimonials.length === 2 ? "md:grid-cols-2" :
+              testimonials.length === 4 ? "md:grid-cols-2 lg:grid-cols-4" :
+              "md:grid-cols-2 lg:grid-cols-3"
+            )}
+          >
+            {testimonials.map((testimonial: Testimonial, index: number) => 
+              renderTestimonialCard(testimonial, index)
+            )}
+          </motion.div>
+        )}
       </div>
     </div>
   );

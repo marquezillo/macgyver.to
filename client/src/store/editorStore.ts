@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { arrayMove } from '@dnd-kit/sortable';
 import { nanoid } from 'nanoid';
 
-export type SectionType = 'hero' | 'features' | 'testimonials' | 'pricing' | 'cta' | 'stats' | 'faq' | 'form' | 'footer' | 'process';
+export type SectionType = 'hero' | 'features' | 'testimonials' | 'pricing' | 'cta' | 'stats' | 'faq' | 'form' | 'footer' | 'process' | 'about' | 'gallery' | 'logocloud' | 'logos' | 'partners' | 'clients' | 'header' | 'navbar' | 'nav';
 
 export interface Section {
   id: string;
@@ -98,6 +98,51 @@ const defaultContent: Record<SectionType, Record<string, any>> = {
       { number: 2, title: "Step 2", description: "Description of the second step" },
       { number: 3, title: "Step 3", description: "Description of the third step" }
     ]
+  },
+  about: {
+    title: "About Our Company",
+    description: "We are a team of passionate individuals dedicated to creating exceptional experiences.",
+    team: []
+  },
+  gallery: {
+    title: "Our Gallery",
+    subtitle: "Explore our work",
+    images: []
+  },
+  logocloud: {
+    title: "Trusted By",
+    logos: []
+  },
+  logos: {
+    title: "Our Partners",
+    logos: []
+  },
+  partners: {
+    title: "Our Partners",
+    logos: []
+  },
+  clients: {
+    title: "Our Clients",
+    logos: []
+  },
+  header: {
+    logoText: "Brand",
+    navItems: [
+      { label: "Features", href: "#features" },
+      { label: "Pricing", href: "#pricing" },
+      { label: "About", href: "#about" }
+    ],
+    ctaText: "Get Started"
+  },
+  navbar: {
+    logoText: "Brand",
+    navItems: [],
+    ctaText: "Get Started"
+  },
+  nav: {
+    logoText: "Brand",
+    navItems: [],
+    ctaText: "Get Started"
   }
 };
 

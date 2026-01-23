@@ -15,7 +15,11 @@ import {
   HelpCircle,
   Mail,
   BarChart3,
-  Star
+  Star,
+  Users,
+  Image,
+  Building2,
+  Menu
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -48,6 +52,15 @@ const sectionIcons: Record<SectionType, React.ReactNode> = {
   form: <Mail className="w-4 h-4" />,
   footer: <Layout className="w-4 h-4" />,
   process: <Layout className="w-4 h-4" />,
+  about: <Users className="w-4 h-4" />,
+  gallery: <Image className="w-4 h-4" />,
+  logocloud: <Building2 className="w-4 h-4" />,
+  logos: <Building2 className="w-4 h-4" />,
+  partners: <Building2 className="w-4 h-4" />,
+  clients: <Building2 className="w-4 h-4" />,
+  header: <Menu className="w-4 h-4" />,
+  navbar: <Menu className="w-4 h-4" />,
+  nav: <Menu className="w-4 h-4" />,
 };
 
 const sectionLabels: Record<SectionType, string> = {
@@ -61,6 +74,15 @@ const sectionLabels: Record<SectionType, string> = {
   form: 'Contact Form',
   footer: 'Footer',
   process: 'Process',
+  about: 'About',
+  gallery: 'Gallery',
+  logocloud: 'Logo Cloud',
+  logos: 'Logos',
+  partners: 'Partners',
+  clients: 'Clients',
+  header: 'Header',
+  navbar: 'Navbar',
+  nav: 'Navigation',
 };
 
 interface SortableSectionItemProps {
