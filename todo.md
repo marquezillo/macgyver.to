@@ -523,3 +523,24 @@
 - [x] Actualizar SYSTEM_PROMPT con nuevos tipos
 - [x] Sincronizar con servidor de producción
 - [x] Verificar generación de landings con nuevos componentes
+
+
+## Mejoras de Calidad Visual (23 Enero 2026)
+
+### Validación de Paleta de Colores
+- [x] Crear sistema de validación post-generación para paleta de colores
+- [x] Implementar función que aplique colores solicitados si el LLM los ignora
+- [x] Añadir mapeo de industria → paleta por defecto
+
+### Variantes de Secciones
+- [x] TestimonialsSection: variante carrusel
+- [x] TestimonialsSection: variante con video testimonials
+- [x] TestimonialsSection: variante featured (1 grande + 2 pequeños)
+- [x] PricingSection: variante horizontal
+- [x] PricingSection: variante con comparación detallada
+- [x] FeaturesSection: variante con iconos animados
+- [x] FeaturesSection: variante alternating (imagen izq/der)
+- [x] FeaturesSection: variante bento grid
+- [x] Actualizar SectionRenderer con variantes
+- [x] Actualizar SYSTEM_PROMPT con variantes disponibles
+- [x] Sincronizar con servidor de producción

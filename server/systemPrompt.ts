@@ -244,11 +244,11 @@ Para una landing efectiva, incluye estas secciones en orden:
 | Tipo | Descripción | Campos Clave |
 |------|-------------|--------------|
 | header | Navegación sticky | logoText, logoImage, navItems (label, href), ctaText |
-| hero | Sección principal | title, subtitle, ctaText, backgroundImage, variant (centered/split/minimal/asymmetric), badge, stats, secondaryCtaText |
-| features | Características | title, badge, items (icon, title, description, image), layout (grid/list/alternating) |
+| hero | Sección principal | title, subtitle, ctaText, backgroundImage, variant, badge, stats, secondaryCtaText |
+| features | Características | title, badge, items (icon, title, description, image), layout |
 | stats | Estadísticas animadas | title, items (value, label, icon, prefix, suffix) |
-| testimonials | Testimonios | title, badge, items (name, text, rating, role, company, image), layout (grid/featured) |
-| pricing | Precios | title, plans (name, price, period, features, ctaText, popular, description), showToggle |
+| testimonials | Testimonios | title, badge, items (name, text, rating, role, company, image), layout |
+| pricing | Precios | title, plans (name, price, period, features, ctaText, popular), layout, showToggle |
 | process | Proceso/Pasos | title, steps (number, title, description, icon) |
 | about | Sobre nosotros | title, description, image, mission, vision, team (name, role, image, bio) |
 | gallery | Galería | title, images (src, alt, caption), columns |
@@ -258,12 +258,35 @@ Para una landing efectiva, incluye estas secciones en orden:
 | cta | Llamada a la acción | title, subtitle, ctaText |
 | footer | Pie de página | columns, socialLinks, copyright |
 
-### VARIANTES DE HERO
+### VARIANTES DE SECCIONES
 
-- **centered**: Texto centrado con imagen de fondo (clásico)
-- **split**: 50/50 con imagen a un lado, ideal para productos
-- **minimal**: Solo texto, muy limpio y moderno
-- **asymmetric**: Layout asimétrico con efecto glow, ideal para tech/SaaS
+**Hero (variant):**
+- centered: Texto centrado con imagen de fondo (clásico)
+- split: 50/50 con imagen a un lado, ideal para productos
+- minimal: Solo texto, muy limpio y moderno
+- asymmetric: Layout asimétrico con efecto glow, ideal para tech/SaaS
+
+**Features (layout):**
+- grid: Cuadrícula de cards (default)
+- alternating: Imagen izquierda/derecha alternando, ideal para explicar procesos
+- bento: Estilo bento grid con cards de diferentes tamaños
+- animated: Cards con iconos animados y efectos hover
+- cards3d: Cards con efecto 3D al hover
+- minimal: Layout minimalista centrado
+
+**Testimonials (layout):**
+- grid: Cuadrícula de testimonios (default)
+- carousel: Carrusel automático con navegación
+- featured: 1 testimonio grande + 2 pequeños
+- video: Testimonios con soporte para video
+- masonry: Layout tipo Pinterest
+
+**Pricing (layout):**
+- cards: Cards verticales (default)
+- horizontal: Cards horizontales, ideal para pocos planes
+- comparison: Tabla comparativa detallada
+- minimal: Layout minimalista sin bordes
+- gradient: Cards con gradientes coloridos
 
 ### REGLAS IMPORTANTES
 
