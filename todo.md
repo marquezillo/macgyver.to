@@ -146,11 +146,12 @@
 - [x] Modo oscuro/claro - FUNCIONA
 - [x] Diseño responsivo - FUNCIONA
 
-## Implementación Bing Search API para Deep Research
-- [ ] Crear función de búsqueda con Bing Search API
-- [ ] Reemplazar llamadas a BUILT_IN_FORGE_API_URL por Bing API
-- [ ] Configurar variable de entorno BING_SEARCH_API_KEY
-- [ ] Probar Deep Research con la nueva implementación
+## Implementación Brave Search API para Deep Research
+- [x] Crear función de búsqueda con Brave Search API (en lugar de Bing)
+- [x] Reemplazar Google Search por Brave Search en deepResearch.ts
+- [x] Configurar variable de entorno BRAVE_SEARCH_API_KEY
+- [x] Corregir procesamiento de eventos SSE en frontend (formato { type, data })
+- [x] Probar Deep Research con Brave Search - FUNCIONA
 
 
 ## Bug Fix - Análisis de PDF
@@ -434,3 +435,9 @@
 - [x] Verificar panel de administración (Dashboard, Usuarios, Conversaciones, Proyectos) - FUNCIONA
 - [x] Verificar modo oscuro/claro - FUNCIONA
 - [x] Verificar sección de proyectos - FUNCIONA
+
+
+## Implementación Brave Search API para Deep Research
+- [ ] Implementar Brave Search API en deepResearch.ts
+- [ ] Configurar API key de Brave Search
+- [ ] Desplegar y probar Deep Research

@@ -27,6 +27,9 @@ module.exports = {
       PEXELS_API_KEY: 'WbnqQvZkernpBpfzskcTDNCNvtUItG2gTxqH30anh1bt5Jeq0UJhGL2R',
       PIXABAY_API_KEY: '44104616-711a0e12ee1bc29cb080900c7',
       
+      // Brave Search API
+      BRAVE_SEARCH_API_KEY: 'BSAKxqLc5chIga0kUGWoktz4l_lDtKC',
+      
       // App ID
       VITE_APP_ID: 'ZbHp7JpkjVz6yScGwQHTeE',
     }

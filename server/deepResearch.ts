@@ -1,8 +1,7 @@
 import { invokeLLM, invokeLLMStream, type Message } from "./_core/llm";
 
-// Google Custom Search API configuration
-const GOOGLE_SEARCH_API_KEY = process.env.GOOGLE_SEARCH_API_KEY || "";
-const GOOGLE_SEARCH_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_ID || "";
+// Brave Search API configuration
+const BRAVE_SEARCH_API_KEY = process.env.BRAVE_SEARCH_API_KEY || "";
 
 export interface ResearchSource {
   title: string;
@@ -16,46 +15,51 @@ export interface ResearchResult {
   followUpQuestions: string[];
 }
 
-// Search the web using Google Custom Search API
+// Search the web using Brave Search API
 async function searchWeb(query: string): Promise<ResearchSource[]> {
-  // Check if Google Search is configured
-  if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_ENGINE_ID) {
-    console.warn("Google Search API not configured. Set GOOGLE_SEARCH_API_KEY and GOOGLE_SEARCH_ENGINE_ID environment variables.");
+  // Check if Brave Search is configured
+  if (!BRAVE_SEARCH_API_KEY) {
+    console.warn("[Deep Research] Brave Search API not configured. Set BRAVE_SEARCH_API_KEY environment variable.");
     return [];
   }
 
   try {
-    const url = new URL("https://www.googleapis.com/customsearch/v1");
-    url.searchParams.set("key", GOOGLE_SEARCH_API_KEY);
-    url.searchParams.set("cx", GOOGLE_SEARCH_ENGINE_ID);
+    const url = new URL("https://api.search.brave.com/res/v1/web/search");
     url.searchParams.set("q", query);
-    url.searchParams.set("num", "10");
+    url.searchParams.set("count", "10");
+    url.searchParams.set("text_decorations", "false");
 
-    console.log("[Deep Research] Searching Google for:", query);
+    console.log("[Deep Research] Searching Brave for:", query);
 
-    const response = await fetch(url.toString());
+    const response = await fetch(url.toString(), {
+      headers: {
+        "Accept": "application/json",
+        "Accept-Encoding": "gzip",
+        "X-Subscription-Token": BRAVE_SEARCH_API_KEY,
+      },
+    });
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Google Search API error:", response.status, errorText);
+      console.error("[Deep Research] Brave Search API error:", response.status, errorText);
       return [];
     }
 
     const result = await response.json() as any;
 
-    if (result?.items && Array.isArray(result.items)) {
-      console.log("[Deep Research] Found", result.items.length, "results");
-      return result.items.map((item: any) => ({
+    if (result?.web?.results && Array.isArray(result.web.results)) {
+      console.log("[Deep Research] Found", result.web.results.length, "results from Brave");
+      return result.web.results.map((item: any) => ({
         title: item.title || "",
-        url: item.link || "",
-        snippet: item.snippet || "",
+        url: item.url || "",
+        snippet: item.description || "",
       }));
     }
 
-    console.log("[Deep Research] No items in response");
+    console.log("[Deep Research] No results in Brave response");
     return [];
   } catch (error) {
-    console.error("Google Search API failed:", error);
+    console.error("[Deep Research] Brave Search API failed:", error);
     return [];
   }
 }
@@ -224,7 +228,7 @@ export async function* performDeepResearchStream(
   yield { type: "queries", data: queries };
 
   // Step 2: Search
-  yield { type: "status", data: "Buscando información en la web..." };
+  yield { type: "status", data: "Buscando información en la web con Brave Search..." };
   
   const allSources: ResearchSource[] = [];
   const seenUrls = new Set<string>();

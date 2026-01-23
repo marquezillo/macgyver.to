@@ -196,23 +196,38 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
-              const data = JSON.parse(line.slice(6));
+              const event = JSON.parse(line.slice(6));
               
-              if (data.status) {
-                setResearchStatus(data.status);
+              // Handle server events with { type, data } format
+              if (event.type === 'status') {
+                setResearchStatus(event.data as string);
               }
-              if (data.sources) {
-                sources = data.sources;
-                setResearchSources(data.sources);
+              if (event.type === 'source') {
+                const source = event.data as { title: string; url: string; snippet: string };
+                sources.push(source);
+                setResearchSources([...sources]);
               }
-              if (data.content) {
-                fullContent += data.content;
+              if (event.type === 'queries') {
+                // Optional: show queries being searched
+                console.log('[Deep Research] Queries:', event.data);
+              }
+              if (event.type === 'content') {
+                fullContent += event.data as string;
                 setStreamingContent(fullContent);
                 setResearchStatus(null);
               }
-              if (data.done) {
-                // Research complete
+              if (event.type === 'done') {
+                // Research complete - extract sources and followUpQuestions from data
+                const doneData = event.data as { sources: Array<{ title: string; url: string; snippet: string }>; followUpQuestions: string[] };
+                if (doneData.sources) {
+                  sources = doneData.sources;
+                  setResearchSources(doneData.sources);
+                }
                 setResearchStatus(null);
+              }
+              if (event.type === 'error') {
+                console.error('[Deep Research] Error:', event.data);
+                setResearchStatus('Error en la investigación');
               }
             } catch {
               // Skip invalid JSON
