@@ -324,20 +324,28 @@ async function getImageForSection(
     
     // Si no hay resultados de stock y useAI está habilitado, generar con IA
     if (useAI) {
-      console.log(`[ContextualImageGenerator] No stock images found, generating with AI...`);
+      console.log(`[ContextualImageGenerator] No stock images found for "${industryKeywords[0]}", generating with AI...`);
       const prompt = generateImagePrompt(section, businessType, businessName, industryKeywords);
-      const aiResult = await generateImageWithGemini({
-        prompt,
-        aspectRatio: sectionType === 'hero' ? '16:9' : '1:1',
-        category: sectionType
-      });
       
-      if (aiResult) {
-        console.log(`[ContextualImageGenerator] Generated AI image for ${sectionType}`);
-        return {
-          url: aiResult.url,
-          source: 'ai'
-        };
+      try {
+        const aiResult = await generateImageWithGemini({
+          prompt,
+          aspectRatio: sectionType === 'hero' ? '16:9' : '1:1',
+          category: sectionType,
+          style: sectionType === 'features' || sectionType === 'process' ? 'illustration' : 'photorealistic'
+        });
+        
+        if (aiResult && aiResult.url) {
+          console.log(`[ContextualImageGenerator] ✓ Generated AI image for ${sectionType}: ${aiResult.url}`);
+          return {
+            url: aiResult.url,
+            source: 'ai'
+          };
+        } else {
+          console.warn(`[ContextualImageGenerator] AI generation returned no image for ${sectionType}`);
+        }
+      } catch (aiError) {
+        console.error(`[ContextualImageGenerator] AI generation failed for ${sectionType}:`, aiError);
       }
     }
     
