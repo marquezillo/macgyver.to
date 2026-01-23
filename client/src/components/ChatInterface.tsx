@@ -567,7 +567,15 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
       // Check if message contains both a generation verb and an image noun
       const hasImageVerb = imageKeywords.some(verb => lowerMessage.includes(verb));
       const hasImageNoun = imageNouns.some(noun => lowerMessage.includes(noun));
-      const isImageRequest = isImage || (hasImageVerb && hasImageNoun);
+      
+      // Exclude landing page requests from being treated as image requests
+      const isLandingRequest = lowerMessage.includes('landing') || 
+                               lowerMessage.includes('página web') || 
+                               lowerMessage.includes('pagina web') ||
+                               lowerMessage.includes('sitio web') ||
+                               lowerMessage.includes('website');
+      
+      const isImageRequest = isImage || (hasImageVerb && hasImageNoun && !isLandingRequest);
       
       if (isImageRequest) {
         // Generate image

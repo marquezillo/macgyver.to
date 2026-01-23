@@ -469,3 +469,14 @@
 - [x] Reescribir SYSTEM_PROMPT para generar contenido de alta calidad y contextual
 - [x] Mejorar Canvas.tsx para que drag-and-drop no interfiera con clics
 - [x] Probar generación de landing de Tailandia con mejoras - FUNCIONA
+
+
+## MEJORA CRÍTICA - Calidad de Landings (23 Ene 2026) - COMPLETADO
+- [x] Diagnosticar problemas en landing de Tailandia (imágenes no relevantes, textos genéricos)
+- [x] Reescribir SYSTEM_PROMPT para generar contenido específico y contextual al negocio
+- [x] Mejorar landingImageEnricher.ts para buscar imágenes usando descripciones contextuales
+- [x] Corregir bug del FAQ (segundo item no funciona) - Separado listeners de drag del contenido en Canvas.tsx
+- [x] Corregir detección de intenciones para no confundir "landing page" con solicitudes de imagen
+- [x] Probar generación de landing de Tailandia - FUNCIONA (imagen de templo, contenido específico)
+- [x] Probar generación de landing de restaurante japonés "Sakura Zen" - FUNCIONA (imagen de restaurante, menú omakase)
+- [x] Verificar FAQ funciona correctamente - FUNCIONA (múltiples items se abren/cierran)
