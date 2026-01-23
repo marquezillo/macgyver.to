@@ -4,13 +4,9 @@
  * Este módulo enriquece las secciones de una landing page con imágenes automáticas.
  * Usa el sistema híbrido de imágenes: bancos de stock primero, IA como fallback.
  * 
- * Secciones que reciben imágenes:
- * - Hero: Imagen de fondo o principal relacionada con el negocio
- * - Testimonials: Avatares generados con IA para cada persona
- * - Team: Fotos profesionales generadas con IA
- * - Gallery: Imágenes relacionadas con el negocio
- * - Features: Iconos o imágenes ilustrativas
- * - About: Imagen del negocio o equipo
+ * IMPORTANTE: Las búsquedas de imágenes deben ser CONTEXTUALES al negocio específico.
+ * Por ejemplo, para una agencia de viajes a Tailandia, buscar "Thailand temples beaches"
+ * NO "travel agency business professional".
  */
 
 import { searchImages, ImageResult } from './imageSearch';
@@ -33,38 +29,172 @@ interface EnrichedSection extends LandingSection {
 interface EnrichmentContext {
   businessType: string;
   businessName: string;
+  targetAudience?: string;
+  uniqueValue?: string;
 }
 
 /**
- * Genera un prompt de búsqueda basado en el tipo de negocio y sección
+ * Mapeo de tipos de negocio a términos de búsqueda específicos
+ * Esto asegura que las imágenes sean relevantes al contexto
  */
-function generateSearchQuery(sectionType: string, context: EnrichmentContext, content: Record<string, unknown>): string {
+const BUSINESS_IMAGE_KEYWORDS: Record<string, string[]> = {
+  // Viajes y turismo
+  'travel_agency_thailand': ['Thailand temples', 'Bangkok Wat Arun', 'Thai beach paradise', 'Phuket islands', 'Thai food market'],
+  'thailand_travel': ['Thailand golden temples', 'Thai beaches turquoise', 'Bangkok skyline', 'Thai street food', 'Phi Phi islands'],
+  'thailand': ['Thailand temples sunset', 'Thai beach paradise', 'Bangkok Grand Palace', 'Thai culture', 'Krabi limestone cliffs'],
+  'travel_agency': ['travel destination beautiful', 'vacation paradise', 'tourist landmark', 'travel adventure'],
+  'tourism': ['tourist destination scenic', 'travel landscape beautiful', 'vacation resort'],
+  
+  // Restaurantes
+  'restaurant_italian': ['Italian restaurant interior', 'pizza pasta authentic', 'Italian cuisine elegant', 'trattoria ambiance'],
+  'restaurant_japanese': ['Japanese restaurant zen', 'sushi chef preparation', 'ramen authentic', 'Japanese cuisine elegant'],
+  'restaurant_mexican': ['Mexican restaurant colorful', 'tacos authentic', 'Mexican cuisine vibrant', 'cantina atmosphere'],
+  'restaurant': ['restaurant interior elegant', 'fine dining ambiance', 'chef cooking', 'gourmet food plating'],
+  
+  // Fitness y salud
+  'gym': ['modern gym equipment', 'fitness training workout', 'gym interior professional', 'personal training'],
+  'fitness': ['fitness workout motivation', 'gym training professional', 'healthy lifestyle active'],
+  'spa': ['spa relaxation luxury', 'wellness massage', 'spa interior zen', 'aromatherapy treatment'],
+  'yoga': ['yoga studio peaceful', 'meditation practice', 'yoga class serene'],
+  
+  // Tecnología
+  'saas': ['technology modern office', 'software dashboard', 'tech startup workspace', 'digital innovation'],
+  'tech': ['technology innovation', 'modern tech office', 'digital transformation', 'startup workspace'],
+  'software': ['software development', 'coding programming', 'tech team collaboration'],
+  'agency': ['creative agency office', 'marketing team', 'digital agency workspace'],
+  
+  // Inmobiliaria
+  'real_estate': ['luxury home interior', 'modern architecture', 'real estate property', 'house beautiful'],
+  'property': ['property investment', 'luxury apartment', 'home interior design'],
+  
+  // Educación
+  'education': ['education learning', 'classroom modern', 'students studying', 'online learning'],
+  'school': ['school education', 'students classroom', 'learning environment'],
+  'course': ['online course learning', 'education training', 'workshop seminar'],
+  
+  // E-commerce
+  'ecommerce': ['online shopping', 'ecommerce store', 'product showcase', 'retail modern'],
+  'shop': ['retail store modern', 'shopping experience', 'product display'],
+  
+  // Servicios profesionales
+  'consulting': ['business consulting', 'professional meeting', 'corporate office', 'strategy planning'],
+  'legal': ['law office professional', 'legal services', 'attorney consultation'],
+  'accounting': ['accounting finance', 'financial services', 'business professional'],
+  
+  // Default
+  'default': ['professional business', 'modern office', 'corporate team', 'business success'],
+};
+
+/**
+ * Extrae palabras clave relevantes del contenido de la sección
+ */
+function extractKeywordsFromContent(content: Record<string, unknown>): string[] {
+  const keywords: string[] = [];
+  
+  // Extraer del título
+  if (content.title && typeof content.title === 'string') {
+    // Extraer palabras significativas del título
+    const titleWords = content.title
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .split(/\s+/)
+      .filter(word => word.length > 3 && !['para', 'with', 'your', 'the', 'and', 'los', 'las', 'del', 'que', 'con'].includes(word));
+    keywords.push(...titleWords.slice(0, 3));
+  }
+  
+  // Extraer de la descripción de imagen si existe
+  if (content.backgroundImage && typeof content.backgroundImage === 'string' && !content.backgroundImage.startsWith('http')) {
+    keywords.push(content.backgroundImage);
+  }
+  
+  if (content.imageUrl && typeof content.imageUrl === 'string' && !content.imageUrl.startsWith('http')) {
+    keywords.push(content.imageUrl);
+  }
+  
+  return keywords;
+}
+
+/**
+ * Genera un query de búsqueda contextual basado en el tipo de negocio y contenido
+ */
+function generateContextualSearchQuery(
+  sectionType: string, 
+  context: EnrichmentContext, 
+  content: Record<string, unknown>
+): string {
   const { businessType, businessName } = context;
+  
+  // Normalizar el tipo de negocio
+  const normalizedType = businessType.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  
+  // Buscar keywords específicas para este tipo de negocio
+  let baseKeywords: string[] = [];
+  
+  // Buscar coincidencia exacta primero
+  if (BUSINESS_IMAGE_KEYWORDS[normalizedType]) {
+    baseKeywords = BUSINESS_IMAGE_KEYWORDS[normalizedType];
+  } else {
+    // Buscar coincidencia parcial
+    for (const [key, keywords] of Object.entries(BUSINESS_IMAGE_KEYWORDS)) {
+      if (normalizedType.includes(key) || key.includes(normalizedType)) {
+        baseKeywords = keywords;
+        break;
+      }
+    }
+  }
+  
+  // Si no hay coincidencia, usar default
+  if (baseKeywords.length === 0) {
+    baseKeywords = BUSINESS_IMAGE_KEYWORDS['default'];
+  }
+  
+  // Extraer keywords del contenido
+  const contentKeywords = extractKeywordsFromContent(content);
+  
+  // Construir query según el tipo de sección
+  let query: string;
   
   switch (sectionType) {
     case 'hero':
-      return `${businessType} business professional modern`;
+      // Para hero, usar la descripción de imagen si existe, sino keywords del negocio
+      if (contentKeywords.length > 0 && contentKeywords[0].length > 10) {
+        // Usar la descripción de imagen del LLM
+        query = contentKeywords[0];
+      } else {
+        // Usar keywords del tipo de negocio
+        query = baseKeywords[0] || `${businessType} professional`;
+      }
+      break;
+      
     case 'about':
-      return `${businessType} team office professional`;
-    case 'services':
+      query = baseKeywords[1] || `${businessType} team professional`;
+      break;
+      
     case 'features':
-      return `${businessType} service professional`;
+    case 'services':
+      query = baseKeywords[2] || `${businessType} service`;
+      break;
+      
     case 'gallery':
-      return `${businessType} showcase portfolio`;
-    case 'contact':
-      return `${businessType} office location`;
+      query = baseKeywords[3] || `${businessType} showcase`;
+      break;
+      
     case 'cta':
-      return `${businessType} success happy customer`;
+      query = baseKeywords[4] || `${businessType} success`;
+      break;
+      
     default:
-      return `${businessType} professional`;
+      query = baseKeywords[0] || `${businessType} professional`;
   }
+  
+  console.log(`[LandingEnricher] Generated search query for ${sectionType}: "${query}"`);
+  return query;
 }
 
 /**
  * Genera un prompt para crear avatares con IA
  */
 function generateAvatarPrompt(name: string, role?: string): string {
-  // Determinar género basado en el nombre (heurística simple)
   const femaleNames = ['maría', 'maria', 'ana', 'laura', 'carmen', 'lucia', 'lucía', 'sofia', 'sofía', 'elena', 'paula', 'marta', 'sara', 'andrea', 'claudia', 'patricia', 'rosa', 'julia', 'isabel', 'cristina', 'jennifer', 'jessica', 'ashley', 'emily', 'emma', 'olivia', 'ava', 'sophia', 'isabella', 'mia', 'charlotte', 'amelia', 'harper', 'evelyn'];
   const nameLower = name.toLowerCase().split(' ')[0];
   const isFemale = femaleNames.some(fn => nameLower.includes(fn));
@@ -91,48 +221,66 @@ async function enrichTestimonialsSection(
     avatar?: string;
   }> | undefined;
   
-  if (!testimonials || !Array.isArray(testimonials)) {
+  // También verificar items (algunos templates usan items en lugar de testimonials)
+  const items = content.items as Array<{
+    author?: string;
+    name?: string;
+    role?: string;
+    company?: string;
+    quote?: string;
+    text?: string;
+    avatar?: string;
+    image?: string;
+  }> | undefined;
+  
+  const testimonialsArray = testimonials || items;
+  
+  if (!testimonialsArray || !Array.isArray(testimonialsArray)) {
     return section as EnrichedSection;
   }
   
-  console.log(`[LandingEnricher] Enriching ${testimonials.length} testimonials with avatars`);
+  console.log(`[LandingEnricher] Enriching ${testimonialsArray.length} testimonials with avatars`);
   
-  // Generar avatares para cada testimonio
   const enrichedTestimonials = await Promise.all(
-    testimonials.map(async (testimonial, index) => {
-      if (testimonial.avatar && testimonial.avatar.startsWith('http')) {
-        // Ya tiene avatar, no generar
+    testimonialsArray.map(async (testimonial, index) => {
+      const t = testimonial as Record<string, unknown>;
+      const name = (t.name as string) || (t.author as string) || `Person ${index + 1}`;
+      const existingAvatar = (t.avatar as string) || (t.image as string);
+      
+      if (existingAvatar && existingAvatar.startsWith('http')) {
         return testimonial;
       }
       
       try {
-        const prompt = generateAvatarPrompt(testimonial.name, testimonial.role);
-        console.log(`[LandingEnricher] Generating avatar for ${testimonial.name}`);
+        const prompt = generateAvatarPrompt(name, testimonial.role);
+        console.log(`[LandingEnricher] Generating avatar for ${name}`);
         
-        // Para testimonios, generar avatar con IA directamente
         const { generateCustomImage } = await import('./geminiImageGeneration');
         const imageUrl = await generateCustomImage(prompt);
         
         return {
           ...testimonial,
-          avatar: imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(testimonial.name)}&background=random&size=200`,
+          avatar: imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=200`,
+          image: imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=200`,
         };
       } catch (error) {
-        console.error(`[LandingEnricher] Error generating avatar for ${testimonial.name}:`, error);
-        // Fallback a UI Avatars
+        console.error(`[LandingEnricher] Error generating avatar for ${name}:`, error);
         return {
           ...testimonial,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(testimonial.name)}&background=random&size=200`,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=200`,
+          image: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=200`,
         };
       }
     })
   );
   
+  // Devolver con ambas claves para compatibilidad
   return {
     ...section,
     content: {
       ...content,
       testimonials: enrichedTestimonials,
+      items: enrichedTestimonials,
     },
   };
 }
@@ -159,7 +307,6 @@ async function enrichTeamSection(
   
   console.log(`[LandingEnricher] Enriching ${members.length} team members with photos`);
   
-  // Generar fotos para cada miembro
   const enrichedMembers = await Promise.all(
     members.map(async (member) => {
       if (member.image && member.image.startsWith('http')) {
@@ -171,7 +318,6 @@ async function enrichTeamSection(
         const prompt = generateAvatarPrompt(member.name, role);
         console.log(`[LandingEnricher] Generating photo for team member ${member.name}`);
         
-        // Para equipo, generar foto con IA directamente
         const { generateCustomImage } = await import('./geminiImageGeneration');
         const imageUrl = await generateCustomImage(prompt);
         
@@ -208,13 +354,10 @@ async function enrichGallerySection(
   const content = section.content as Record<string, unknown>;
   let images = content.images as (string | { url: string })[] | undefined;
   
-  // Si ya tiene imágenes válidas, no buscar más
-  // Las imágenes pueden ser strings o objetos con url
   if (images && Array.isArray(images) && images.length > 0) {
     const firstImage = images[0];
     const firstUrl = typeof firstImage === 'string' ? firstImage : firstImage?.url;
     if (firstUrl && typeof firstUrl === 'string' && firstUrl.startsWith('http')) {
-      // Normalizar a strings si son objetos
       const normalizedImages = images.map(img => 
         typeof img === 'string' ? img : img?.url
       ).filter((url): url is string => typeof url === 'string');
@@ -231,19 +374,20 @@ async function enrichGallerySection(
   console.log(`[LandingEnricher] Searching gallery images for ${context.businessType}`);
   
   try {
-    const query = `${context.businessType} showcase portfolio professional`;
+    const query = generateContextualSearchQuery('gallery', context, content);
     const results = await searchImages(query, { count: 6 });
     
     let finalImages: string[];
     if (results.length > 0) {
       finalImages = results.map(r => r.url);
     } else {
-      // Fallback: usar Unsplash Source
+      // Fallback con query contextual
+      const fallbackQuery = encodeURIComponent(query.split(' ').slice(0, 2).join(','));
       finalImages = [
-        `https://source.unsplash.com/800x600/?${encodeURIComponent(context.businessType)},1`,
-        `https://source.unsplash.com/800x600/?${encodeURIComponent(context.businessType)},2`,
-        `https://source.unsplash.com/800x600/?${encodeURIComponent(context.businessType)},3`,
-        `https://source.unsplash.com/800x600/?${encodeURIComponent(context.businessType)},4`,
+        `https://source.unsplash.com/800x600/?${fallbackQuery},1`,
+        `https://source.unsplash.com/800x600/?${fallbackQuery},2`,
+        `https://source.unsplash.com/800x600/?${fallbackQuery},3`,
+        `https://source.unsplash.com/800x600/?${fallbackQuery},4`,
       ];
     }
     
@@ -269,7 +413,7 @@ async function enrichHeroSection(
 ): Promise<EnrichedSection> {
   const content = section.content as Record<string, unknown>;
   
-  // Si ya tiene imagen, no buscar
+  // Si ya tiene imagen válida, no buscar
   if (content.backgroundImage && typeof content.backgroundImage === 'string' && content.backgroundImage.startsWith('http')) {
     return section as EnrichedSection;
   }
@@ -280,7 +424,10 @@ async function enrichHeroSection(
   console.log(`[LandingEnricher] Searching hero image for ${context.businessType}`);
   
   try {
-    const query = `${context.businessType} business professional modern hero`;
+    // Generar query contextual
+    const query = generateContextualSearchQuery('hero', context, content);
+    console.log(`[LandingEnricher] Hero search query: "${query}"`);
+    
     const results = await searchImages(query, { count: 1, orientation: 'landscape' });
     
     console.log(`[LandingEnricher] Hero search results:`, JSON.stringify(results, null, 2));
@@ -290,8 +437,10 @@ async function enrichHeroSection(
       imageUrl = results[0].url;
       console.log(`[LandingEnricher] Hero image URL found: ${imageUrl}`);
     } else {
-      // Fallback
-      imageUrl = `https://source.unsplash.com/1920x1080/?${encodeURIComponent(context.businessType)},business`;
+      // Fallback con query contextual
+      const fallbackQuery = encodeURIComponent(query.split(' ').slice(0, 2).join(','));
+      imageUrl = `https://source.unsplash.com/1920x1080/?${fallbackQuery}`;
+      console.log(`[LandingEnricher] Using fallback URL: ${imageUrl}`);
     }
     
     const enrichedSection = {
@@ -302,7 +451,7 @@ async function enrichHeroSection(
         imageUrl: imageUrl,
       },
     };
-    console.log(`[LandingEnricher] Hero section enriched:`, JSON.stringify(enrichedSection.content, null, 2));
+    console.log(`[LandingEnricher] Hero section enriched with image: ${imageUrl}`);
     return enrichedSection;
   } catch (error) {
     console.error('[LandingEnricher] Error searching hero image:', error);
@@ -326,14 +475,15 @@ async function enrichAboutSection(
   console.log(`[LandingEnricher] Searching about image for ${context.businessType}`);
   
   try {
-    const query = `${context.businessType} team office professional`;
+    const query = generateContextualSearchQuery('about', context, content);
     const results = await searchImages(query, { count: 1 });
     
     let imageUrl: string;
     if (results.length > 0) {
       imageUrl = results[0].url;
     } else {
-      imageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(context.businessType)},team`;
+      const fallbackQuery = encodeURIComponent(query.split(' ').slice(0, 2).join(','));
+      imageUrl = `https://source.unsplash.com/800x600/?${fallbackQuery}`;
     }
     
     return {
@@ -371,37 +521,44 @@ async function enrichFeaturesSection(
     image?: string;
   }> | undefined;
   
-  const items = features || services;
-  const itemKey = features ? 'features' : 'services';
+  const items = content.items as Array<{
+    title: string;
+    description?: string;
+    icon?: string;
+    image?: string;
+  }> | undefined;
   
-  if (!items || !Array.isArray(items)) {
+  const featureItems = features || services || items;
+  const itemKey = features ? 'features' : services ? 'services' : 'items';
+  
+  if (!featureItems || !Array.isArray(featureItems)) {
     return section as EnrichedSection;
   }
   
   // Solo buscar imágenes si algún item no tiene imagen
-  const needsImages = items.some(item => !item.image || !item.image.startsWith('http'));
+  const needsImages = featureItems.some(item => !item.image || !item.image.startsWith('http'));
   if (!needsImages) {
     return section as EnrichedSection;
   }
   
-  console.log(`[LandingEnricher] Searching images for ${items.length} features/services`);
+  console.log(`[LandingEnricher] Searching images for ${featureItems.length} features/services`);
   
   try {
-    // Buscar imágenes para cada feature/service
     const enrichedItems = await Promise.all(
-      items.map(async (item) => {
+      featureItems.map(async (item) => {
         if (item.image && item.image.startsWith('http')) {
           return item;
         }
         
-        const query = `${item.title} ${context.businessType} icon illustration`;
+        // Usar el título del item + contexto del negocio para búsqueda más relevante
+        const query = `${item.title} ${context.businessType}`;
         const results = await searchImages(query, { count: 1 });
         
         return {
           ...item,
           image: results.length > 0 
             ? results[0].url 
-            : `https://source.unsplash.com/400x300/?${encodeURIComponent(item.title)}`,
+            : `https://source.unsplash.com/400x300/?${encodeURIComponent(item.title.split(' ')[0])}`,
         };
       })
     );
@@ -432,7 +589,6 @@ export async function enrichLandingWithImages(
   
   const context: EnrichmentContext = { businessType, businessName };
   
-  // Procesar secciones en paralelo con límite de concurrencia
   const enrichedSections = await Promise.all(
     sections.map(async (section) => {
       try {
@@ -451,7 +607,6 @@ export async function enrichLandingWithImages(
           case 'services':
             return await enrichFeaturesSection(section, context);
           default:
-            // Para otras secciones, devolver sin cambios
             return section as EnrichedSection;
         }
       } catch (error) {
@@ -467,7 +622,6 @@ export async function enrichLandingWithImages(
 
 /**
  * Versión rápida: Solo enriquece Hero y usa placeholders para el resto
- * Útil para preview rápido mientras se cargan las demás imágenes
  */
 export async function enrichLandingQuick(
   sections: LandingSection[],

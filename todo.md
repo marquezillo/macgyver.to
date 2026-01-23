@@ -441,3 +441,31 @@
 - [ ] Implementar Brave Search API en deepResearch.ts
 - [ ] Configurar API key de Brave Search
 - [ ] Desplegar y probar Deep Research
+
+
+## MEJORA CRÍTICA - Calidad de Generación de Landings (23 Enero 2026)
+
+### Problemas Identificados
+- [ ] Imágenes del Hero no son relevantes al contexto (ej: agencia de viajes Tailandia muestra imagen genérica)
+- [ ] Textos son genéricos y no contextuales al negocio
+- [ ] FAQ tiene bug: el segundo item no funciona al hacer click
+- [ ] Todas las landings son iguales a pesar de tener cientos de patrones
+- [ ] Los patrones descargados de Tailwind no se están usando
+- [ ] Diseños muy básicos y poco profesionales
+
+### Correcciones a Implementar
+- [ ] Corregir bug del FAQ (segundo item no responde al click)
+- [ ] Mejorar búsqueda de imágenes para que sean contextualmente relevantes
+- [ ] Reescribir SYSTEM_PROMPT para generar contenido de alta calidad
+- [ ] Implementar selección inteligente de patrones según industria/contexto
+- [ ] Añadir más variedad de diseños y layouts
+- [ ] Probar con landing de agencia de viajes Tailandia
+
+
+## MEJORA CRÍTICA - Calidad de Landings (23 Ene 2026)
+- [x] Diagnosticar problemas en landing de Tailandia
+- [x] Corregir bug del FAQ (segundo item no funciona) - Separado listeners de drag del contenido
+- [x] Mejorar sistema de búsqueda de imágenes para que sean relevantes al contexto
+- [x] Reescribir SYSTEM_PROMPT para generar contenido de alta calidad y contextual
+- [x] Mejorar Canvas.tsx para que drag-and-drop no interfiera con clics
+- [x] Probar generación de landing de Tailandia con mejoras - FUNCIONA

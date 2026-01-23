@@ -4,6 +4,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { CSS } from '@dnd-kit/utilities';
 import { SectionRenderer } from './SectionRenderer';
 import { cn } from '@/lib/utils';
+import { GripVertical } from 'lucide-react';
 
 function SortableSection({ section }: { section: any }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
@@ -16,9 +17,28 @@ function SortableSection({ section }: { section: any }) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="group relative">
-      <div className={cn("absolute inset-0 border-2 border-primary opacity-0 pointer-events-none transition-opacity", isDragging && "opacity-100")} />
-      <SectionRenderer section={section} />
+    <div ref={setNodeRef} style={style} className="group relative">
+      {/* Drag handle - only this element triggers drag */}
+      <div 
+        {...attributes} 
+        {...listeners}
+        className={cn(
+          "absolute left-0 top-1/2 -translate-y-1/2 z-20 p-2 rounded-r-lg cursor-grab active:cursor-grabbing",
+          "bg-gray-800/80 text-white opacity-0 group-hover:opacity-100 transition-opacity",
+          "hover:bg-gray-700",
+          isDragging && "opacity-100"
+        )}
+        title="Arrastra para reordenar"
+      >
+        <GripVertical className="h-5 w-5" />
+      </div>
+      
+      <div className={cn(
+        "border-2 border-transparent transition-all",
+        isDragging && "border-primary opacity-75"
+      )}>
+        <SectionRenderer section={section} />
+      </div>
     </div>
   );
 }
@@ -27,7 +47,11 @@ export function Canvas() {
   const { sections, reorderSections, selectSection } = useEditorStore();
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before drag starts
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -40,10 +64,17 @@ export function Canvas() {
     }
   };
 
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    // Only deselect if clicking directly on the canvas background
+    if (e.target === e.currentTarget) {
+      selectSection(null);
+    }
+  };
+
   return (
     <div 
       className="flex-1 bg-gray-100 overflow-y-auto p-2 md:p-8"
-      onClick={() => selectSection(null)}
+      onClick={handleCanvasClick}
     >
       <div className="max-w-5xl mx-auto bg-white shadow-lg min-h-[400px] md:min-h-[800px] rounded-lg overflow-hidden">
         <DndContext 
