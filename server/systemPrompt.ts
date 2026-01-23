@@ -295,13 +295,19 @@ Para una landing efectiva, incluye estas secciones en orden:
 Cuando el usuario pida: "layout bento para features, testimonios en carrusel, pricing gradient"
 
 Features con layout bento:
+\`\`\`json
 { "id": "features-1", "type": "features", "content": { "layout": "bento", "title": "Nuestros Servicios", "items": [...] } }
+\`\`\`
 
 Testimonials con layout carousel:
+\`\`\`json
 { "id": "testimonials-1", "type": "testimonials", "content": { "layout": "carousel", "title": "Lo que dicen nuestros clientes", "items": [...] } }
+\`\`\`
 
 Pricing con layout gradient:
+\`\`\`json
 { "id": "pricing-1", "type": "pricing", "content": { "layout": "gradient", "title": "Planes y Precios", "plans": [...] } }
+\`\`\`
 
 ### SELECCIÓN AUTOMÁTICA DE VARIANTES POR INDUSTRIA
 
