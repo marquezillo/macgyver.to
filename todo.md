@@ -544,3 +544,22 @@
 - [x] Actualizar SectionRenderer con variantes
 - [x] Actualizar SYSTEM_PROMPT con variantes disponibles
 - [x] Sincronizar con servidor de producción
+
+
+## Mejoras de Generación de Landings (Fase 3)
+
+### Refuerzo de Instrucciones de Variantes
+- [x] Añadir ejemplos concretos de cada variante en SYSTEM_PROMPT
+- [x] Hacer obligatorio que el LLM especifique layout en cada sección
+- [x] Añadir instrucciones explícitas para respetar variantes solicitadas
+
+### Validación Post-Generación
+- [x] Crear función validateVariants() que verifique variantes aplicadas
+- [x] Implementar corrección automática de variantes no respetadas
+- [x] Integrar validación en el flujo de generación
+
+### Generación de Imágenes con IA
+- [x] Integrar API de generación de imágenes del servidor
+- [x] Crear función generateContextualImage() para cada sección
+- [x] Implementar generación automática de imágenes en Hero y Features
+- [x] Añadir fallback a imágenes de stock si falla la generación

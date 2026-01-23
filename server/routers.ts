@@ -8,6 +8,8 @@ import { generateCustomImage, generateLandingImages } from "./geminiImageGenerat
 import { listTemplates, getTemplate, applyTemplateToLanding } from "./landingTemplates";
 import { generateChatImage, searchImages, getApiStatus } from "./imageSearch";
 import { extractMemoriesFromConversation } from "./memoryExtraction";
+import { validateAndFixVariants, getVariantsSummary } from "./variantValidator";
+import { generateContextualImages } from "./contextualImageGenerator";
 import {
   createChat,
   getChatsByUserId,
@@ -417,6 +419,44 @@ export const appRouter = router({
             if (jsonMatch) {
               parsedResponse = JSON.parse(jsonMatch[0]);
               isLandingResponse = parsedResponse?.type === 'landing';
+              
+              // Validar y corregir variantes si es una landing
+              if (isLandingResponse && parsedResponse) {
+                const lastUserMessage = input.messages.filter(m => m.role === 'user').pop();
+                const userMessageContent = lastUserMessage?.content || '';
+                
+                const { data: fixedData, corrections } = validateAndFixVariants(
+                  parsedResponse as { type: string; businessType?: string; sections: { id: string; type: string; content: Record<string, unknown>; styles?: Record<string, unknown> }[] },
+                  userMessageContent
+                );
+                
+                if (corrections.length > 0) {
+                  console.log('[VariantValidator] Correcciones aplicadas:', corrections);
+                }
+                
+                parsedResponse = fixedData;
+                
+                // Log de variantes aplicadas
+                const variantsSummary = getVariantsSummary(fixedData);
+                console.log('[VariantValidator] Variantes finales:', variantsSummary);
+                
+                // Generar imágenes contextuales automáticamente
+                try {
+                  const { data: dataWithImages, generatedImages } = await generateContextualImages(
+                    fixedData as { type: string; businessType?: string; businessName?: string; sections: { id: string; type: string; content: Record<string, unknown>; styles?: Record<string, unknown> }[] },
+                    { useAI: true, maxImages: 3 }
+                  );
+                  
+                  if (generatedImages.length > 0) {
+                    console.log(`[ContextualImageGenerator] Generated ${generatedImages.length} images:`, 
+                      generatedImages.map(img => `${img.sectionId} (${img.source})`));
+                    parsedResponse = dataWithImages;
+                  }
+                } catch (imgError) {
+                  console.error('[ContextualImageGenerator] Error generating images:', imgError);
+                  // Continuar sin imágenes generadas
+                }
+              }
             }
           } catch {
             // Not a JSON response, that's fine

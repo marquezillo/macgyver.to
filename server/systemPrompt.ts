@@ -258,35 +258,64 @@ Para una landing efectiva, incluye estas secciones en orden:
 | cta | Llamada a la acción | title, subtitle, ctaText |
 | footer | Pie de página | columns, socialLinks, copyright |
 
-### VARIANTES DE SECCIONES
+### VARIANTES DE SECCIONES (OBLIGATORIO ESPECIFICAR)
 
-**Hero (variant):**
-- centered: Texto centrado con imagen de fondo (clásico)
-- split: 50/50 con imagen a un lado, ideal para productos
-- minimal: Solo texto, muy limpio y moderno
-- asymmetric: Layout asimétrico con efecto glow, ideal para tech/SaaS
+**⚠️ REGLA CRÍTICA**: Cuando el usuario solicite una variante específica, DEBES incluir el campo "layout" o "variant" en el JSON de la sección. Si no se especifica variante, usa la más apropiada para el tipo de negocio.
 
-**Features (layout):**
+**Hero (variant):** - SIEMPRE incluir "variant" en content
+- centered: Texto centrado con imagen de fondo (clásico) - para servicios tradicionales
+- split: 50/50 con imagen a un lado - para productos, e-commerce
+- minimal: Solo texto, muy limpio - para tech minimalista
+- asymmetric: Layout asimétrico con glow - para SaaS, startups tech
+
+**Features (layout):** - SIEMPRE incluir "layout" en content
 - grid: Cuadrícula de cards (default)
-- alternating: Imagen izquierda/derecha alternando, ideal para explicar procesos
-- bento: Estilo bento grid con cards de diferentes tamaños
-- animated: Cards con iconos animados y efectos hover
-- cards3d: Cards con efecto 3D al hover
-- minimal: Layout minimalista centrado
+- alternating: Imagen izq/der alternando - para explicar procesos paso a paso
+- bento: Estilo bento grid con cards de diferentes tamaños - para agencias creativas, portfolios
+- animated: Cards con iconos animados - para tech, SaaS
+- cards3d: Cards con efecto 3D al hover - para productos premium
+- minimal: Layout minimalista centrado - para servicios profesionales
 
-**Testimonials (layout):**
+**Testimonials (layout):** - SIEMPRE incluir "layout" en content
 - grid: Cuadrícula de testimonios (default)
-- carousel: Carrusel automático con navegación
-- featured: 1 testimonio grande + 2 pequeños
-- video: Testimonios con soporte para video
-- masonry: Layout tipo Pinterest
+- carousel: Carrusel automático con navegación - para muchos testimonios
+- featured: 1 testimonio grande + 2 pequeños - para destacar un cliente importante
+- video: Testimonios con soporte para video - para mayor impacto
+- masonry: Layout tipo Pinterest - para testimonios de diferentes longitudes
 
-**Pricing (layout):**
+**Pricing (layout):** - SIEMPRE incluir "layout" en content
 - cards: Cards verticales (default)
-- horizontal: Cards horizontales, ideal para pocos planes
-- comparison: Tabla comparativa detallada
-- minimal: Layout minimalista sin bordes
-- gradient: Cards con gradientes coloridos
+- horizontal: Cards horizontales - para 2-3 planes simples
+- comparison: Tabla comparativa detallada - para muchas features
+- minimal: Layout minimalista sin bordes - para servicios premium
+- gradient: Cards con gradientes coloridos - para startups, tech
+
+### EJEMPLO DE USO CORRECTO DE VARIANTES
+
+Cuando el usuario pida: "layout bento para features, testimonios en carrusel, pricing gradient"
+
+Features con layout bento:
+{ "id": "features-1", "type": "features", "content": { "layout": "bento", "title": "Nuestros Servicios", "items": [...] } }
+
+Testimonials con layout carousel:
+{ "id": "testimonials-1", "type": "testimonials", "content": { "layout": "carousel", "title": "Lo que dicen nuestros clientes", "items": [...] } }
+
+Pricing con layout gradient:
+{ "id": "pricing-1", "type": "pricing", "content": { "layout": "gradient", "title": "Planes y Precios", "plans": [...] } }
+
+### SELECCIÓN AUTOMÁTICA DE VARIANTES POR INDUSTRIA
+
+Si el usuario NO especifica variante, usa estas por defecto:
+
+| Industria | Hero | Features | Testimonials | Pricing |
+|-----------|------|----------|--------------|--------|
+| Tech/SaaS | asymmetric | animated | carousel | gradient |
+| Agencia Creativa | split | bento | featured | cards |
+| E-commerce | split | grid | carousel | comparison |
+| Restaurante | centered | grid | grid | cards |
+| Salud/Bienestar | minimal | minimal | featured | minimal |
+| Viajes/Turismo | centered | alternating | carousel | cards |
+| Servicios Profesionales | minimal | alternating | featured | horizontal |
 
 ### REGLAS IMPORTANTES
 
