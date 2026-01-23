@@ -2,12 +2,135 @@ import { useEditorStore } from '@/store/editorStore';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
-import { X, ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ZoomIn, ImageOff } from 'lucide-react';
+
+interface GalleryImage {
+  src: string;
+  alt?: string;
+  caption?: string;
+}
 
 interface GallerySectionProps {
   id: string;
-  content: any;
-  styles?: any;
+  content: {
+    title?: string;
+    subtitle?: string;
+    images?: GalleryImage[];
+    layout?: 'grid' | 'masonry' | 'carousel';
+  };
+  styles?: {
+    backgroundColor?: string;
+    textColor?: string;
+    accentColor?: string;
+  };
+}
+
+// Función para validar si una URL de imagen es válida
+const isValidImageUrl = (url: string): boolean => {
+  if (!url || typeof url !== 'string') return false;
+  if (url.trim() === '' || url === 'undefined' || url === 'null') return false;
+  
+  // Debe empezar con http, https, / o data:
+  if (!url.startsWith('http') && !url.startsWith('/') && !url.startsWith('data:')) {
+    return false;
+  }
+  
+  // Patrones de placeholder conocidos que fallan frecuentemente
+  const badPatterns = [
+    'placeholder.com', 'via.placeholder', 'placehold.it', 
+    'dummyimage.com', 'fakeimg.pl', 'lorempixel.com',
+    'placekitten.com', 'loremflickr.com'
+  ];
+  
+  return !badPatterns.some(pattern => url.includes(pattern));
+};
+
+// Generar color basado en texto para consistencia
+const getColorFromText = (text: string, baseColor: string = '#6366f1'): string => {
+  if (!text) return baseColor;
+  
+  const colors = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316',
+    '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'
+  ];
+  
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  return colors[Math.abs(hash) % colors.length];
+};
+
+// Componente de imagen con fallback
+function GalleryImageWithFallback({ 
+  image, 
+  index, 
+  accentColor,
+  className = '',
+  onClick 
+}: { 
+  image: GalleryImage; 
+  index: number;
+  accentColor?: string;
+  className?: string;
+  onClick?: () => void;
+}) {
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const isValid = isValidImageUrl(image.src);
+  const showFallback = !isValid || hasError;
+  const bgColor = getColorFromText(image.alt || image.caption || `image-${index}`, accentColor);
+
+  if (showFallback) {
+    return (
+      <div 
+        className={cn(
+          "w-full h-full flex flex-col items-center justify-center",
+          className
+        )}
+        style={{ 
+          background: `linear-gradient(135deg, ${bgColor}15, ${bgColor}30)` 
+        }}
+        onClick={onClick}
+      >
+        <ImageOff 
+          className="w-12 h-12 mb-3 opacity-30" 
+          style={{ color: bgColor }}
+        />
+        {(image.alt || image.caption) && (
+          <p 
+            className="text-sm font-medium opacity-50 text-center px-4 max-w-[200px]"
+            style={{ color: bgColor }}
+          >
+            {image.caption || image.alt}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("relative w-full h-full", className)} onClick={onClick}>
+      {isLoading && (
+        <div 
+          className="absolute inset-0 animate-pulse"
+          style={{ backgroundColor: `${bgColor}20` }}
+        />
+      )}
+      <img
+        src={image.src}
+        alt={image.alt || `Gallery image ${index + 1}`}
+        className={cn(
+          "w-full h-full object-cover transition-all duration-500",
+          isLoading ? 'opacity-0' : 'opacity-100 group-hover:scale-110'
+        )}
+        onError={() => setHasError(true)}
+        onLoad={() => setIsLoading(false)}
+      />
+    </div>
+  );
 }
 
 export function GallerySection({ id, content, styles = {} }: GallerySectionProps) {
@@ -16,7 +139,7 @@ export function GallerySection({ id, content, styles = {} }: GallerySectionProps
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const images = content?.images || [
+  const defaultImages: GalleryImage[] = [
     { src: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800', alt: 'Gallery image 1', caption: 'Modern workspace' },
     { src: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800', alt: 'Gallery image 2', caption: 'Team collaboration' },
     { src: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=800', alt: 'Gallery image 3', caption: 'Creative office' },
@@ -25,11 +148,16 @@ export function GallerySection({ id, content, styles = {} }: GallerySectionProps
     { src: 'https://images.unsplash.com/photo-1497215842964-222b430dc094?w=800', alt: 'Gallery image 6', caption: 'Open space' },
   ];
 
-  const layout = content?.layout || 'grid'; // grid, masonry, carousel
+  const images = content?.images && content.images.length > 0 ? content.images : defaultImages;
+  const layout = content?.layout || 'grid';
+  const accentColor = styles?.accentColor || '#6366f1';
 
   const openLightbox = (index: number) => {
-    setCurrentIndex(index);
-    setLightboxOpen(true);
+    // Solo abrir lightbox si la imagen es válida
+    if (isValidImageUrl(images[index].src)) {
+      setCurrentIndex(index);
+      setLightboxOpen(true);
+    }
   };
 
   const closeLightbox = () => setLightboxOpen(false);
@@ -76,20 +204,15 @@ export function GallerySection({ id, content, styles = {} }: GallerySectionProps
           className="text-center mb-12"
         >
           <h2 
-            className={cn(
-              "text-3xl md:text-4xl font-bold tracking-tight",
-              styles?.textColor || "text-gray-900"
-            )}
+            className="text-3xl md:text-4xl font-bold tracking-tight"
+            style={{ color: styles?.textColor || '#111827' }}
           >
             {content?.title || "Our Gallery"}
           </h2>
           {content?.subtitle && (
             <p 
-              className={cn(
-                "mt-4 text-lg max-w-2xl mx-auto",
-                styles?.textColor ? "opacity-70" : "text-gray-600"
-              )}
-              style={{ color: styles?.textColor }}
+              className="mt-4 text-lg max-w-2xl mx-auto opacity-70"
+              style={{ color: styles?.textColor || '#4b5563' }}
             >
               {content.subtitle}
             </p>
@@ -111,36 +234,33 @@ export function GallerySection({ id, content, styles = {} }: GallerySectionProps
                 : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
           )}
         >
-          {images.map((image: any, index: number) => (
+          {images.map((image: GalleryImage, index: number) => (
             <motion.div
               key={index}
               variants={itemVariants}
               className={cn(
-                "group relative overflow-hidden rounded-xl cursor-pointer",
+                "group relative overflow-hidden rounded-xl cursor-pointer bg-gray-100",
                 layout === 'masonry' ? "break-inside-avoid mb-4" : "aspect-square"
               )}
-              onClick={(e) => {
-                e.stopPropagation();
-                openLightbox(index);
-              }}
             >
-              <img
-                src={image.src}
-                alt={image.alt || `Gallery image ${index + 1}`}
-                className={cn(
-                  "w-full h-full object-cover transition-transform duration-500 group-hover:scale-110",
-                  layout !== 'masonry' && "absolute inset-0"
-                )}
+              <GalleryImageWithFallback
+                image={image}
+                index={index}
+                accentColor={accentColor}
+                className={layout !== 'masonry' ? "absolute inset-0" : ""}
+                onClick={() => openLightbox(index)}
               />
               
-              {/* Overlay */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
-                <ZoomIn className="w-10 h-10 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
+              {/* Overlay - solo si la imagen es válida */}
+              {isValidImageUrl(image.src) && (
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center pointer-events-none">
+                  <ZoomIn className="w-10 h-10 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </div>
+              )}
 
               {/* Caption */}
-              {image.caption && (
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              {image.caption && isValidImageUrl(image.src) && (
+                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                   <p className="text-white text-sm font-medium">{image.caption}</p>
                 </div>
               )}
@@ -151,7 +271,7 @@ export function GallerySection({ id, content, styles = {} }: GallerySectionProps
 
       {/* Lightbox */}
       <AnimatePresence>
-        {lightboxOpen && (
+        {lightboxOpen && isValidImageUrl(images[currentIndex]?.src) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

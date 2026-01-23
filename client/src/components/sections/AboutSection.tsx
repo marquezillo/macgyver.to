@@ -1,17 +1,167 @@
 import { useEditorStore } from '@/store/editorStore';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { Linkedin, Twitter, Mail } from 'lucide-react';
+import { Linkedin, Twitter, Mail, ImageOff, Building2 } from 'lucide-react';
+import { useState } from 'react';
+
+interface TeamMember {
+  name: string;
+  role?: string;
+  image?: string;
+  linkedin?: string;
+  twitter?: string;
+  email?: string;
+}
 
 interface AboutSectionProps {
   id: string;
-  content: any;
-  styles?: any;
+  content: {
+    title?: string;
+    description?: string;
+    badge?: string;
+    image?: string;
+    imageAlt?: string;
+    highlights?: string[];
+    ctaText?: string;
+    team?: TeamMember[];
+    teamTitle?: string;
+    teamSubtitle?: string;
+  };
+  styles?: {
+    backgroundColor?: string;
+    textColor?: string;
+    accentColor?: string;
+  };
+}
+
+// Función para validar URLs de imagen
+const isValidImageUrl = (url?: string): boolean => {
+  if (!url || typeof url !== 'string') return false;
+  if (url.trim() === '' || url === 'undefined' || url === 'null') return false;
+  if (!url.startsWith('http') && !url.startsWith('/') && !url.startsWith('data:')) return false;
+  
+  const badPatterns = ['placeholder.com', 'via.placeholder', 'placehold.it', 'dummyimage.com'];
+  return !badPatterns.some(pattern => url.includes(pattern));
+};
+
+// Generar color basado en texto
+const getColorFromText = (text: string, baseColor: string = '#6366f1'): string => {
+  if (!text) return baseColor;
+  const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'];
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+};
+
+// Obtener iniciales
+const getInitials = (name: string): string => {
+  if (!name) return 'U';
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+};
+
+// Componente de imagen principal con fallback
+function MainImageWithFallback({ 
+  src, 
+  alt, 
+  accentColor 
+}: { 
+  src?: string; 
+  alt?: string; 
+  accentColor?: string;
+}) {
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const isValid = isValidImageUrl(src);
+  const showFallback = !isValid || hasError;
+  const color = accentColor || '#6366f1';
+
+  if (showFallback) {
+    return (
+      <div 
+        className="aspect-[4/3] rounded-2xl flex flex-col items-center justify-center"
+        style={{ background: `linear-gradient(135deg, ${color}10, ${color}25)` }}
+      >
+        <Building2 className="w-16 h-16 mb-4 opacity-30" style={{ color }} />
+        <span className="text-sm font-medium opacity-40" style={{ color }}>
+          {alt || 'Company Image'}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {isLoading && (
+        <div 
+          className="absolute inset-0 rounded-2xl animate-pulse"
+          style={{ backgroundColor: `${color}15` }}
+        />
+      )}
+      <img
+        src={src}
+        alt={alt || "About us"}
+        className={cn(
+          "rounded-2xl shadow-2xl w-full h-auto object-cover transition-opacity duration-300",
+          isLoading ? 'opacity-0' : 'opacity-100'
+        )}
+        onError={() => setHasError(true)}
+        onLoad={() => setIsLoading(false)}
+      />
+    </div>
+  );
+}
+
+// Componente de avatar de equipo con fallback
+function TeamAvatarWithFallback({ 
+  member, 
+  accentColor 
+}: { 
+  member: TeamMember; 
+  accentColor?: string;
+}) {
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const isValid = isValidImageUrl(member.image);
+  const showFallback = !isValid || hasError;
+  const color = getColorFromText(member.name, accentColor);
+
+  if (showFallback) {
+    return (
+      <div 
+        className="w-32 h-32 rounded-full mx-auto flex items-center justify-center text-white text-3xl font-bold ring-4 ring-white shadow-lg"
+        style={{ backgroundColor: color }}
+      >
+        {getInitials(member.name)}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative inline-block">
+      {isLoading && (
+        <div 
+          className="absolute inset-0 rounded-full animate-pulse"
+          style={{ backgroundColor: `${color}30` }}
+        />
+      )}
+      <img
+        src={member.image}
+        alt={member.name}
+        className={cn(
+          "w-32 h-32 rounded-full object-cover mx-auto ring-4 ring-white shadow-lg group-hover:scale-105 transition-all duration-300",
+          isLoading ? 'opacity-0' : 'opacity-100'
+        )}
+        onError={() => setHasError(true)}
+        onLoad={() => setIsLoading(false)}
+      />
+    </div>
+  );
 }
 
 export function AboutSection({ id, content, styles = {} }: AboutSectionProps) {
   const { selectedSectionId, selectSection } = useEditorStore();
   const isSelected = selectedSectionId === id;
+  const accentColor = styles?.accentColor || '#6366f1';
 
   const team = content?.team || [];
 
@@ -54,8 +204,8 @@ export function AboutSection({ id, content, styles = {} }: AboutSectionProps) {
               <span 
                 className="inline-block px-4 py-1.5 rounded-full text-sm font-medium mb-4"
                 style={{ 
-                  backgroundColor: styles?.accentColor ? `${styles.accentColor}20` : '#6366f120',
-                  color: styles?.accentColor || '#6366f1'
+                  backgroundColor: `${accentColor}20`,
+                  color: accentColor
                 }}
               >
                 {content.badge}
@@ -63,25 +213,20 @@ export function AboutSection({ id, content, styles = {} }: AboutSectionProps) {
             )}
             
             <h2 
-              className={cn(
-                "text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight",
-                styles?.textColor || "text-gray-900"
-              )}
+              className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight"
+              style={{ color: styles?.textColor || '#111827' }}
             >
               {content?.title || "About Our Company"}
             </h2>
             
             <p 
-              className={cn(
-                "mt-6 text-lg leading-relaxed",
-                styles?.textColor ? "opacity-80" : "text-gray-600"
-              )}
-              style={{ color: styles?.textColor }}
+              className="mt-6 text-lg leading-relaxed opacity-80"
+              style={{ color: styles?.textColor || '#4b5563' }}
             >
               {content?.description || "We are a team of passionate individuals dedicated to creating exceptional experiences for our customers."}
             </p>
 
-            {content?.highlights && (
+            {content?.highlights && content.highlights.length > 0 && (
               <ul className="mt-8 space-y-4">
                 {content.highlights.map((highlight: string, index: number) => (
                   <motion.li 
@@ -94,15 +239,13 @@ export function AboutSection({ id, content, styles = {} }: AboutSectionProps) {
                   >
                     <span 
                       className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                      style={{ backgroundColor: styles?.accentColor || '#6366f1' }}
+                      style={{ backgroundColor: accentColor }}
                     >
                       ✓
                     </span>
-                    <span className={cn(
-                      "text-base",
-                      styles?.textColor ? "opacity-80" : "text-gray-700"
-                    )}
-                    style={{ color: styles?.textColor }}
+                    <span 
+                      className="text-base opacity-80"
+                      style={{ color: styles?.textColor || '#374151' }}
                     >
                       {highlight}
                     </span>
@@ -118,7 +261,7 @@ export function AboutSection({ id, content, styles = {} }: AboutSectionProps) {
                 viewport={{ once: true }}
                 transition={{ delay: 0.3 }}
                 className="mt-8 px-8 py-3 rounded-lg font-semibold text-white transition-all hover:opacity-90"
-                style={{ backgroundColor: styles?.accentColor || '#6366f1' }}
+                style={{ backgroundColor: accentColor }}
               >
                 {content.ctaText}
               </motion.button>
@@ -133,22 +276,16 @@ export function AboutSection({ id, content, styles = {} }: AboutSectionProps) {
             transition={{ duration: 0.6 }}
             className="relative"
           >
-            {content?.image ? (
-              <img
-                src={content.image}
-                alt={content?.imageAlt || "About us"}
-                className="rounded-2xl shadow-2xl w-full h-auto object-cover"
-              />
-            ) : (
-              <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                <span className="text-gray-400 text-lg">Company Image</span>
-              </div>
-            )}
+            <MainImageWithFallback 
+              src={content?.image} 
+              alt={content?.imageAlt}
+              accentColor={accentColor}
+            />
             
             {/* Decorative element */}
             <div 
               className="absolute -bottom-6 -right-6 w-24 h-24 rounded-2xl -z-10"
-              style={{ backgroundColor: styles?.accentColor || '#6366f1' }}
+              style={{ backgroundColor: accentColor }}
             />
           </motion.div>
         </div>
@@ -163,20 +300,15 @@ export function AboutSection({ id, content, styles = {} }: AboutSectionProps) {
               className="text-center mb-12"
             >
               <h3 
-                className={cn(
-                  "text-2xl md:text-3xl font-bold",
-                  styles?.textColor || "text-gray-900"
-                )}
+                className="text-2xl md:text-3xl font-bold"
+                style={{ color: styles?.textColor || '#111827' }}
               >
                 {content?.teamTitle || "Meet Our Team"}
               </h3>
               {content?.teamSubtitle && (
                 <p 
-                  className={cn(
-                    "mt-4 text-lg max-w-2xl mx-auto",
-                    styles?.textColor ? "opacity-70" : "text-gray-600"
-                  )}
-                  style={{ color: styles?.textColor }}
+                  className="mt-4 text-lg max-w-2xl mx-auto opacity-70"
+                  style={{ color: styles?.textColor || '#4b5563' }}
                 >
                   {content.teamSubtitle}
                 </p>
@@ -195,7 +327,7 @@ export function AboutSection({ id, content, styles = {} }: AboutSectionProps) {
                 "md:grid-cols-4"
               )}
             >
-              {team.map((member: any, index: number) => (
+              {team.map((member: TeamMember, index: number) => (
                 <motion.div
                   key={index}
                   variants={itemVariants}
@@ -203,37 +335,19 @@ export function AboutSection({ id, content, styles = {} }: AboutSectionProps) {
                 >
                   {/* Avatar */}
                   <div className="relative inline-block mb-4">
-                    {member.image ? (
-                      <img
-                        src={member.image}
-                        alt={member.name}
-                        className="w-32 h-32 rounded-full object-cover mx-auto ring-4 ring-white shadow-lg group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <div 
-                        className="w-32 h-32 rounded-full mx-auto flex items-center justify-center text-white text-3xl font-bold ring-4 ring-white shadow-lg"
-                        style={{ backgroundColor: styles?.accentColor || '#6366f1' }}
-                      >
-                        {member.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
-                      </div>
-                    )}
+                    <TeamAvatarWithFallback member={member} accentColor={accentColor} />
                   </div>
 
                   {/* Info */}
                   <h4 
-                    className={cn(
-                      "text-lg font-semibold",
-                      styles?.textColor || "text-gray-900"
-                    )}
+                    className="text-lg font-semibold"
+                    style={{ color: styles?.textColor || '#111827' }}
                   >
                     {member.name}
                   </h4>
                   <p 
-                    className={cn(
-                      "text-sm mt-1",
-                      styles?.textColor ? "opacity-70" : "text-gray-500"
-                    )}
-                    style={{ color: styles?.textColor }}
+                    className="text-sm mt-1 opacity-70"
+                    style={{ color: styles?.textColor || '#6b7280' }}
                   >
                     {member.role}
                   </p>

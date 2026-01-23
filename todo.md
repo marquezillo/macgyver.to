@@ -592,3 +592,26 @@
 - Eventos (Corporativos, Cumpleaños, Baby Showers, Quinceañeras)
 - Retail (Joyería, Relojes, Zapatos, Vintage, Plantas)
 - Personal (Coaches, Speakers, Freelancers)
+
+
+## Corrección de Errores Visuales Críticos (24 Enero 2026)
+
+### Errores Identificados en Landing Seoul Fire
+| Error | Tipo | Prioridad |
+|-------|------|-----------|
+| Imágenes de galería rotas | Imagen | Alta |
+| Avatar del chef sin imagen | Imagen | Alta |
+| Avatar de testimonio roto | Imagen | Alta |
+| Imagen About rota | Imagen | Alta |
+| Hero con imagen no relevante | Contenido | Media |
+| Toggle Monthly/Annual en restaurante | UX | Media |
+
+### Correcciones a Implementar
+- [ ] Implementar validación de URLs de imágenes antes de renderizar
+- [ ] Crear fallback elegante con gradiente para imágenes rotas
+- [ ] Mejorar búsqueda de imágenes por industria (usar queries específicas)
+- [ ] Ocultar toggle Monthly/Annual para industrias de restauración
+- [ ] Implementar sistema de contraste automático texto/fondo
+- [ ] Corregir avatares de testimonios con fallback a iniciales
+- [ ] Corregir avatares de equipo con fallback a iniciales
+- [ ] Sincronizar correcciones con servidor de producción
