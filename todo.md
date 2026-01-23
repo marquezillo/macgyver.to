@@ -626,3 +626,16 @@
 - [x] Añadir keywords de búsqueda por industria para imágenes relevantes
 - [x] Sincronizar con servidor de producción
 - [x] Verificar generación con detección automática de industria
+
+
+## Mejoras de Calidad de Generación (24-01-2026)
+- [x] Priorizar colores solicitados por el usuario sobre colores de industria
+- [x] Detectar colores mencionados en el mensaje del usuario (azul, rojo, verde, etc.)
+- [x] Aplicar colores del usuario al SYSTEM_PROMPT antes de generar
+- [x] Implementar detección automática de idioma del usuario
+- [x] Generar contenido en español si el usuario escribe en español
+- [x] Generar contenido en inglés si el usuario escribe en inglés
+- [x] Integrar servicio de avatares reales (Unsplash fotos de personas)
+- [x] Reemplazar iniciales por fotos de personas reales en testimonios
+- [x] Sincronizar con servidor de producción
+- [ ] Verificar mejoras con landing de prueba

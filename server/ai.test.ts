@@ -101,8 +101,13 @@ describe("ai.chat", () => {
 
     expect(result.content).toBe("He creado tu landing page");
     expect(result.hasArtifact).toBe(true);
-    expect(result.artifactData).toEqual({
-      sections: [{ id: "hero-1", type: "hero", content: { title: "Test" } }]
+    // El sistema añade campos adicionales como backgroundImage y variant automáticamente
+    expect(result.artifactData?.sections).toBeDefined();
+    expect(result.artifactData?.sections?.length).toBe(1);
+    expect((result.artifactData?.sections as unknown[])?.[0]).toMatchObject({
+      id: "hero-1",
+      type: "hero",
+      content: expect.objectContaining({ title: "Test" })
     });
   });
 

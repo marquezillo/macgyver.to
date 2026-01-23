@@ -57,6 +57,18 @@ export function AvatarWithFallback({
       return false;
     }
     
+    // URLs de fuentes confiables - siempre válidas
+    const trustedSources = [
+      'unsplash.com',
+      'images.unsplash.com',
+      'pexels.com',
+      'images.pexels.com',
+    ];
+    
+    if (trustedSources.some(source => url.includes(source))) {
+      return true;
+    }
+    
     // URLs de placeholder conocidas que pueden fallar
     const knownBadPatterns = [
       'placeholder.com',

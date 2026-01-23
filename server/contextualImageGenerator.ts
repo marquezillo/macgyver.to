@@ -8,6 +8,7 @@ import { generateImageWithGemini } from './geminiImageGeneration';
 import { searchImages } from './imageSearch';
 import { detectIndustry, getImageQueriesForIndustry } from './industryDetector';
 import { allPatterns, IndustryPattern } from './industryPatterns';
+import { generateAvatarsForTestimonials } from './avatarService';
 
 interface Section {
   id: string;
@@ -432,6 +433,21 @@ export async function generateContextualImages(
         });
         
         imagesGenerated++;
+      }
+    }
+  }
+  
+  // Procesar avatares de testimonios
+  for (const section of fixedData.sections) {
+    if (section.type === 'testimonials') {
+      const content = section.content;
+      const items = content.items as Array<{ name: string; image?: string; avatar?: string }> | undefined;
+      
+      if (items && items.length > 0) {
+        console.log(`[ContextualImageGenerator] Processing ${items.length} testimonial avatars...`);
+        const enrichedItems = generateAvatarsForTestimonials(items);
+        section.content.items = enrichedItems;
+        console.log(`[ContextualImageGenerator] ✓ Enriched testimonial avatars with real photos`);
       }
     }
   }

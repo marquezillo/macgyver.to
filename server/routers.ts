@@ -11,6 +11,8 @@ import { extractMemoriesFromConversation } from "./memoryExtraction";
 import { validateAndFixVariants, getVariantsSummary } from "./variantValidator";
 import { generateContextualImages } from "./contextualImageGenerator";
 import { detectIndustry, enrichPromptWithIndustry, applyIndustryPattern, getImageQueriesForIndustry } from "./industryDetector";
+import { detectUserColors, generateColorInstructions } from "./userColorDetector";
+import { detectLanguage, generateLanguageInstructions } from "./languageDetector";
 import {
   createChat,
   getChatsByUserId,
@@ -405,6 +407,24 @@ export const appRouter = router({
             console.log(`[IndustryDetector] Keywords matched: ${industryDetection.matchedKeywords.join(', ')}`);
             enrichedSystemPrompt = enrichPromptWithIndustry(SYSTEM_PROMPT, userMessageContent);
           }
+          
+          // Detectar colores solicitados por el usuario (PRIORIDAD sobre industria)
+          const userColors = detectUserColors(userMessageContent);
+          if (userColors.detected) {
+            console.log(`[ColorDetector] User requested colors: ${userColors.colorNames.join(', ')}`);
+            console.log(`[ColorDetector] Primary: ${userColors.primary}, Secondary: ${userColors.secondary}, Accent: ${userColors.accent}`);
+            // Añadir instrucciones de color al prompt (tienen prioridad sobre industria)
+            const colorInstructions = generateColorInstructions(userColors);
+            enrichedSystemPrompt = enrichedSystemPrompt + '\n\n' + colorInstructions;
+          }
+          
+          // Detectar idioma del usuario para generar contenido en el idioma correcto
+          const languageDetection = detectLanguage(userMessageContent);
+          console.log(`[LanguageDetector] Detected: ${languageDetection.language} (confidence: ${languageDetection.confidence.toFixed(2)})`);
+          console.log(`[LanguageDetector] Spanish score: ${languageDetection.spanishScore}, English score: ${languageDetection.englishScore}`);
+          // Añadir instrucciones de idioma al prompt
+          const languageInstructions = generateLanguageInstructions(languageDetection);
+          enrichedSystemPrompt = enrichedSystemPrompt + '\n\n' + languageInstructions;
           
           // Build conversation history for LLM
           const llmMessages = [
