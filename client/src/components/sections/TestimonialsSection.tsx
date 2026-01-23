@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { Star, Quote, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
+import { AvatarWithFallback } from '@/components/ui/AvatarWithFallback';
 
 interface Testimonial {
   name: string;
@@ -159,30 +160,12 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
       </p>
 
       <div className="flex items-center gap-4">
-        {(testimonial.image || testimonial.avatar) ? (
-          <img
-            src={testimonial.image || testimonial.avatar}
-            alt={testimonial.name}
-            className={cn(
-              "rounded-full object-cover ring-2 ring-white shadow",
-              featured ? "w-14 h-14" : "w-12 h-12"
-            )}
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-            }}
-          />
-        ) : (
-          <div 
-            className={cn(
-              "rounded-full flex items-center justify-center font-semibold text-white",
-              featured ? "w-14 h-14 text-lg" : "w-12 h-12"
-            )}
-            style={{ backgroundColor: styles?.accentColor || '#6366f1' }}
-          >
-            {(testimonial.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-          </div>
-        )}
+        <AvatarWithFallback
+          src={testimonial.image || testimonial.avatar}
+          name={testimonial.name}
+          size={featured ? 'lg' : 'md'}
+          accentColor={styles?.accentColor || '#6366f1'}
+        />
         <div>
           <p
             className={cn(
@@ -226,13 +209,12 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
         "{testimonial.text || testimonial.quote}"
       </p>
       <div className="flex items-center justify-center gap-4">
-        {(testimonial.image || testimonial.avatar) && (
-          <img
-            src={testimonial.image || testimonial.avatar}
-            alt={testimonial.name}
-            className="w-12 h-12 rounded-full object-cover"
-          />
-        )}
+        <AvatarWithFallback
+          src={testimonial.image || testimonial.avatar}
+          name={testimonial.name}
+          size="md"
+          accentColor={styles?.accentColor || '#6366f1'}
+        />
         <div className="text-left">
           <p className="font-semibold" style={{ color: styles?.textColor }}>
             {testimonial.name}
@@ -311,13 +293,13 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
           "{testimonial.text || testimonial.quote}"
         </p>
         <div className="flex items-center gap-3">
-          {(testimonial.image || testimonial.avatar) && (
-            <img
-              src={testimonial.image || testimonial.avatar}
-              alt={testimonial.name}
-              className="w-10 h-10 rounded-full object-cover"
-            />
-          )}
+          <AvatarWithFallback
+            src={testimonial.image || testimonial.avatar}
+            name={testimonial.name}
+            size="sm"
+            accentColor={styles?.accentColor || '#6366f1'}
+            className="w-10 h-10"
+          />
           <div>
             <p className="font-semibold text-sm" style={{ color: styles?.textColor }}>
               {testimonial.name}
@@ -367,20 +349,13 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
             </p>
 
             <div className="flex items-center justify-center gap-4">
-              {(testimonials[currentIndex]?.image || testimonials[currentIndex]?.avatar) ? (
-                <img
-                  src={testimonials[currentIndex]?.image || testimonials[currentIndex]?.avatar}
-                  alt={testimonials[currentIndex]?.name}
-                  className="w-14 h-14 rounded-full object-cover ring-4 ring-white shadow-lg"
-                />
-              ) : (
-                <div 
-                  className="w-14 h-14 rounded-full flex items-center justify-center font-semibold text-white text-lg"
-                  style={{ backgroundColor: styles?.accentColor || '#6366f1' }}
-                >
-                  {(testimonials[currentIndex]?.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                </div>
-              )}
+              <AvatarWithFallback
+                src={testimonials[currentIndex]?.image || testimonials[currentIndex]?.avatar}
+                name={testimonials[currentIndex]?.name || 'User'}
+                size="lg"
+                accentColor={styles?.accentColor || '#6366f1'}
+                className="ring-4 ring-white shadow-lg"
+              />
               <div className="text-left">
                 <p className="font-semibold text-lg" style={{ color: styles?.textColor }}>
                   {testimonials[currentIndex]?.name}
@@ -483,20 +458,13 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
           </p>
 
           <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
-            {(testimonial.image || testimonial.avatar) ? (
-              <img
-                src={testimonial.image || testimonial.avatar}
-                alt={testimonial.name}
-                className="w-10 h-10 rounded-full object-cover"
-              />
-            ) : (
-              <div 
-                className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-white text-sm"
-                style={{ backgroundColor: styles?.accentColor || '#6366f1' }}
-              >
-                {(testimonial.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-              </div>
-            )}
+            <AvatarWithFallback
+              src={testimonial.image || testimonial.avatar}
+              name={testimonial.name}
+              size="sm"
+              accentColor={styles?.accentColor || '#6366f1'}
+              className="w-10 h-10"
+            />
             <div>
               <p className="font-semibold text-sm" style={{ color: styles?.textColor }}>
                 {testimonial.name}

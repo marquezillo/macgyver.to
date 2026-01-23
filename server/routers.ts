@@ -437,8 +437,8 @@ export const appRouter = router({
               
               // Validar y corregir variantes si es una landing
               if (isLandingResponse && parsedResponse) {
-                const lastUserMessage = input.messages.filter(m => m.role === 'user').pop();
-                const userMessageContent = lastUserMessage?.content || '';
+                // Reutilizar lastUserMessage ya declarado arriba
+                const userMsgContent = lastUserMessage?.content || '';
                 
                 const { data: fixedData, corrections } = validateAndFixVariants(
                   parsedResponse as { type: string; businessType?: string; sections: { id: string; type: string; content: Record<string, unknown>; styles?: Record<string, unknown> }[] },
