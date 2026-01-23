@@ -615,3 +615,14 @@
 - [ ] Corregir avatares de testimonios con fallback a iniciales
 - [ ] Corregir avatares de equipo con fallback a iniciales
 - [ ] Sincronizar correcciones con servidor de producción
+
+
+## Integración de Patrones de Industria y Mejora de Imágenes
+- [x] Implementar detección automática de industria en el generador
+- [x] Conectar los 308 patrones con el flujo de generación
+- [x] Aplicar automáticamente secciones, variantes y colores según industria
+- [x] Integrar búsqueda de imágenes de stock específicas por industria
+- [x] Priorizar Unsplash/Pexels antes de generar con IA
+- [x] Añadir keywords de búsqueda por industria para imágenes relevantes
+- [x] Sincronizar con servidor de producción
+- [x] Verificar generación con detección automática de industria

@@ -10,6 +10,7 @@ import { generateChatImage, searchImages, getApiStatus } from "./imageSearch";
 import { extractMemoriesFromConversation } from "./memoryExtraction";
 import { validateAndFixVariants, getVariantsSummary } from "./variantValidator";
 import { generateContextualImages } from "./contextualImageGenerator";
+import { detectIndustry, enrichPromptWithIndustry, applyIndustryPattern, getImageQueriesForIndustry } from "./industryDetector";
 import {
   createChat,
   getChatsByUserId,
@@ -391,9 +392,23 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         try {
+          // Detectar industria del usuario para enriquecer el prompt
+          const lastUserMessage = input.messages.filter(m => m.role === 'user').pop();
+          const userMessageContent = lastUserMessage?.content || '';
+          
+          // Detectar industria y enriquecer el system prompt
+          const industryDetection = detectIndustry(userMessageContent);
+          let enrichedSystemPrompt = SYSTEM_PROMPT;
+          
+          if (industryDetection.detected && industryDetection.pattern) {
+            console.log(`[IndustryDetector] Detected: ${industryDetection.pattern.name} (confidence: ${industryDetection.confidence})`);
+            console.log(`[IndustryDetector] Keywords matched: ${industryDetection.matchedKeywords.join(', ')}`);
+            enrichedSystemPrompt = enrichPromptWithIndustry(SYSTEM_PROMPT, userMessageContent);
+          }
+          
           // Build conversation history for LLM
           const llmMessages = [
-            { role: 'system' as const, content: SYSTEM_PROMPT },
+            { role: 'system' as const, content: enrichedSystemPrompt },
             ...input.messages.map(m => ({
               role: m.role as 'user' | 'assistant',
               content: m.content,
@@ -463,7 +478,6 @@ export const appRouter = router({
           }
 
           // Extract memories in the background (non-blocking)
-          const lastUserMessage = input.messages.filter(m => m.role === 'user').pop();
           if (lastUserMessage && ctx.user?.id) {
             extractMemoriesFromConversation(
               ctx.user.id,
