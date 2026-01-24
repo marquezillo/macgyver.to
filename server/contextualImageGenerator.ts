@@ -9,6 +9,7 @@ import { searchImages } from './imageSearch';
 import { detectIndustry, getImageQueriesForIndustry } from './industryDetector';
 import { allPatterns, IndustryPattern } from './industryPatterns';
 import { generateAvatarsForTestimonials } from './avatarService';
+import { validateLandingImages } from './imageValidator';
 
 interface Section {
   id: string;
@@ -452,8 +453,12 @@ export async function generateContextualImages(
     }
   }
   
+  // Validar todas las imágenes y reemplazar las rotas con fallbacks
+  console.log(`[ContextualImageGenerator] Validating all images...`);
+  const validatedData = validateLandingImages(fixedData);
+  
   console.log(`[ContextualImageGenerator] Generated ${generatedImages.length} images total`);
-  return { data: fixedData, generatedImages };
+  return { data: validatedData as LandingData, generatedImages };
 }
 
 /**

@@ -639,3 +639,25 @@
 - [x] Reemplazar iniciales por fotos de personas reales en testimonios
 - [x] Sincronizar con servidor de producción
 - [ ] Verificar mejoras con landing de prueba
+
+
+## Mejoras de Avatares y Validación de Imágenes (24-01-2026)
+
+### Expansión de Colección de Avatares
+- [x] Expandir colección de avatares masculinos de 10 a 35 fotos
+- [x] Expandir colección de avatares femeninos de 10 a 35 fotos
+- [x] Añadir diversidad étnica y de edad en los avatares
+- [x] Organizar avatares por categorías (profesional, casual, joven, mayor)
+
+### Validación de Imágenes Rotas
+- [x] Crear módulo imageValidator.ts para verificar URLs de imágenes
+- [x] Implementar verificación HEAD request para validar URLs
+- [x] Crear sistema de fallback con gradientes elegantes
+- [x] Integrar validación en el flujo de generación de landings
+- [x] Añadir caché de URLs validadas para evitar verificaciones repetidas
+
+### Tests y Despliegue
+- [x] Crear tests para el nuevo sistema de avatares
+- [x] Crear tests para la validación de imágenes
+- [x] Sincronizar con servidor de producción
+- [x] Verificar funcionamiento en producción
