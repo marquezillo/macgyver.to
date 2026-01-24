@@ -102,7 +102,9 @@ function generateLandingHTML(landing: any, pagePath: string): string {
     // Buscar página interna
     const page = pages.find((p: any) => p.slug === pagePath || p.path === `/${pagePath}`);
     if (page) {
-      pageContent = renderInternalPage(page);
+      // Pasar los estilos para que use los colores del tema
+      const styles = config?.styles || theme || {};
+      pageContent = renderInternalPage(page, styles);
       pageTitle = `${page.title} - ${landing.name}`;
     } else {
       pageContent = `<div class="min-h-screen flex items-center justify-center"><h1 class="text-2xl">Page not found</h1></div>`;
@@ -453,6 +455,16 @@ function renderFooterSection(content: any, styles: any): string {
   const links = content.links || [];
   const social = content.social || [];
   const copyright = content.copyright || '';
+  const businessName = logo.text || 'Nuestra Empresa';
+  const currentYear = new Date().getFullYear();
+  
+  // Links legales por defecto
+  const legalLinks = [
+    { label: 'Términos y Condiciones', href: '/terminos' },
+    { label: 'Política de Privacidad', href: '/privacidad' },
+    { label: 'Contacto', href: '/contacto' },
+    { label: 'Sobre Nosotros', href: '/nosotros' },
+  ];
   
   return `
   <footer class="bg-gray-900 text-white py-12">
@@ -460,21 +472,40 @@ function renderFooterSection(content: any, styles: any): string {
       <div class="grid md:grid-cols-4 gap-8 mb-8">
         <div>
           ${logo.image ? `<img src="${logo.image}" alt="${logo.text}" class="h-8 mb-4">` : ''}
-          <span class="font-bold text-xl">${logo.text || ''}</span>
+          <span class="font-bold text-xl">${businessName}</span>
+          <p class="text-gray-400 mt-2 text-sm">Todos los derechos reservados.</p>
         </div>
-        ${links.map((group: any) => `
+        ${links.length > 0 ? links.map((group: any) => `
           <div>
             <h4 class="font-semibold mb-4">${group.title || ''}</h4>
             <ul class="space-y-2">
               ${(group.items || []).map((item: any) => `<li><a href="${item.href || '#'}" class="text-gray-400 hover:text-white">${item.label}</a></li>`).join('')}
             </ul>
           </div>
-        `).join('')}
+        `).join('') : `
+          <div>
+            <h4 class="font-semibold mb-4">Navegación</h4>
+            <ul class="space-y-2">
+              <li><a href="/" class="text-gray-400 hover:text-white">Inicio</a></li>
+              <li><a href="/nosotros" class="text-gray-400 hover:text-white">Sobre Nosotros</a></li>
+              <li><a href="/contacto" class="text-gray-400 hover:text-white">Contacto</a></li>
+            </ul>
+          </div>
+        `}
+        <div>
+          <h4 class="font-semibold mb-4">Legal</h4>
+          <ul class="space-y-2">
+            ${legalLinks.map(link => `<li><a href="${link.href}" class="text-gray-400 hover:text-white">${link.label}</a></li>`).join('')}
+          </ul>
+        </div>
       </div>
       <div class="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center">
-        <p class="text-gray-400">${copyright}</p>
+        <p class="text-gray-400">${copyright || `© ${currentYear} ${businessName}. Todos los derechos reservados.`}</p>
         <div class="flex gap-4 mt-4 md:mt-0">
-          ${social.map((s: any) => `<a href="${s.href || '#'}" class="text-gray-400 hover:text-white">${s.icon || s.platform}</a>`).join('')}
+          ${social.length > 0 ? social.map((s: any) => `<a href="${s.href || '#'}" class="text-gray-400 hover:text-white">${s.icon || s.platform}</a>`).join('') : `
+            <a href="/terminos" class="text-gray-400 hover:text-white text-sm">Términos</a>
+            <a href="/privacidad" class="text-gray-400 hover:text-white text-sm">Privacidad</a>
+          `}
         </div>
       </div>
     </div>
@@ -482,15 +513,354 @@ function renderFooterSection(content: any, styles: any): string {
 }
 
 /**
- * Renderiza una página interna
+ * Renderiza una página interna (términos, privacidad, contacto, about)
  */
-function renderInternalPage(page: any): string {
+function renderInternalPage(page: any, styles: any = {}): string {
+  const pageData = page.data || {};
+  const content = pageData.content || page.content || '';
+  const primaryColor = styles?.primaryColor || '#3B82F6';
+  
+  // Si la página tiene contenido HTML pre-generado, usarlo directamente
+  if (content && content.includes('<')) {
+    return `
+    <div class="min-h-screen py-20 bg-white">
+      <div class="container mx-auto px-4 max-w-4xl">
+        <h1 class="text-4xl font-bold mb-8 text-gray-900">${page.title || ''}</h1>
+        <div class="prose prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 prose-a:text-primary">
+          ${content}
+        </div>
+      </div>
+    </div>`;
+  }
+  
+  // Renderizar páginas por tipo
+  switch (page.type) {
+    case 'terms':
+      return renderTermsPage(page, styles);
+    case 'privacy':
+      return renderPrivacyPage(page, styles);
+    case 'contact':
+      return renderContactPage(page, styles);
+    case 'about':
+      return renderAboutPage(page, styles);
+    default:
+      return `
+      <div class="min-h-screen py-20 bg-white">
+        <div class="container mx-auto px-4 max-w-4xl">
+          <h1 class="text-4xl font-bold mb-8 text-gray-900">${page.title || ''}</h1>
+          <div class="prose prose-lg max-w-none">
+            ${content || '<p class="text-gray-600">Contenido no disponible.</p>'}
+          </div>
+        </div>
+      </div>`;
+  }
+}
+
+/**
+ * Renderiza página de Términos y Condiciones
+ */
+function renderTermsPage(page: any, styles: any): string {
+  const data = page.data || {};
+  const businessName = data.businessName || 'Nuestra Empresa';
+  const lastUpdated = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+  
   return `
-  <div class="min-h-screen py-20">
+  <div class="min-h-screen py-20 bg-white">
     <div class="container mx-auto px-4 max-w-4xl">
-      <h1 class="text-4xl font-bold mb-8">${page.title || ''}</h1>
+      <h1 class="text-4xl font-bold mb-4 text-gray-900">Términos y Condiciones</h1>
+      <p class="text-gray-500 mb-8">Última actualización: ${lastUpdated}</p>
+      
       <div class="prose prose-lg max-w-none">
-        ${page.content || ''}
+        <p class="text-gray-600 mb-6">
+          Bienvenido a <strong class="text-gray-900">${businessName}</strong>. Estos términos y condiciones describen las reglas 
+          y regulaciones para el uso de nuestro sitio web.
+        </p>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-900">1. Aceptación de los Términos</h2>
+        <p class="text-gray-600 mb-6">
+          Al acceder y utilizar este sitio web, usted acepta estar sujeto a estos Términos y Condiciones de uso, 
+          todas las leyes y regulaciones aplicables.
+        </p>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-900">2. Uso de la Licencia</h2>
+        <p class="text-gray-600 mb-6">
+          Se concede permiso para descargar temporalmente una copia de los materiales en el sitio web de ${businessName} 
+          solo para visualización transitoria personal y no comercial.
+        </p>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-900">3. Descargo de Responsabilidad</h2>
+        <p class="text-gray-600 mb-6">
+          Los materiales en el sitio web de ${businessName} se proporcionan "tal cual". ${businessName} no ofrece garantías, 
+          expresas o implícitas.
+        </p>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-900">4. Limitaciones</h2>
+        <p class="text-gray-600 mb-6">
+          En ningún caso ${businessName} o sus proveedores serán responsables de ningún daño que surja del uso 
+          o la imposibilidad de usar los materiales en el sitio web.
+        </p>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-900">5. Modificaciones</h2>
+        <p class="text-gray-600 mb-6">
+          ${businessName} puede revisar estos términos de servicio en cualquier momento sin previo aviso.
+        </p>
+        
+        ${data.contactEmail ? `
+        <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-900">Contacto</h2>
+        <p class="text-gray-600 mb-6">
+          Si tiene alguna pregunta, contáctenos en: 
+          <a href="mailto:${data.contactEmail}" class="text-primary hover:underline">${data.contactEmail}</a>
+        </p>
+        ` : ''}
+      </div>
+      
+      <div class="mt-12 pt-8 border-t border-gray-200 text-center text-gray-500">
+        <p>© ${new Date().getFullYear()} ${businessName}. Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+/**
+ * Renderiza página de Política de Privacidad
+ */
+function renderPrivacyPage(page: any, styles: any): string {
+  const data = page.data || {};
+  const businessName = data.businessName || 'Nuestra Empresa';
+  const lastUpdated = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+  
+  return `
+  <div class="min-h-screen py-20 bg-white">
+    <div class="container mx-auto px-4 max-w-4xl">
+      <h1 class="text-4xl font-bold mb-4 text-gray-900">Política de Privacidad</h1>
+      <p class="text-gray-500 mb-8">Última actualización: ${lastUpdated}</p>
+      
+      <div class="prose prose-lg max-w-none">
+        <p class="text-gray-600 mb-6">
+          En <strong class="text-gray-900">${businessName}</strong> nos tomamos muy en serio la privacidad de nuestros usuarios. 
+          Esta Política de Privacidad describe cómo recopilamos, usamos y protegemos su información personal.
+        </p>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-900">1. Información que Recopilamos</h2>
+        <ul class="list-disc pl-6 mb-6 space-y-2 text-gray-600">
+          <li><strong>Información de contacto:</strong> nombre, email, teléfono</li>
+          <li><strong>Información de uso:</strong> cómo interactúa con nuestro sitio</li>
+          <li><strong>Información técnica:</strong> IP, navegador, dispositivo</li>
+          <li><strong>Cookies:</strong> archivos de datos en su dispositivo</li>
+        </ul>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-900">2. Cómo Usamos su Información</h2>
+        <ul class="list-disc pl-6 mb-6 space-y-2 text-gray-600">
+          <li>Proporcionar y mejorar nuestros servicios</li>
+          <li>Comunicarnos con usted</li>
+          <li>Personalizar su experiencia</li>
+          <li>Cumplir con obligaciones legales</li>
+        </ul>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-900">3. Protección de Datos</h2>
+        <p class="text-gray-600 mb-6">
+          Implementamos medidas de seguridad técnicas y organizativas para proteger su información personal.
+        </p>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-900">4. Sus Derechos</h2>
+        <ul class="list-disc pl-6 mb-6 space-y-2 text-gray-600">
+          <li>Acceder a sus datos personales</li>
+          <li>Rectificar datos inexactos</li>
+          <li>Solicitar la eliminación de sus datos</li>
+          <li>Oponerse al procesamiento</li>
+        </ul>
+        
+        ${data.contactEmail ? `
+        <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-900">Contacto</h2>
+        <p class="text-gray-600 mb-6">
+          Para ejercer sus derechos, contáctenos en: 
+          <a href="mailto:${data.contactEmail}" class="text-primary hover:underline">${data.contactEmail}</a>
+        </p>
+        ` : ''}
+      </div>
+      
+      <div class="mt-12 pt-8 border-t border-gray-200 text-center text-gray-500">
+        <p>© ${new Date().getFullYear()} ${businessName}. Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+/**
+ * Renderiza página de Contacto
+ */
+function renderContactPage(page: any, styles: any): string {
+  const data = page.data || {};
+  const businessName = data.businessName || 'Nuestra Empresa';
+  const primaryColor = styles?.primaryColor || '#3B82F6';
+  
+  return `
+  <div class="min-h-screen py-20 bg-white">
+    <div class="container mx-auto px-4 max-w-4xl">
+      <h1 class="text-4xl font-bold mb-4 text-center text-gray-900">Contacto</h1>
+      <p class="text-lg text-gray-600 mb-12 text-center">
+        ¿Tienes alguna pregunta? Nos encantaría escucharte.
+      </p>
+      
+      <div class="grid md:grid-cols-2 gap-12">
+        <!-- Información de contacto -->
+        <div class="space-y-6">
+          <h2 class="text-2xl font-semibold mb-6 text-gray-900">Información de Contacto</h2>
+          
+          ${data.contactEmail ? `
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5" style="color: ${primaryColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-gray-900">Email</h3>
+              <a href="mailto:${data.contactEmail}" class="hover:underline" style="color: ${primaryColor}">${data.contactEmail}</a>
+            </div>
+          </div>
+          ` : ''}
+          
+          ${data.phone ? `
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5" style="color: ${primaryColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-gray-900">Teléfono</h3>
+              <a href="tel:${data.phone}" class="hover:underline" style="color: ${primaryColor}">${data.phone}</a>
+            </div>
+          </div>
+          ` : ''}
+          
+          ${data.address ? `
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5" style="color: ${primaryColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-gray-900">Dirección</h3>
+              <p class="text-gray-600">${data.address}</p>
+            </div>
+          </div>
+          ` : ''}
+          
+          <div class="pt-6">
+            <h3 class="font-semibold text-gray-900 mb-4">Horario de Atención</h3>
+            <div class="space-y-2 text-gray-600">
+              <p>Lunes - Viernes: 9:00 - 18:00</p>
+              <p>Sábado: 10:00 - 14:00</p>
+              <p>Domingo: Cerrado</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Formulario de contacto -->
+        <div class="bg-gray-50 p-8 rounded-2xl">
+          <h2 class="text-2xl font-semibold mb-6 text-gray-900">Envíanos un Mensaje</h2>
+          <form class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+              <input type="text" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent" style="--tw-ring-color: ${primaryColor}" placeholder="Tu nombre">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent" placeholder="tu@email.com">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Mensaje</label>
+              <textarea rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent" placeholder="Escribe tu mensaje..."></textarea>
+            </div>
+            <button type="submit" class="w-full text-white py-3 px-6 rounded-lg font-semibold transition-colors" style="background-color: ${primaryColor}">
+              Enviar Mensaje
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/**
+ * Renderiza página Sobre Nosotros
+ */
+function renderAboutPage(page: any, styles: any): string {
+  const data = page.data || {};
+  const businessName = data.businessName || 'Nuestra Empresa';
+  const description = data.description || `En ${businessName} nos dedicamos a ofrecer los mejores servicios a nuestros clientes.`;
+  const primaryColor = styles?.primaryColor || '#3B82F6';
+  
+  return `
+  <div class="min-h-screen py-20 bg-white">
+    <div class="container mx-auto px-4 max-w-4xl">
+      <h1 class="text-4xl font-bold mb-4 text-center text-gray-900">Sobre Nosotros</h1>
+      <p class="text-xl text-gray-600 mb-12 text-center leading-relaxed">
+        ${description}
+      </p>
+      
+      <div class="grid md:grid-cols-2 gap-12 mb-16">
+        <div>
+          <h2 class="text-2xl font-semibold mb-4 text-gray-900">Nuestra Misión</h2>
+          <p class="text-gray-600 leading-relaxed">
+            Nuestra misión es proporcionar soluciones excepcionales que superen las expectativas de nuestros 
+            clientes, manteniendo los más altos estándares de calidad e innovación.
+          </p>
+        </div>
+        <div>
+          <h2 class="text-2xl font-semibold mb-4 text-gray-900">Nuestra Visión</h2>
+          <p class="text-gray-600 leading-relaxed">
+            Aspiramos a ser líderes reconocidos en nuestro sector, destacando por nuestra excelencia, 
+            integridad y compromiso con el desarrollo sostenible.
+          </p>
+        </div>
+      </div>
+      
+      <div class="bg-gray-50 rounded-2xl p-8 mb-16">
+        <h2 class="text-2xl font-semibold mb-6 text-center text-gray-900">Nuestros Valores</h2>
+        <div class="grid md:grid-cols-3 gap-6">
+          <div class="text-center">
+            <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style="background-color: ${primaryColor}20">
+              <svg class="w-8 h-8" style="color: ${primaryColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <h3 class="font-semibold mb-2 text-gray-900">Calidad</h3>
+            <p class="text-gray-600 text-sm">Excelencia en cada detalle</p>
+          </div>
+          <div class="text-center">
+            <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style="background-color: ${primaryColor}20">
+              <svg class="w-8 h-8" style="color: ${primaryColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <h3 class="font-semibold mb-2 text-gray-900">Compromiso</h3>
+            <p class="text-gray-600 text-sm">Dedicación total al cliente</p>
+          </div>
+          <div class="text-center">
+            <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style="background-color: ${primaryColor}20">
+              <svg class="w-8 h-8" style="color: ${primaryColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+            </div>
+            <h3 class="font-semibold mb-2 text-gray-900">Innovación</h3>
+            <p class="text-gray-600 text-sm">Siempre mejorando</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="text-center">
+        <h2 class="text-2xl font-semibold mb-4 text-gray-900">¿Quieres saber más?</h2>
+        <p class="text-gray-600 mb-6">
+          Estamos aquí para responder todas tus preguntas.
+        </p>
+        <a href="/contacto" class="inline-block text-white py-3 px-8 rounded-lg font-semibold transition-colors" style="background-color: ${primaryColor}">
+          Contáctanos
+        </a>
       </div>
     </div>
   </div>`;

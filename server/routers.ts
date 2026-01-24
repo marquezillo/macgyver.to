@@ -77,6 +77,7 @@ import { generateProject, generateProjectWithAI } from "./projectGenerator";
 import { deployProject, stopProject, getProjectStatus } from "./projectDeployment";
 import { startDevServer, stopDevServer, getDevServerStatus, getDevServerLogs, refreshProjectFiles, listRunningDevServers } from "./projectDevServer";
 import { generateUserSubdomain, generateProjectSlug, getProjectUrl } from "./subdomainMiddleware";
+import { generateAllLegalPages } from "./legalPagesGenerator";
 
 // System prompt for the AI assistant
 const SYSTEM_PROMPT = `Eres un asistente de IA avanzado y versátil especializado en crear landing pages de alta conversión.
@@ -1401,6 +1402,14 @@ export const appRouter = router({
           counter++;
         }
         
+        // Generar páginas legales automáticamente si no se proporcionan
+        let pages = input.pages || [];
+        if (pages.length === 0) {
+          console.log('[Publish] Generando páginas legales automáticamente...');
+          pages = generateAllLegalPages(input.config);
+          console.log(`[Publish] ${pages.length} páginas generadas: ${pages.map(p => p.slug).join(', ')}`);
+        }
+        
         const landing = await createPublishedLanding({
           userId,
           subdomain,
@@ -1408,7 +1417,7 @@ export const appRouter = router({
           name: input.name,
           description: input.description,
           config: input.config,
-          pages: input.pages || [],
+          pages: pages,
           theme: input.theme || {},
           seoMetadata: input.seoMetadata,
           favicon: input.favicon,

@@ -919,3 +919,10 @@
 - [ ] Las secciones del menú inferior no se ven
 - [ ] Mover secciones debajo de "Nuevo Chat"
 - [ ] Sincronizar con producción
+
+
+## Páginas Legales Automáticas en Subdominios (24-01-2026)
+- [x] Crear generador de páginas legales (términos, privacidad, contacto, about)
+- [x] Modificar proceso de publicación para generar páginas automáticamente
+- [x] Mejorar renderizado de páginas internas en subdomainRouter.ts
+- [x] Sincronizar cambios a GitHub y servidor de producción
