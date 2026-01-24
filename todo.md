@@ -846,3 +846,9 @@
 - [x] Corregir landingImageEnricher.ts - enrichTestimonialsSection() usaba ui-avatars.com como fallback
 - [x] Corregir landingImageEnricher.ts - enrichTeamSection() usaba ui-avatars.com como fallback
 - [x] Sincronizar con producción y verificar
+
+
+## Corrección Visual - Avatar con fondo cuadrado (24-01-2026)
+- [x] El avatar circular tiene un fondo cuadrado blanco visible
+- [x] Corregir el contenedor del avatar para que sea completamente circular (overflow-hidden + rounded-full)
+- [x] Sincronizar con producción

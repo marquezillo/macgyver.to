@@ -167,7 +167,7 @@ export function AvatarWithFallback({
   }
 
   return (
-    <div className={cn("relative", sizeClasses[size], className)}>
+    <div className={cn("relative rounded-full overflow-hidden", sizeClasses[size], className)}>
       {/* Loading skeleton */}
       {isLoading && (
         <div className="absolute inset-0 rounded-full bg-gray-200 animate-pulse" />
@@ -178,7 +178,7 @@ export function AvatarWithFallback({
         src={src}
         alt={name}
         className={cn(
-          "rounded-full object-cover w-full h-full ring-2 ring-white shadow",
+          "rounded-full object-cover w-full h-full",
           isLoading ? 'opacity-0' : 'opacity-100',
           'transition-opacity duration-300'
         )}
