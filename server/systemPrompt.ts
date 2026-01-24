@@ -111,7 +111,8 @@ Para una landing efectiva, incluye estas secciones en orden:
       "styles": {
         "backgroundColor": "#color apropiado al estilo",
         "textColor": "#color de texto",
-        "buttonColor": "#color de botón"
+        "buttonColor": "#color de botón",
+        "accentColor": "#color de acento para elementos decorativos"
       }
     }
   ],

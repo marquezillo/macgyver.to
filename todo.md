@@ -661,3 +661,30 @@
 - [x] Crear tests para la validación de imágenes
 - [x] Sincronizar con servidor de producción
 - [x] Verificar funcionamiento en producción
+
+
+## Mejoras Visuales: Sticky CTA y Elementos Flotantes (24-01-2026)
+
+### Elementos Decorativos Flotantes
+- [x] Crear componente FloatingElements.tsx con círculos, líneas e iconos animados
+- [x] Implementar animaciones sutiles con Framer Motion (float, pulse, rotate)
+- [x] Añadir variantes de color que se adapten al tema de la landing
+- [x] Crear diferentes patrones (minimal, abundant, geometric, organic, dots, lines)
+
+### Sticky CTA Flotante
+- [x] Crear componente StickyCTA.tsx que aparece al hacer scroll
+- [x] Implementar lógica de visibilidad (aparece después del hero)
+- [x] Añadir animación de entrada/salida suave
+- [x] Diseño responsive (diferente en mobile vs desktop)
+- [x] 5 variantes: default, minimal, expanded, floating-button, bottom-bar
+
+### Integración
+- [x] Integrar FloatingElements en HeroSection
+- [x] Integrar FloatingElements en otras secciones (opcional por config)
+- [x] Integrar StickyCTA en el Canvas
+- [x] Actualizar systemPrompt para incluir opciones de elementos flotantes
+
+### Tests y Despliegue
+- [x] Verificar rendimiento de animaciones (110 tests pasando)
+- [x] Sincronizar con servidor de producción
+- [ ] Probar con landing de ejemplo

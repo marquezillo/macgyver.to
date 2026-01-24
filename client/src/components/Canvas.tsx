@@ -3,6 +3,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { SectionRenderer } from './SectionRenderer';
+import { StickyCTA } from '@/components/ui/StickyCTA';
 import { cn } from '@/lib/utils';
 import { GripVertical } from 'lucide-react';
 
@@ -98,6 +99,21 @@ export function Canvas() {
           </div>
         )}
       </div>
+      
+      {/* Sticky CTA - aparece después de hacer scroll */}
+      {sections.length > 0 && (
+        <StickyCTA
+          text="¿Listo para empezar?"
+          buttonText="Contactar"
+          href="#contact"
+          variant="default"
+          position="bottom-right"
+          accentColor={sections[0]?.styles?.accentColor || '#6366f1'}
+          showAfterScroll={400}
+          icon="arrow"
+          dismissible={true}
+        />
+      )}
     </div>
   );
 }

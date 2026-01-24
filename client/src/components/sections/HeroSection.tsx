@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { ArrowRight, Play, ChevronDown, ImageOff } from 'lucide-react';
 import { useState } from 'react';
+import { FloatingElements } from '@/components/ui/FloatingElements';
 
 interface HeroSectionProps {
   id: string;
@@ -235,6 +236,16 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
           src={backgroundImage} 
           accentColor={accentColor}
           isBackground={true}
+        />
+      )}
+      
+      {/* Floating decorative elements */}
+      {content?.showFloatingElements !== false && (
+        <FloatingElements
+          variant={content?.floatingElementsVariant || 'minimal'}
+          accentColor={accentColor}
+          opacity={hasValidBgImage ? 0.3 : 0.5}
+          density="low"
         />
       )}
       
