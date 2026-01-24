@@ -2,6 +2,9 @@
  * Avatar Service
  * Proporciona avatares reales de personas para testimonios
  * Colección expandida con 35+ fotos por género y diversidad étnica/edad
+ * 
+ * IMPORTANTE: Este servicio SIEMPRE reemplaza URLs de servicios no confiables
+ * (ui-avatars.com, placeholder.com, etc.) con fotos reales de Unsplash
  */
 
 // Cache de avatares para evitar llamadas repetidas
@@ -156,6 +159,33 @@ const MALE_NAMES = [
 ];
 
 /**
+ * Lista de patrones de URLs NO CONFIABLES que SIEMPRE deben ser reemplazadas
+ * Estas URLs generan avatares genéricos o pueden fallar
+ */
+const UNRELIABLE_URL_PATTERNS = [
+  'placeholder.com',
+  'via.placeholder',
+  'placehold.it',
+  'dummyimage.com',
+  'fakeimg.pl',
+  'lorempixel.com',
+  'placekitten.com',
+  'loremflickr.com',
+  'randomuser.me',
+  'i.pravatar.cc',
+  'ui-avatars.com',    // ← Este es el problema principal
+  'gravatar.com',
+  'robohash.org',
+  'dicebear.com',
+  'avatars.dicebear.com',
+  'api.dicebear.com',
+  'boringavatars.com',
+  'avatar-placeholder',
+  'placeholder-avatar',
+  'default-avatar',
+];
+
+/**
  * Detecta el género probable basado en el nombre
  */
 function detectGender(name: string): 'male' | 'female' | 'neutral' {
@@ -185,6 +215,27 @@ function detectGender(name: string): 'male' | 'female' | 'neutral' {
 }
 
 /**
+ * Verifica si una URL es de un servicio NO CONFIABLE que debe ser reemplazada
+ * IMPORTANTE: Esta función es más estricta que isValidAvatarUrl
+ */
+function isUnreliableAvatarUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') return true;
+  if (url.trim() === '' || url === 'undefined' || url === 'null') return true;
+  
+  // Verificar contra todos los patrones no confiables
+  const lowerUrl = url.toLowerCase();
+  return UNRELIABLE_URL_PATTERNS.some(pattern => lowerUrl.includes(pattern.toLowerCase()));
+}
+
+/**
+ * Verifica si una URL es de Unsplash (fuente confiable)
+ */
+function isUnsplashUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  return url.includes('unsplash.com') || url.includes('images.unsplash.com');
+}
+
+/**
  * Obtiene un avatar de Unsplash basado en el nombre
  * Usa un hash del nombre para obtener consistencia
  */
@@ -201,6 +252,7 @@ export function getAvatarForName(name: string, index: number = 0): string {
 
 /**
  * Genera avatares para una lista de testimonios
+ * IMPORTANTE: SIEMPRE reemplaza URLs de servicios no confiables con fotos reales de Unsplash
  */
 export function generateAvatarsForTestimonials(
   testimonials: Array<{ name: string; image?: string; avatar?: string }>
@@ -208,24 +260,26 @@ export function generateAvatarsForTestimonials(
   // Mantener track de avatares usados para evitar duplicados
   const usedAvatars = new Set<string>();
   
+  console.log(`[AvatarService] Processing ${testimonials.length} testimonials for avatar enrichment...`);
+  
   return testimonials.map((testimonial, index) => {
-    // Si ya tiene una imagen válida de Unsplash, mantenerla
-    if (testimonial.image && isValidAvatarUrl(testimonial.image)) {
-      usedAvatars.add(testimonial.image);
+    const existingUrl = testimonial.image || testimonial.avatar;
+    
+    // SOLO mantener URLs de Unsplash existentes (son confiables)
+    // SIEMPRE reemplazar URLs de servicios no confiables
+    if (existingUrl && isUnsplashUrl(existingUrl) && !isUnreliableAvatarUrl(existingUrl)) {
+      console.log(`[AvatarService] ✓ Keeping existing Unsplash URL for ${testimonial.name}`);
+      usedAvatars.add(existingUrl);
       return {
         ...testimonial,
-        image: testimonial.image,
-        avatar: testimonial.image,
+        image: existingUrl,
+        avatar: existingUrl,
       };
     }
     
-    if (testimonial.avatar && isValidAvatarUrl(testimonial.avatar)) {
-      usedAvatars.add(testimonial.avatar);
-      return {
-        ...testimonial,
-        image: testimonial.avatar,
-        avatar: testimonial.avatar,
-      };
+    // Log si estamos reemplazando una URL no confiable
+    if (existingUrl && isUnreliableAvatarUrl(existingUrl)) {
+      console.log(`[AvatarService] ⚠ Replacing unreliable URL for ${testimonial.name}: ${existingUrl.substring(0, 50)}...`);
     }
     
     // Generar nuevo avatar basado en el nombre
@@ -248,6 +302,8 @@ export function generateAvatarsForTestimonials(
     if (!avatarUrl) {
       avatarUrl = getAvatarForName(testimonial.name, index);
     }
+    
+    console.log(`[AvatarService] ✓ Assigned real photo to ${testimonial.name} (${gender})`);
     
     return {
       ...testimonial,
@@ -295,6 +351,7 @@ export function getMultipleAvatars(count: number, preferredGender?: 'male' | 'fe
 
 /**
  * Valida si una URL de avatar es válida y accesible
+ * NOTA: Esta función es usada por el frontend para decidir si mostrar imagen o fallback
  */
 export function isValidAvatarUrl(url: string): boolean {
   if (!url || typeof url !== 'string') return false;
@@ -304,22 +361,7 @@ export function isValidAvatarUrl(url: string): boolean {
   if (url.includes('unsplash.com') || url.includes('pexels.com')) return true;
   
   // Rechazar URLs de servicios que pueden fallar
-  const unreliablePatterns = [
-    'placeholder.com',
-    'via.placeholder',
-    'placehold.it',
-    'dummyimage.com',
-    'fakeimg.pl',
-    'lorempixel.com',
-    'placekitten.com',
-    'loremflickr.com',
-    'randomuser.me',
-    'i.pravatar.cc',
-    'ui-avatars.com',
-    'gravatar.com',
-  ];
-  
-  if (unreliablePatterns.some(pattern => url.includes(pattern))) {
+  if (isUnreliableAvatarUrl(url)) {
     return false;
   }
   

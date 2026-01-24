@@ -38,6 +38,58 @@ interface TestimonialsSectionProps {
   };
 }
 
+/**
+ * SOLUCIÓN DEFINITIVA: Función para determinar si un color es claro u oscuro
+ * Retorna true si el color es claro (necesita texto oscuro)
+ */
+function isLightColor(color: string | undefined): boolean {
+  if (!color) return true; // Si no hay color, asumimos fondo claro (blanco)
+  
+  // Convertir color a RGB
+  let r = 255, g = 255, b = 255;
+  
+  if (color.startsWith('#')) {
+    const hex = color.replace('#', '');
+    if (hex.length === 3) {
+      r = parseInt(hex[0] + hex[0], 16);
+      g = parseInt(hex[1] + hex[1], 16);
+      b = parseInt(hex[2] + hex[2], 16);
+    } else if (hex.length === 6) {
+      r = parseInt(hex.slice(0, 2), 16);
+      g = parseInt(hex.slice(2, 4), 16);
+      b = parseInt(hex.slice(4, 6), 16);
+    }
+  } else if (color.startsWith('rgb')) {
+    const match = color.match(/\d+/g);
+    if (match && match.length >= 3) {
+      r = parseInt(match[0]);
+      g = parseInt(match[1]);
+      b = parseInt(match[2]);
+    }
+  } else if (color.includes('white') || color.includes('light') || color === 'transparent') {
+    return true;
+  } else if (color.includes('black') || color.includes('dark') || color.includes('gray-9') || color.includes('gray-8')) {
+    return false;
+  }
+  
+  // Calcular luminosidad (fórmula estándar)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5;
+}
+
+/**
+ * COLORES HARDCODEADOS PARA CARDS - SIEMPRE LEGIBLES
+ * Las cards de testimonios SIEMPRE tienen fondo blanco/claro, por lo tanto:
+ * - Texto principal: SIEMPRE oscuro (#1f2937 - gray-800)
+ * - Texto secundario: SIEMPRE gris medio (#6b7280 - gray-500)
+ * - Quote: SIEMPRE gris oscuro (#4b5563 - gray-600)
+ */
+const CARD_TEXT_COLORS = {
+  name: '#1f2937',      // gray-800 - SIEMPRE visible
+  quote: '#374151',     // gray-700 - SIEMPRE visible
+  role: '#6b7280',      // gray-500 - SIEMPRE visible
+};
+
 export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSectionProps) {
   const { selectedSectionId, selectSection } = useEditorStore();
   const isSelected = selectedSectionId === id;
@@ -73,6 +125,11 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
 
   const layout = content?.layout || 'grid';
   const autoplayInterval = content?.autoplayInterval || 5000;
+  
+  // Determinar si el fondo de la sección es claro u oscuro para el título
+  const sectionBgIsLight = isLightColor(styles?.backgroundColor);
+  const sectionTitleColor = sectionBgIsLight ? '#111827' : '#ffffff';
+  const sectionSubtitleColor = sectionBgIsLight ? '#4b5563' : 'rgba(255,255,255,0.8)';
 
   // Carousel autoplay
   useEffect(() => {
@@ -123,16 +180,16 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
     );
   };
 
-  // Standard testimonial card
+  // Standard testimonial card - COLORES HARDCODEADOS
   const renderTestimonialCard = (testimonial: Testimonial, index: number, featured = false) => (
     <motion.div
       key={index}
       variants={itemVariants}
       className={cn(
-        "relative rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300",
-        featured ? "p-8 md:p-10" : "p-6",
-        styles?.cardBackground || "bg-white"
+        "relative rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 bg-white",
+        featured ? "p-8 md:p-10" : "p-6"
       )}
+      style={{ backgroundColor: styles?.cardBackground || '#ffffff' }}
     >
       <Quote 
         className={cn(
@@ -148,12 +205,13 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
         </div>
       )}
 
+      {/* QUOTE - SIEMPRE COLOR OSCURO HARDCODEADO */}
       <p
         className={cn(
           "mb-6 leading-relaxed",
           featured ? "text-lg md:text-xl" : "text-base"
         )}
-        style={{ color: styles?.textColor || '#4b5563' }}
+        style={{ color: CARD_TEXT_COLORS.quote }}
       >
         "{testimonial.text || testimonial.quote || 'Great experience!'}"
       </p>
@@ -166,19 +224,21 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
           accentColor={styles?.accentColor || '#6366f1'}
         />
         <div>
+          {/* NAME - SIEMPRE COLOR OSCURO HARDCODEADO */}
           <p
             className={cn(
               "font-semibold",
               featured ? "text-lg" : ""
             )}
-            style={{ color: styles?.textColor || '#111827' }}
+            style={{ color: CARD_TEXT_COLORS.name }}
           >
             {testimonial.name}
           </p>
+          {/* ROLE - SIEMPRE COLOR GRIS MEDIO HARDCODEADO */}
           {(testimonial.role || testimonial.company) && (
             <p
               className="text-sm"
-              style={{ color: styles?.textColor || '#6b7280' }}
+              style={{ color: CARD_TEXT_COLORS.role }}
             >
               {testimonial.role}{testimonial.role && testimonial.company && ', '}{testimonial.company}
             </p>
@@ -188,19 +248,20 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
     </motion.div>
   );
 
-  // Minimal testimonial card (for minimal layout)
+  // Minimal testimonial card - COLORES HARDCODEADOS
   const renderMinimalCard = (testimonial: Testimonial, index: number) => (
     <motion.div
       key={index}
       variants={itemVariants}
       className="text-center py-8"
     >
-      <div className="mb-6">
+      <div className="mb-6 flex justify-center">
         {renderStars(testimonial.rating || 5)}
       </div>
+      {/* QUOTE - SIEMPRE OSCURO */}
       <p
         className="text-xl md:text-2xl lg:text-3xl font-light leading-relaxed mb-8 max-w-4xl mx-auto"
-        style={{ color: styles?.textColor || '#1a1a1a' }}
+        style={{ color: CARD_TEXT_COLORS.quote }}
       >
         "{testimonial.text || testimonial.quote}"
       </p>
@@ -212,10 +273,12 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
           accentColor={styles?.accentColor || '#6366f1'}
         />
         <div className="text-left">
-          <p className="font-semibold" style={{ color: styles?.textColor }}>
+          {/* NAME - SIEMPRE OSCURO */}
+          <p className="font-semibold" style={{ color: CARD_TEXT_COLORS.name }}>
             {testimonial.name}
           </p>
-          <p className="text-sm opacity-60" style={{ color: styles?.textColor }}>
+          {/* ROLE - SIEMPRE GRIS */}
+          <p className="text-sm" style={{ color: CARD_TEXT_COLORS.role }}>
             {testimonial.role}{testimonial.role && testimonial.company && ' at '}{testimonial.company}
           </p>
         </div>
@@ -223,15 +286,13 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
     </motion.div>
   );
 
-  // Video testimonial card
+  // Video testimonial card - COLORES HARDCODEADOS
   const renderVideoCard = (testimonial: Testimonial, index: number) => (
     <motion.div
       key={index}
       variants={itemVariants}
-      className={cn(
-        "relative rounded-2xl overflow-hidden shadow-lg group cursor-pointer",
-        styles?.cardBackground || "bg-white"
-      )}
+      className="relative rounded-2xl overflow-hidden shadow-lg group cursor-pointer bg-white"
+      style={{ backgroundColor: styles?.cardBackground || '#ffffff' }}
       onClick={() => setActiveVideo(activeVideo === index ? null : index)}
     >
       {/* Video Thumbnail */}
@@ -245,7 +306,7 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
             <div 
-              className="w-20 h-20 rounded-full flex items-center justify-center"
+              className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-xl"
               style={{ backgroundColor: styles?.accentColor || '#6366f1' }}
             >
               {(testimonial.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
@@ -275,16 +336,17 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
         )}
       </div>
 
-      {/* Info */}
+      {/* Info - COLORES HARDCODEADOS */}
       <div className="p-6">
         {testimonial.rating && (
           <div className="mb-3">
             {renderStars(testimonial.rating)}
           </div>
         )}
+        {/* QUOTE - SIEMPRE OSCURO */}
         <p
           className="text-sm mb-4 line-clamp-3"
-          style={{ color: styles?.textColor ? `${styles.textColor}cc` : '#666' }}
+          style={{ color: CARD_TEXT_COLORS.quote }}
         >
           "{testimonial.text || testimonial.quote}"
         </p>
@@ -297,10 +359,12 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
             className="w-10 h-10"
           />
           <div>
-            <p className="font-semibold text-sm" style={{ color: styles?.textColor }}>
+            {/* NAME - SIEMPRE OSCURO */}
+            <p className="font-semibold text-sm" style={{ color: CARD_TEXT_COLORS.name }}>
               {testimonial.name}
             </p>
-            <p className="text-xs opacity-60" style={{ color: styles?.textColor }}>
+            {/* ROLE - SIEMPRE GRIS */}
+            <p className="text-xs" style={{ color: CARD_TEXT_COLORS.role }}>
               {testimonial.role}
             </p>
           </div>
@@ -309,7 +373,7 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
     </motion.div>
   );
 
-  // Carousel layout
+  // Carousel layout - COLORES HARDCODEADOS
   const renderCarousel = () => (
     <div className="relative max-w-4xl mx-auto">
       {/* Main Carousel */}
@@ -321,10 +385,8 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -100 }}
             transition={{ duration: 0.3 }}
-            className={cn(
-              "p-8 md:p-12 text-center",
-              styles?.cardBackground || "bg-white"
-            )}
+            className="p-8 md:p-12 text-center bg-white"
+            style={{ backgroundColor: styles?.cardBackground || '#ffffff' }}
           >
             <Quote 
               className="w-12 h-12 mx-auto mb-6 opacity-20"
@@ -337,9 +399,10 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
               </div>
             )}
 
+            {/* QUOTE - SIEMPRE OSCURO */}
             <p
               className="text-xl md:text-2xl lg:text-3xl font-light leading-relaxed mb-8"
-              style={{ color: styles?.textColor || '#1a1a1a' }}
+              style={{ color: CARD_TEXT_COLORS.quote }}
             >
               "{testimonials[currentIndex]?.text || testimonials[currentIndex]?.quote}"
             </p>
@@ -353,10 +416,12 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
                 className="ring-4 ring-white shadow-lg"
               />
               <div className="text-left">
-                <p className="font-semibold text-lg" style={{ color: styles?.textColor }}>
+                {/* NAME - SIEMPRE OSCURO */}
+                <p className="font-semibold text-lg" style={{ color: CARD_TEXT_COLORS.name }}>
                   {testimonials[currentIndex]?.name}
                 </p>
-                <p className="text-sm opacity-60" style={{ color: styles?.textColor }}>
+                {/* ROLE - SIEMPRE GRIS */}
+                <p className="text-sm" style={{ color: CARD_TEXT_COLORS.role }}>
                   {testimonials[currentIndex]?.role}
                   {testimonials[currentIndex]?.role && testimonials[currentIndex]?.company && ', '}
                   {testimonials[currentIndex]?.company}
@@ -409,7 +474,7 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
         <button
           onClick={() => setIsPlaying(!isPlaying)}
           className="w-8 h-8 rounded-full flex items-center justify-center opacity-60 hover:opacity-100 transition-opacity"
-          style={{ color: styles?.textColor }}
+          style={{ color: sectionTitleColor }}
         >
           {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
         </button>
@@ -417,7 +482,7 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
     </div>
   );
 
-  // Masonry layout
+  // Masonry layout - COLORES HARDCODEADOS
   const renderMasonry = () => (
     <motion.div 
       variants={containerVariants}
@@ -430,10 +495,8 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
         <motion.div
           key={index}
           variants={itemVariants}
-          className={cn(
-            "break-inside-avoid rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all",
-            styles?.cardBackground || "bg-white"
-          )}
+          className="break-inside-avoid rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all bg-white"
+          style={{ backgroundColor: styles?.cardBackground || '#ffffff' }}
         >
           <Quote 
             className="w-8 h-8 mb-4 opacity-20"
@@ -446,9 +509,10 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
             </div>
           )}
 
+          {/* QUOTE - SIEMPRE OSCURO */}
           <p
             className="mb-6 leading-relaxed"
-            style={{ color: styles?.textColor ? `${styles.textColor}cc` : '#666' }}
+            style={{ color: CARD_TEXT_COLORS.quote }}
           >
             "{testimonial.text || testimonial.quote}"
           </p>
@@ -462,10 +526,12 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
               className="w-10 h-10"
             />
             <div>
-              <p className="font-semibold text-sm" style={{ color: styles?.textColor }}>
+              {/* NAME - SIEMPRE OSCURO */}
+              <p className="font-semibold text-sm" style={{ color: CARD_TEXT_COLORS.name }}>
                 {testimonial.name}
               </p>
-              <p className="text-xs opacity-60" style={{ color: styles?.textColor }}>
+              {/* ROLE - SIEMPRE GRIS */}
+              <p className="text-xs" style={{ color: CARD_TEXT_COLORS.role }}>
                 {testimonial.role}{testimonial.role && testimonial.company && ', '}{testimonial.company}
               </p>
             </div>
@@ -488,7 +554,7 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
       style={{ backgroundColor: styles?.backgroundColor || '#f9fafb' }}
     >
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Header - USA COLORES CALCULADOS SEGÚN FONDO DE SECCIÓN */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -508,14 +574,14 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
           )}
           <h2
             className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight"
-            style={{ color: styles?.textColor || (styles?.backgroundColor?.includes('gray-9') || styles?.backgroundColor?.includes('black') || styles?.backgroundColor?.includes('#1') || styles?.backgroundColor?.includes('#0') ? '#ffffff' : '#111827') }}
+            style={{ color: sectionTitleColor }}
           >
             {content?.title || "Lo que dicen nuestros clientes"}
           </h2>
           {content?.subtitle && (
             <p
               className="mt-4 text-lg max-w-2xl mx-auto"
-              style={{ color: styles?.textColor || (styles?.backgroundColor?.includes('gray-9') || styles?.backgroundColor?.includes('black') || styles?.backgroundColor?.includes('#1') || styles?.backgroundColor?.includes('#0') ? 'rgba(255,255,255,0.8)' : '#4b5563') }}
+              style={{ color: sectionSubtitleColor }}
             >
               {content.subtitle}
             </p>

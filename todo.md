@@ -828,4 +828,19 @@
 - [x] Mejorar mapeo de secciones detectadas a componentes
 - [x] Agregar logs detallados para debugging
 - [x] Probar con URL de Thailand Arrival Card
-- [ ] Sincronizar mejoras con producción
+- [x] Sincronizar mejoras con producción
+
+
+## CORRECCIÓN DEFINITIVA - Texto Blanco sobre Blanco en Testimonios (24-01-2026)
+- [x] Identificar el problema raíz: styles?.textColor no tiene fallback cuando cardBackground es blanco
+- [x] Forzar colores oscuros SIEMPRE en las cards de testimonios (no depender de textColor)
+- [x] Añadir función helper para calcular contraste automático
+- [x] Sincronizar con producción
+- [x] Verificar en producción
+
+
+## CORRECCIÓN - Avatares Reales No Se Generan (24-01-2026)
+- [x] El LLM genera URLs de ui-avatars.com que son rechazadas por el frontend
+- [x] isValidAvatarUrl() rechaza ui-avatars.com pero generateAvatarsForTestimonials() no las reemplaza
+- [x] Modificar generateAvatarsForTestimonials() para SIEMPRE reemplazar URLs no confiables
+- [x] Sincronizar con producción
