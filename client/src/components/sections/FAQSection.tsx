@@ -86,10 +86,10 @@ export function FAQSection({ id, content, styles = {} }: FAQSectionProps) {
       style={{ backgroundColor: bgColor }}
     >
       <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-12 md:mb-16">
+        <div className="text-center mb-8 sm:mb-10 md:mb-12 lg:mb-16">
           <h2 
             className={cn(
-              "text-3xl md:text-4xl font-bold tracking-tight",
+              "text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight",
               textColorClass
             )}
             style={{ color: styles?.textColor }}

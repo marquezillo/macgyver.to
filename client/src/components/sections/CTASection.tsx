@@ -44,7 +44,7 @@ export function CTASection({ id, content, styles = {} }: CTASectionProps) {
       <div className="max-w-4xl mx-auto text-center">
         <h2 
           className={cn(
-            "text-2xl md:text-3xl font-bold tracking-tight sm:text-4xl",
+            "text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight",
             styles?.textColor || "text-white"
           )}
         >

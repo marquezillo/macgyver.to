@@ -270,7 +270,7 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
         
         <motion.h1 
           variants={fadeInUp}
-          className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight"
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight leading-tight"
           style={{ 
             color: colors.textColor,
             textShadow: hasValidBgImage ? '0 4px 12px rgba(0,0,0,0.4)' : undefined
@@ -293,7 +293,7 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
         >
           <Button 
             size="lg"
-            className="text-lg px-8 py-6 group text-white"
+            className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 group text-white"
             style={{ backgroundColor: accentColor }}
           >
             {content?.ctaText || "Get Started"}
@@ -304,7 +304,7 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
               size="lg"
               variant="outline"
               className={cn(
-                "text-lg px-8 py-6",
+                "w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6",
                 hasValidBgImage ? "border-white/30 text-white hover:bg-white/10" : "border-gray-300"
               )}
               style={{ 
@@ -322,18 +322,18 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
         {content?.stats && content.stats.length > 0 && (
           <motion.div 
             variants={fadeInUp}
-            className="mt-16 grid grid-cols-3 gap-8 max-w-2xl mx-auto"
+            className="mt-12 sm:mt-16 grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 md:gap-8 max-w-2xl mx-auto"
           >
             {content.stats.map((stat: any, index: number) => (
               <div key={index} className="text-center">
                 <div 
-                  className="text-3xl md:text-4xl font-bold"
+                  className="text-2xl sm:text-3xl md:text-4xl font-bold"
                   style={{ color: colors.textColor }}
                 >
                   {stat.value}
                 </div>
                 <div 
-                  className="text-sm mt-1"
+                  className="text-xs sm:text-sm mt-1"
                   style={{ color: colors.subtitleColor }}
                 >
                   {stat.label}
@@ -399,7 +399,7 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
               
               <motion.h1 
                 variants={fadeInUp}
-                className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight"
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight"
                 style={{ color: splitColors.textColor }}
               >
                 {content?.title || "Welcome"}
@@ -419,7 +419,7 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
               >
                 <Button 
                   size="lg"
-                  className="text-lg px-8 py-6 group text-white"
+                  className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 group text-white"
                   style={{ backgroundColor: accentColor }}
                 >
                   {content?.ctaText || "Get Started"}
@@ -601,7 +601,7 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
             >
               <Button 
                 size="lg"
-                className="text-lg px-8 py-6 group text-white"
+                className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 group text-white"
                 style={{ backgroundColor: accentColor }}
               >
                 {content?.ctaText || "Get Started"}

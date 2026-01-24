@@ -162,10 +162,10 @@ export function PricingSection({ id, content, styles = {} }: PricingSectionProps
       whileInView="visible"
       viewport={{ once: true }}
       className={cn(
-        "grid gap-8",
-        plans.length === 2 ? "lg:grid-cols-2 max-w-4xl mx-auto" :
-        plans.length === 4 ? "lg:grid-cols-4" :
-        "lg:grid-cols-3"
+        "grid gap-4 sm:gap-6 lg:gap-8",
+        plans.length === 2 ? "grid-cols-1 sm:grid-cols-2 max-w-4xl mx-auto" :
+        plans.length === 4 ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" :
+        "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
       )}
     >
       {plans.map((plan, index) => (
@@ -175,7 +175,7 @@ export function PricingSection({ id, content, styles = {} }: PricingSectionProps
           onMouseEnter={() => setHoveredPlan(index)}
           onMouseLeave={() => setHoveredPlan(null)}
           className={cn(
-            "relative rounded-2xl p-8 transition-all duration-300",
+            "relative rounded-2xl p-4 sm:p-6 lg:p-8 transition-all duration-300",
             plan.highlighted 
               ? "bg-gray-900 text-white shadow-2xl scale-105 z-10" 
               : "bg-white border border-gray-200 shadow-lg hover:shadow-xl",
@@ -211,7 +211,7 @@ export function PricingSection({ id, content, styles = {} }: PricingSectionProps
 
           <div className="mt-6 flex items-baseline">
             <span className={cn(
-              "text-5xl font-bold tracking-tight",
+              "text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight",
               plan.highlighted ? "text-white" : "text-gray-900"
             )}>
               {isAnnual ? (plan.annualPrice || plan.price) : plan.price}
@@ -584,10 +584,10 @@ export function PricingSection({ id, content, styles = {} }: PricingSectionProps
       whileInView="visible"
       viewport={{ once: true }}
       className={cn(
-        "grid gap-6",
-        plans.length === 2 ? "lg:grid-cols-2 max-w-4xl mx-auto" :
-        plans.length === 4 ? "lg:grid-cols-4" :
-        "lg:grid-cols-3"
+        "grid gap-4 sm:gap-6",
+        plans.length === 2 ? "grid-cols-1 sm:grid-cols-2 max-w-4xl mx-auto" :
+        plans.length === 4 ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" :
+        "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
       )}
     >
       {plans.map((plan, index) => {
@@ -687,7 +687,7 @@ export function PricingSection({ id, content, styles = {} }: PricingSectionProps
     >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 sm:mb-10 md:mb-12">
           {content?.badge && (
             <motion.span 
               initial={{ opacity: 0, y: -10 }}
@@ -707,7 +707,7 @@ export function PricingSection({ id, content, styles = {} }: PricingSectionProps
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className={cn(
-              "text-3xl md:text-4xl font-bold tracking-tight",
+              "text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight",
               styles?.textColor || "text-gray-900"
             )}
           >

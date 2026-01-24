@@ -497,7 +497,7 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-10 md:mb-12"
         >
           {content?.badge && (
             <span 
@@ -512,7 +512,7 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
           )}
           <h2
             className={cn(
-              "text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight",
+              "text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight",
               styles?.textColor || "text-gray-900"
             )}
           >
@@ -540,7 +540,7 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
           >
             {testimonials.map((testimonial, index) => renderVideoCard(testimonial, index))}
           </motion.div>
@@ -562,7 +562,7 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="grid lg:grid-cols-2 gap-6"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6"
           >
             <div className="lg:row-span-2">
               {renderTestimonialCard(testimonials[0], 0, true)}
@@ -579,10 +579,10 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
             whileInView="visible"
             viewport={{ once: true }}
             className={cn(
-              "grid gap-6 md:gap-8",
-              testimonials.length === 2 ? "md:grid-cols-2" :
-              testimonials.length === 4 ? "md:grid-cols-2 lg:grid-cols-4" :
-              "md:grid-cols-2 lg:grid-cols-3"
+              "grid gap-4 sm:gap-6 md:gap-8",
+              testimonials.length === 2 ? "grid-cols-1 sm:grid-cols-2" :
+              testimonials.length === 4 ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" :
+              "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
             )}
           >
             {testimonials.map((testimonial, index) => 

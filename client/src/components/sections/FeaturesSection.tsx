@@ -414,7 +414,7 @@ export function FeaturesSection({ id, content, styles = {} }: FeaturesSectionPro
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true }}
-      className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8"
     >
       {items.map((item, index) => (
         <motion.div 
@@ -494,7 +494,7 @@ export function FeaturesSection({ id, content, styles = {} }: FeaturesSectionPro
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true }}
-      className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8"
     >
       {items.map((item, index) => {
         const IconComponent = getIcon(item?.icon);
@@ -556,7 +556,7 @@ export function FeaturesSection({ id, content, styles = {} }: FeaturesSectionPro
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true }}
-      className="grid md:grid-cols-2 lg:grid-cols-4 gap-x-12 gap-y-10"
+      className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 sm:gap-x-8 lg:gap-x-12 gap-y-6 sm:gap-y-8 lg:gap-y-10"
     >
       {items.map((item, index) => {
         const IconComponent = getIcon(item?.icon);
@@ -599,7 +599,7 @@ export function FeaturesSection({ id, content, styles = {} }: FeaturesSectionPro
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-8 sm:mb-12 md:mb-16"
         >
           {content?.badge && (
             <motion.span 
@@ -616,7 +616,7 @@ export function FeaturesSection({ id, content, styles = {} }: FeaturesSectionPro
             </motion.span>
           )}
           <h2 className={cn(
-            "text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight",
+            "text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight",
             styles?.textColor || "text-gray-900"
           )}>
             {content?.title || "Features"}
