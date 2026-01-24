@@ -207,6 +207,8 @@ function generateAvatarPrompt(name: string, role?: string): string {
 
 /**
  * Enriquece una sección de testimonios con avatares
+ * IMPORTANTE: Usa avatarService para obtener fotos REALES de Unsplash
+ * NUNCA usa ui-avatars.com ni servicios similares
  */
 async function enrichTestimonialsSection(
   section: LandingSection,
@@ -239,40 +241,35 @@ async function enrichTestimonialsSection(
     return section as EnrichedSection;
   }
   
-  console.log(`[LandingEnricher] Enriching ${testimonialsArray.length} testimonials with avatars`);
+  console.log(`[LandingEnricher] Enriching ${testimonialsArray.length} testimonials with REAL avatars from Unsplash`);
   
-  const enrichedTestimonials = await Promise.all(
-    testimonialsArray.map(async (testimonial, index) => {
-      const t = testimonial as Record<string, unknown>;
-      const name = (t.name as string) || (t.author as string) || `Person ${index + 1}`;
-      const existingAvatar = (t.avatar as string) || (t.image as string);
-      
-      if (existingAvatar && existingAvatar.startsWith('http')) {
-        return testimonial;
-      }
-      
-      try {
-        const prompt = generateAvatarPrompt(name, testimonial.role);
-        console.log(`[LandingEnricher] Generating avatar for ${name}`);
-        
-        const { generateCustomImage } = await import('./geminiImageGeneration');
-        const imageUrl = await generateCustomImage(prompt);
-        
-        return {
-          ...testimonial,
-          avatar: imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=200`,
-          image: imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=200`,
-        };
-      } catch (error) {
-        console.error(`[LandingEnricher] Error generating avatar for ${name}:`, error);
-        return {
-          ...testimonial,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=200`,
-          image: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=200`,
-        };
-      }
-    })
-  );
+  // Importar el servicio de avatares que tiene 70+ fotos reales
+  const { generateAvatarsForTestimonials } = await import('./avatarService');
+  
+  // Preparar los testimonios para el servicio de avatares
+  const testimonialsForAvatars = testimonialsArray.map((testimonial, index) => {
+    const t = testimonial as Record<string, unknown>;
+    return {
+      name: (t.name as string) || (t.author as string) || `Person ${index + 1}`,
+      image: t.image as string | undefined,
+      avatar: t.avatar as string | undefined,
+    };
+  });
+  
+  // Generar avatares reales usando el servicio
+  const enrichedAvatars = generateAvatarsForTestimonials(testimonialsForAvatars);
+  
+  // Combinar los avatares con los datos originales de los testimonios
+  const enrichedTestimonials = testimonialsArray.map((testimonial, index) => {
+    const avatarData = enrichedAvatars[index];
+    return {
+      ...testimonial,
+      avatar: avatarData.avatar,
+      image: avatarData.image,
+    };
+  });
+  
+  console.log(`[LandingEnricher] ✓ Assigned ${enrichedTestimonials.length} real Unsplash avatars`);
   
   // Devolver con ambas claves para compatibilidad
   return {
@@ -287,6 +284,7 @@ async function enrichTestimonialsSection(
 
 /**
  * Enriquece una sección de equipo con fotos profesionales
+ * IMPORTANTE: Usa avatarService para obtener fotos REALES de Unsplash
  */
 async function enrichTeamSection(
   section: LandingSection,
@@ -305,35 +303,31 @@ async function enrichTeamSection(
     return section as EnrichedSection;
   }
   
-  console.log(`[LandingEnricher] Enriching ${members.length} team members with photos`);
+  console.log(`[LandingEnricher] Enriching ${members.length} team members with REAL photos from Unsplash`);
   
-  const enrichedMembers = await Promise.all(
-    members.map(async (member) => {
-      if (member.image && member.image.startsWith('http')) {
-        return member;
-      }
-      
-      try {
-        const role = member.role || member.position || '';
-        const prompt = generateAvatarPrompt(member.name, role);
-        console.log(`[LandingEnricher] Generating photo for team member ${member.name}`);
-        
-        const { generateCustomImage } = await import('./geminiImageGeneration');
-        const imageUrl = await generateCustomImage(prompt);
-        
-        return {
-          ...member,
-          image: imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=6366f1&color=fff&size=300`,
-        };
-      } catch (error) {
-        console.error(`[LandingEnricher] Error generating photo for ${member.name}:`, error);
-        return {
-          ...member,
-          image: `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=6366f1&color=fff&size=300`,
-        };
-      }
-    })
-  );
+  // Importar el servicio de avatares que tiene 70+ fotos reales
+  const { generateAvatarsForTestimonials } = await import('./avatarService');
+  
+  // Preparar los miembros para el servicio de avatares
+  const membersForAvatars = members.map((member) => ({
+    name: member.name,
+    image: member.image,
+    avatar: member.image,
+  }));
+  
+  // Generar avatares reales usando el servicio
+  const enrichedAvatars = generateAvatarsForTestimonials(membersForAvatars);
+  
+  // Combinar los avatares con los datos originales de los miembros
+  const enrichedMembers = members.map((member, index) => {
+    const avatarData = enrichedAvatars[index];
+    return {
+      ...member,
+      image: avatarData.image,
+    };
+  });
+  
+  console.log(`[LandingEnricher] ✓ Assigned ${enrichedMembers.length} real Unsplash photos to team members`);
   
   return {
     ...section,

@@ -843,4 +843,6 @@
 - [x] El LLM genera URLs de ui-avatars.com que son rechazadas por el frontend
 - [x] isValidAvatarUrl() rechaza ui-avatars.com pero generateAvatarsForTestimonials() no las reemplaza
 - [x] Modificar generateAvatarsForTestimonials() para SIEMPRE reemplazar URLs no confiables
-- [x] Sincronizar con producción
+- [x] Corregir landingImageEnricher.ts - enrichTestimonialsSection() usaba ui-avatars.com como fallback
+- [x] Corregir landingImageEnricher.ts - enrichTeamSection() usaba ui-avatars.com como fallback
+- [x] Sincronizar con producción y verificar
