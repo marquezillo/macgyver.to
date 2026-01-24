@@ -819,3 +819,13 @@
 - [x] Tests pasando (123 tests)
 - [x] Sincronizado con producción (macgyver.to)
 - [ ] Probar con web real
+
+
+## Debugging Sistema de Clonación (24 Ene 2026) - COMPLETADO
+- [x] Analizar por qué la clonación no produce resultados precisos
+- [x] Mejorar prompt de análisis visual para extraer estructura exacta
+- [x] Mejorar extracción de contenido del HTML (textos, CTAs, imágenes)
+- [x] Mejorar mapeo de secciones detectadas a componentes
+- [x] Agregar logs detallados para debugging
+- [x] Probar con URL de Thailand Arrival Card
+- [ ] Sincronizar mejoras con producción

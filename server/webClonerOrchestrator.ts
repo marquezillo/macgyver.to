@@ -71,7 +71,7 @@ export async function cloneWebsite(url: string, userMessage?: string): Promise<C
     const screenshotBase64 = scraped.screenshot.toString('base64');
     const visualAnalysis = await analyzeScreenshot(screenshotBase64);
     
-    // 3. Combinar análisis
+    // 3. Combinar análisis (prioriza HTML para contenido, visual para estructura)
     console.log('[WebClonerOrchestrator] Paso 3: Combinando análisis...');
     const merged = mergeAnalysis(visualAnalysis, scraped);
     
@@ -80,6 +80,7 @@ export async function cloneWebsite(url: string, userMessage?: string): Promise<C
     const landingConfig = generateLandingConfig(merged, visualAnalysis, scraped, userMessage);
     
     console.log('[WebClonerOrchestrator] Clonación completada exitosamente');
+    console.log(`[WebClonerOrchestrator] Secciones generadas: ${landingConfig.sections.length}`);
     
     return {
       success: true,
@@ -107,6 +108,7 @@ export async function cloneWebsite(url: string, userMessage?: string): Promise<C
 
 /**
  * Genera la configuración de landing basada en el análisis
+ * PRIORIZA el contenido extraído del HTML sobre el análisis visual
  */
 function generateLandingConfig(
   merged: ReturnType<typeof mergeAnalysis>,
@@ -116,7 +118,7 @@ function generateLandingConfig(
 ): LandingConfig {
   const sections: SectionConfig[] = [];
   
-  // Mapear secciones detectadas a configuración
+  // Mapear TODAS las secciones detectadas a configuración
   for (const section of visual.sections) {
     const sectionConfig = mapSectionToConfig(section, merged.content, scraped, visual);
     if (sectionConfig) {
@@ -127,6 +129,85 @@ function generateLandingConfig(
   // Si no se detectaron secciones, usar estructura por defecto
   if (sections.length === 0) {
     sections.push(...getDefaultSections(merged.content, scraped));
+  }
+  
+  // Asegurar que siempre hay header si hay contenido de header
+  const hasHeader = sections.some(s => s.type === 'header');
+  if (!hasHeader && (merged.content.header?.logo || merged.content.header?.navItems?.length)) {
+    sections.unshift({
+      id: 'section-header',
+      type: 'header',
+      order: -1,
+      data: {
+        logo: merged.content.header?.logo || scraped.assets.images.find(i => i.type === 'logo')?.src || '',
+        navItems: merged.content.header?.navItems || [],
+        variant: 'default',
+      },
+    });
+  }
+  
+  // Asegurar que siempre hay features si hay contenido de features
+  const hasFeatures = sections.some(s => s.type === 'features');
+  if (!hasFeatures && merged.content.features && merged.content.features.length > 0) {
+    const featuresOrder = sections.length > 0 ? Math.max(...sections.map(s => s.order)) + 1 : 2;
+    sections.push({
+      id: 'section-features',
+      type: 'features',
+      order: featuresOrder,
+      data: {
+        title: 'Features',
+        subtitle: 'What we offer',
+        items: merged.content.features.map((f, i) => ({
+          title: f.title || `Feature ${i + 1}`,
+          description: f.description || '',
+          icon: getIconForFeature(f.title, i),
+        })),
+        variant: 'grid',
+        columns: merged.content.features.length === 4 ? 4 : 3,
+      },
+    });
+  }
+  
+  // Asegurar que siempre hay footer
+  const hasFooter = sections.some(s => s.type === 'footer');
+  if (!hasFooter) {
+    const footerOrder = sections.length > 0 ? Math.max(...sections.map(s => s.order)) + 1 : 10;
+    sections.push({
+      id: 'section-footer',
+      type: 'footer',
+      order: footerOrder,
+      data: {
+        logo: merged.content.header?.logo || '',
+        columns: merged.content.footer?.columns || [],
+        copyright: merged.content.footer?.copyright || `© ${new Date().getFullYear()} All rights reserved.`,
+        variant: 'simple',
+      },
+    });
+  }
+  
+  // Reordenar secciones por order
+  sections.sort((a, b) => a.order - b.order);
+  
+  // Renumerar orders para que sean consecutivos
+  sections.forEach((section, index) => {
+    section.order = index;
+  });
+  
+  // Asegurar que hay FAQ si se detectó en el scraping
+  const hasFaq = sections.some(s => s.type === 'faq');
+  if (!hasFaq && scraped.content.faq && scraped.content.faq.length > 0) {
+    const faqOrder = sections.length > 0 ? Math.max(...sections.map(s => s.order)) + 1 : 5;
+    sections.push({
+      id: `section-faq`,
+      type: 'faq',
+      order: faqOrder,
+      data: {
+        title: 'Frequently Asked Questions',
+        subtitle: '',
+        items: scraped.content.faq,
+        variant: 'accordion',
+      },
+    });
   }
   
   return {
@@ -160,6 +241,7 @@ function generateLandingConfig(
 
 /**
  * Mapea una sección detectada a configuración de componente
+ * PRIORIZA el contenido del HTML sobre el análisis visual
  */
 function mapSectionToConfig(
   section: DetectedSection,
@@ -178,22 +260,49 @@ function mapSectionToConfig(
         ...baseConfig,
         type: 'header',
         data: {
-          logo: content.header?.logo || '',
+          logo: content.header?.logo || scraped.assets.images.find(i => i.type === 'logo')?.src || '',
           navItems: content.header?.navItems || [],
           variant: section.variant || 'default',
         },
       };
       
     case 'hero':
+      // PRIORIZAR contenido del HTML sobre el análisis visual
+      const heroTitle = content.hero?.title || section.content?.title || scraped.title || 'Welcome';
+      const heroSubtitle = content.hero?.subtitle || section.content?.subtitle || scraped.description || '';
+      const heroImage = content.hero?.image || 
+                        scraped.assets.images.find(i => i.type === 'img')?.src || 
+                        '';
+      
+      // Determinar CTA - priorizar HTML
+      let primaryCTA = content.hero?.primaryCTA;
+      if (!primaryCTA && section.content?.ctas?.[0]) {
+        primaryCTA = { text: section.content.ctas[0].text, href: '#' };
+      }
+      if (!primaryCTA) {
+        // Buscar el primer CTA en el nav como fallback
+        const navCTA = content.header?.navItems?.find(item => 
+          item.text.toLowerCase().includes('apply') || 
+          item.text.toLowerCase().includes('start') ||
+          item.text.toLowerCase().includes('get')
+        );
+        primaryCTA = navCTA ? { text: navCTA.text, href: navCTA.href } : { text: 'Get Started', href: '#' };
+      }
+      
+      let secondaryCTA = content.hero?.secondaryCTA;
+      if (!secondaryCTA && section.content?.ctas?.[1]) {
+        secondaryCTA = { text: section.content.ctas[1].text, href: '#' };
+      }
+      
       return {
         ...baseConfig,
         type: 'hero',
         data: {
-          title: content.hero?.title || scraped.title || 'Welcome',
-          subtitle: content.hero?.subtitle || scraped.description || '',
-          primaryCTA: content.hero?.primaryCTA || { text: 'Get Started', href: '#' },
-          secondaryCTA: content.hero?.secondaryCTA,
-          image: content.hero?.image || scraped.assets.images[0]?.src || '',
+          title: heroTitle,
+          subtitle: heroSubtitle,
+          primaryCTA,
+          secondaryCTA,
+          image: heroImage,
           variant: mapHeroVariant(section.variant),
           backgroundColor: visual.style.darkMode ? '#0f172a' : '#ffffff',
           accentColor: visual.colorPalette.primary,
@@ -201,30 +310,60 @@ function mapSectionToConfig(
       };
       
     case 'features':
+    case 'process':
+    case 'benefits':
+      // PRIORIZAR features del HTML sobre el análisis visual
+      const htmlFeatures = content.features || [];
+      const visualFeatures = section.content?.items || [];
+      
+      let featureItems: Array<{ title: string; description: string; icon?: string }>;
+      
+      if (htmlFeatures.length > 0) {
+        // Usar features del HTML
+        featureItems = htmlFeatures.map((f, i) => ({
+          title: f.title || `Feature ${i + 1}`,
+          description: f.description || `Description ${i + 1}`,
+          icon: getIconForFeature(f.title, i),
+        }));
+      } else if (visualFeatures.length > 0) {
+        // Usar features del análisis visual
+        featureItems = visualFeatures.map((f, i) => ({
+          title: f.title || `Feature ${i + 1}`,
+          description: f.description || `Description ${i + 1}`,
+          icon: getIconForFeature(f.title, i),
+        }));
+      } else {
+        // Fallback genérico
+        featureItems = [
+          { title: 'Feature 1', description: 'Description 1', icon: 'star' },
+          { title: 'Feature 2', description: 'Description 2', icon: 'zap' },
+          { title: 'Feature 3', description: 'Description 3', icon: 'shield' },
+        ];
+      }
+      
       return {
         ...baseConfig,
         type: 'features',
         data: {
-          title: 'Features',
-          subtitle: 'What we offer',
-          items: content.features || [
-            { title: 'Feature 1', description: 'Description 1', icon: 'star' },
-            { title: 'Feature 2', description: 'Description 2', icon: 'zap' },
-            { title: 'Feature 3', description: 'Description 3', icon: 'shield' },
-          ],
+          title: section.content?.title || 'Features',
+          subtitle: section.content?.subtitle || 'What we offer',
+          items: featureItems,
           variant: mapFeaturesVariant(section.variant),
-          columns: content.features?.length === 4 ? 4 : 3,
+          columns: featureItems.length === 4 ? 4 : 3,
         },
       };
       
     case 'testimonials':
+      // PRIORIZAR testimonios del HTML
+      const htmlTestimonials = content.testimonials || [];
+      
       return {
         ...baseConfig,
         type: 'testimonials',
         data: {
-          title: 'What Our Customers Say',
-          subtitle: 'Trusted by thousands',
-          testimonials: content.testimonials || [
+          title: section.content?.title || 'What Our Customers Say',
+          subtitle: section.content?.subtitle || 'Trusted by thousands',
+          testimonials: htmlTestimonials.length > 0 ? htmlTestimonials : [
             { quote: 'Great product!', name: 'John Doe', role: 'CEO', avatar: '' },
           ],
           variant: section.variant || 'grid',
@@ -232,13 +371,16 @@ function mapSectionToConfig(
       };
       
     case 'pricing':
+      // PRIORIZAR pricing del HTML
+      const htmlPricing = content.pricing || [];
+      
       return {
         ...baseConfig,
         type: 'pricing',
         data: {
-          title: 'Pricing',
-          subtitle: 'Choose your plan',
-          plans: content.pricing || [
+          title: section.content?.title || 'Pricing',
+          subtitle: section.content?.subtitle || 'Choose your plan',
+          plans: htmlPricing.length > 0 ? htmlPricing : [
             { name: 'Basic', price: '$9', period: '/month', features: ['Feature 1'], highlighted: false },
             { name: 'Pro', price: '$29', period: '/month', features: ['Feature 1', 'Feature 2'], highlighted: true },
           ],
@@ -247,13 +389,16 @@ function mapSectionToConfig(
       };
       
     case 'faq':
+      // PRIORIZAR FAQ del HTML
+      const htmlFaq = content.faq || [];
+      
       return {
         ...baseConfig,
         type: 'faq',
         data: {
-          title: 'Frequently Asked Questions',
-          subtitle: '',
-          items: content.faq || [
+          title: section.content?.title || 'Frequently Asked Questions',
+          subtitle: section.content?.subtitle || '',
+          items: htmlFaq.length > 0 ? htmlFaq : [
             { question: 'Question 1?', answer: 'Answer 1' },
           ],
           variant: section.variant || 'accordion',
@@ -261,13 +406,18 @@ function mapSectionToConfig(
       };
       
     case 'cta':
+      // Usar contenido del HTML o visual
+      const ctaTitle = content.cta?.title || section.content?.title || 'Ready to get started?';
+      const ctaSubtitle = content.cta?.subtitle || section.content?.subtitle || 'Join thousands of satisfied customers';
+      const ctaButton = section.content?.ctas?.[0]?.text || content.cta?.buttonText || 'Get Started';
+      
       return {
         ...baseConfig,
         type: 'cta',
         data: {
-          title: content.cta?.title || 'Ready to get started?',
-          subtitle: content.cta?.subtitle || 'Join thousands of satisfied customers',
-          buttonText: content.cta?.buttonText || 'Get Started',
+          title: ctaTitle,
+          subtitle: ctaSubtitle,
+          buttonText: ctaButton,
           variant: section.variant || 'centered',
           backgroundColor: visual.colorPalette.primary,
         },
@@ -286,15 +436,21 @@ function mapSectionToConfig(
       };
       
     case 'stats':
+      // Extraer stats del contenido del análisis visual si está disponible
+      const statsItems = section.content?.items?.map(item => ({
+        value: item.title,
+        label: item.description,
+      })) || [
+        { value: '100+', label: 'Customers' },
+        { value: '50+', label: 'Countries' },
+        { value: '99%', label: 'Satisfaction' },
+      ];
+      
       return {
         ...baseConfig,
         type: 'stats',
         data: {
-          stats: [
-            { value: '100+', label: 'Customers' },
-            { value: '50+', label: 'Countries' },
-            { value: '99%', label: 'Satisfaction' },
-          ],
+          stats: statsItems,
           variant: section.variant || 'inline',
         },
       };
@@ -304,7 +460,7 @@ function mapSectionToConfig(
         ...baseConfig,
         type: 'gallery',
         data: {
-          title: 'Gallery',
+          title: section.content?.title || 'Gallery',
           images: scraped.assets.images.slice(0, 6).map(img => ({
             src: img.src,
             alt: img.alt,
@@ -318,21 +474,103 @@ function mapSectionToConfig(
         ...baseConfig,
         type: 'form',
         data: {
-          title: 'Contact Us',
-          subtitle: 'Get in touch',
+          title: section.content?.title || 'Contact Us',
+          subtitle: section.content?.subtitle || 'Get in touch',
           fields: [
             { name: 'name', label: 'Name', type: 'text', required: true },
             { name: 'email', label: 'Email', type: 'email', required: true },
             { name: 'message', label: 'Message', type: 'textarea', required: false },
           ],
-          submitText: 'Send Message',
+          submitText: section.content?.ctas?.[0]?.text || 'Send Message',
+          variant: section.variant || 'default',
+        },
+      };
+      
+    case 'about':
+      return {
+        ...baseConfig,
+        type: 'about',
+        data: {
+          title: section.content?.title || 'About Us',
+          description: section.content?.subtitle || section.description || '',
+          image: scraped.assets.images.find(i => i.type === 'img')?.src || '',
+          variant: section.variant || 'default',
+        },
+      };
+      
+    case 'logos':
+      return {
+        ...baseConfig,
+        type: 'logos',
+        data: {
+          title: section.content?.title || 'Trusted By',
+          logos: scraped.assets.images.filter(i => i.type === 'logo').slice(0, 6).map(img => ({
+            src: img.src,
+            alt: img.alt,
+          })),
           variant: section.variant || 'default',
         },
       };
       
     default:
+      // Para tipos desconocidos, intentar mapear a un tipo conocido
+      console.log(`[WebClonerOrchestrator] Tipo de sección desconocido: ${section.type}`);
       return null;
   }
+}
+
+/**
+ * Obtiene un icono apropiado para una feature basado en su título
+ */
+function getIconForFeature(title: string, index: number): string {
+  const titleLower = (title || '').toLowerCase();
+  
+  // Mapeo de palabras clave a iconos
+  const iconMap: Record<string, string> = {
+    'fast': 'zap',
+    'quick': 'zap',
+    'speed': 'zap',
+    'secure': 'shield',
+    'security': 'shield',
+    'safe': 'shield',
+    'support': 'headphones',
+    'help': 'help-circle',
+    '24/7': 'clock',
+    'time': 'clock',
+    'easy': 'check-circle',
+    'simple': 'check-circle',
+    'document': 'file-text',
+    'form': 'file-text',
+    'email': 'mail',
+    'refund': 'refresh-cw',
+    'money': 'dollar-sign',
+    'price': 'dollar-sign',
+    'global': 'globe',
+    'world': 'globe',
+    'travel': 'plane',
+    'flight': 'plane',
+    'step': 'list',
+    'process': 'list',
+    'apply': 'file-plus',
+    'fill': 'edit',
+    'complete': 'check',
+    'submit': 'send',
+    'receive': 'inbox',
+    'download': 'download',
+    'print': 'printer',
+    'mobile': 'smartphone',
+    'phone': 'smartphone',
+  };
+  
+  for (const [keyword, icon] of Object.entries(iconMap)) {
+    if (titleLower.includes(keyword)) {
+      return icon;
+    }
+  }
+  
+  // Iconos por defecto según posición
+  const defaultIcons = ['star', 'zap', 'shield', 'check-circle', 'heart', 'award'];
+  return defaultIcons[index % defaultIcons.length];
 }
 
 /**
@@ -350,6 +588,8 @@ function mapHeroVariant(variant?: string): string {
     'video': 'video',
     'gradient': 'gradient',
     'full-image': 'centered',
+    'horizontal': 'split-left',
+    'horizontal-nav': 'centered',
   };
   return variantMap[variant?.toLowerCase() || ''] || 'centered';
 }
@@ -366,6 +606,8 @@ function mapFeaturesVariant(variant?: string): string {
     'list': 'list',
     'icons': 'icons',
     'alternating': 'alternating',
+    'horizontal': 'grid',
+    'three-column': 'grid',
   };
   return variantMap[variant?.toLowerCase() || ''] || 'grid';
 }
@@ -395,7 +637,7 @@ function getDefaultSections(
       data: {
         title: content.hero?.title || scraped.title || 'Welcome',
         subtitle: content.hero?.subtitle || scraped.description || '',
-        primaryCTA: { text: 'Get Started', href: '#' },
+        primaryCTA: content.hero?.primaryCTA || { text: 'Get Started', href: '#' },
         variant: 'centered',
       },
     },

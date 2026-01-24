@@ -11,7 +11,8 @@ export interface CloneIntent {
 
 // Patrones que indican intención de clonar
 const CLONE_PATTERNS = [
-  // Español
+  // Español - Patrones directos
+  /(?:hazme|haz)\s+(?:un\s+)?clon(?:a)?(?:me)?\s+(?:de\s+)?(?:la\s+|esta\s+)?(?:web|landing|página|pagina|sitio)?/i,
   /(?:créa|crea|hazme|genera|diseña|construye|haz)(?:me)?\s+(?:una\s+)?(?:web|landing|página|pagina|sitio)\s+(?:como|igual\s+(?:a|que)|parecida?\s+a|similar\s+a|basada?\s+en)/i,
   /(?:clona|copia|replica|imita|duplica)(?:me)?\s+(?:esta\s+)?(?:web|landing|página|pagina|sitio|diseño)?/i,
   /(?:quiero|necesito|me\s+gustaría|quisiera)\s+(?:una\s+)?(?:web|landing|página|pagina)\s+(?:como|igual\s+(?:a|que)|parecida?\s+a)/i,
@@ -19,6 +20,13 @@ const CLONE_PATTERNS = [
   /(?:copia|replica|clona)\s+(?:el\s+)?(?:diseño|estilo|layout)\s+(?:de\s+)?/i,
   /(?:hazlo|hazla|creala|crealo)\s+(?:igual|como)\s+(?:esta|este|a\s+esta)/i,
   /(?:web|landing|página)\s+(?:como|igual\s+a)\s+(?:esta|este)/i,
+  
+  // Español - Patrones adicionales
+  /clon(?:a|ar)?\s+(?:de\s+)?(?:la\s+)?(?:web|página|landing)/i,
+  /(?:hazme|haz|crea|genera)\s+(?:una?\s+)?(?:copia|clon|réplica)/i,
+  /(?:igual|idéntica?|exacta?)\s+(?:a|que)\s+(?:esta|esa)\s+(?:web|página|landing)/i,
+  /(?:basándote|basandote|basado)\s+en\s+(?:esta|esa)\s+(?:web|página|url)/i,
+  /(?:clonar|copiar|replicar)\s+(?:esta|esa|la)\s+(?:web|página|landing)/i,
   
   // Inglés
   /(?:create|make|build|design|generate)\s+(?:me\s+)?(?:a\s+)?(?:web(?:site)?|landing(?:\s+page)?|page|site)\s+(?:like|similar\s+to|based\s+on)/i,
@@ -28,6 +36,18 @@ const CLONE_PATTERNS = [
   /(?:copy|replicate|clone)\s+(?:the\s+)?(?:design|style|layout)\s+(?:of|from)/i,
   /(?:make\s+it|create\s+it)\s+(?:like|similar\s+to)\s+(?:this|that)/i,
   /website\s+like/i,
+  /clone\s+(?:this\s+)?(?:web|page|site|url)/i,
+];
+
+// Palabras clave simples que junto con una URL indican clonación
+const SIMPLE_CLONE_KEYWORDS = [
+  'clon', 'clona', 'clonar', 'clone',
+  'copia', 'copiar', 'copy',
+  'replica', 'replicar', 'replicate',
+  'igual', 'idéntica', 'identica', 'exacta',
+  'como esta', 'like this', 'similar',
+  'basándote', 'basandote', 'based on',
+  'igual que', 'igual a', 'like',
 ];
 
 // Patrones para extraer URLs
@@ -44,20 +64,7 @@ const URL_PATTERNS = [
 export function detectCloneIntent(message: string): CloneIntent {
   const normalizedMessage = message.toLowerCase().trim();
   
-  // Buscar patrones de clonación
-  let matchedPatterns = 0;
-  for (const pattern of CLONE_PATTERNS) {
-    if (pattern.test(normalizedMessage)) {
-      matchedPatterns++;
-    }
-  }
-  
-  // Si no hay patrones de clonación, no es una solicitud de clonar
-  if (matchedPatterns === 0) {
-    return { isCloneRequest: false, url: null, confidence: 0 };
-  }
-  
-  // Buscar URL en el mensaje
+  // Primero buscar URL
   let url: string | null = null;
   for (const pattern of URL_PATTERNS) {
     const matches = message.match(pattern);
@@ -71,26 +78,43 @@ export function detectCloneIntent(message: string): CloneIntent {
     }
   }
   
-  // Calcular confianza
-  let confidence = 0;
-  if (matchedPatterns >= 2) {
-    confidence = 0.95;
-  } else if (matchedPatterns === 1) {
-    confidence = url ? 0.9 : 0.7;
-  }
-  
-  // Si hay URL pero no patrones claros, podría ser una referencia
-  if (url && matchedPatterns === 0) {
-    // Buscar palabras clave simples cerca de la URL
-    const simpleKeywords = /(?:como|like|igual|similar|clon|copy|replica)/i;
-    if (simpleKeywords.test(normalizedMessage)) {
-      confidence = 0.6;
-      return { isCloneRequest: true, url, confidence };
+  // Buscar patrones de clonación
+  let matchedPatterns = 0;
+  for (const pattern of CLONE_PATTERNS) {
+    if (pattern.test(normalizedMessage)) {
+      matchedPatterns++;
     }
   }
   
+  // Si hay URL, buscar palabras clave simples
+  let hasSimpleKeyword = false;
+  if (url) {
+    for (const keyword of SIMPLE_CLONE_KEYWORDS) {
+      if (normalizedMessage.includes(keyword.toLowerCase())) {
+        hasSimpleKeyword = true;
+        break;
+      }
+    }
+  }
+  
+  // Calcular confianza
+  let confidence = 0;
+  let isCloneRequest = false;
+  
+  if (matchedPatterns >= 2) {
+    confidence = 0.95;
+    isCloneRequest = true;
+  } else if (matchedPatterns === 1) {
+    confidence = url ? 0.9 : 0.7;
+    isCloneRequest = true;
+  } else if (url && hasSimpleKeyword) {
+    // URL + palabra clave simple = probable clonación
+    confidence = 0.85;
+    isCloneRequest = true;
+  }
+  
   return {
-    isCloneRequest: matchedPatterns > 0,
+    isCloneRequest,
     url,
     confidence,
   };

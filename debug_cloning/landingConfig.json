@@ -1,0 +1,294 @@
+{
+  "id": "cloned-1769241739533",
+  "name": "Thailand TDAC Digital Arrival Card 2025",
+  "sections": [
+    {
+      "id": "section-1",
+      "order": 0,
+      "type": "header",
+      "data": {
+        "logo": "/images/logo.png",
+        "navItems": [
+          {
+            "text": "Apply For Thailand Digital Arrival Card",
+            "href": "/application"
+          }
+        ],
+        "variant": "centered"
+      }
+    },
+    {
+      "id": "section-2",
+      "order": 1,
+      "type": "hero",
+      "data": {
+        "title": "Thailand Digital Arrival Card",
+        "subtitle": "The Thailand Digital Arrival Card (TDAC) is an optional online form that",
+        "primaryCTA": {
+          "text": "Apply Now",
+          "href": "#"
+        },
+        "secondaryCTA": {
+          "text": "Learn More",
+          "href": "#"
+        },
+        "image": "https://thailandarrivalcardtourist.com/images/banner.jpg",
+        "variant": "split-left",
+        "backgroundColor": "#ffffff",
+        "accentColor": "#DC2626"
+      }
+    },
+    {
+      "id": "section-3",
+      "order": 2,
+      "type": "features",
+      "data": {
+        "title": "Why Choose Our DTV Visa Service?",
+        "subtitle": "What we offer",
+        "items": [
+          {
+            "title": "Feature 1",
+            "description": "Description 1",
+            "icon": "star"
+          },
+          {
+            "title": "Feature 2",
+            "description": "Description 2",
+            "icon": "zap"
+          },
+          {
+            "title": "Feature 3",
+            "description": "Description 3",
+            "icon": "shield"
+          }
+        ],
+        "variant": "grid",
+        "columns": 3
+      }
+    },
+    {
+      "id": "section-4",
+      "order": 3,
+      "type": "features",
+      "data": {
+        "title": "How It Works",
+        "subtitle": "Simple 3-step process to get your Thailand DTV visa",
+        "items": [
+          {
+            "title": "Feature 1",
+            "description": "Description 1",
+            "icon": "star"
+          },
+          {
+            "title": "Feature 2",
+            "description": "Description 2",
+            "icon": "zap"
+          },
+          {
+            "title": "Feature 3",
+            "description": "Description 3",
+            "icon": "shield"
+          }
+        ],
+        "variant": "grid",
+        "columns": 3
+      }
+    },
+    {
+      "id": "section-5",
+      "order": 4,
+      "type": "pricing",
+      "data": {
+        "title": "Choose Your Package",
+        "subtitle": "Choose your plan",
+        "plans": [
+          {
+            "name": "Basic",
+            "price": "$9",
+            "period": "/month",
+            "features": [
+              "Feature 1"
+            ],
+            "highlighted": false
+          },
+          {
+            "name": "Pro",
+            "price": "$29",
+            "period": "/month",
+            "features": [
+              "Feature 1",
+              "Feature 2"
+            ],
+            "highlighted": true
+          }
+        ],
+        "variant": "centered"
+      }
+    },
+    {
+      "id": "section-6",
+      "order": 5,
+      "type": "cta",
+      "data": {
+        "title": "Ready to Start Your Digital Nomad Journey?",
+        "subtitle": "Join thousands of digital nomads who chose Thailand as their base",
+        "buttonText": "Apply for DTV Visa Now",
+        "variant": "centered",
+        "backgroundColor": "#DC2626"
+      }
+    },
+    {
+      "id": "section-7",
+      "order": 6,
+      "type": "footer",
+      "data": {
+        "logo": "/images/logo.png",
+        "columns": [
+          {
+            "title": "Resources",
+            "links": [
+              {
+                "text": "FAQs",
+                "href": "/#faqs"
+              },
+              {
+                "text": "Contact us",
+                "href": "/contact"
+              },
+              {
+                "text": "Official Form (FREE)",
+                "href": "https://www.thailand.go.th/"
+              },
+              {
+                "text": "+44 7458 164197",
+                "href": "tel:+447458164197"
+              },
+              {
+                "text": "contact@thailandarrivalcardtourist.com",
+                "href": "mailto:contact@thailandarrivalcardtourist.com"
+              },
+              {
+                "text": "Terms of Use",
+                "href": "/terms-of-use"
+              },
+              {
+                "text": "Privacy Policy",
+                "href": "/privacy-policy"
+              },
+              {
+                "text": "Cookie Policy",
+                "href": "/cookie-policy"
+              },
+              {
+                "text": "Refund Policy",
+                "href": "/refund-policy"
+              }
+            ]
+          },
+          {
+            "title": "Resources",
+            "links": [
+              {
+                "text": "FAQs",
+                "href": "/#faqs"
+              },
+              {
+                "text": "Contact us",
+                "href": "/contact"
+              },
+              {
+                "text": "Official Form (FREE)",
+                "href": "https://www.thailand.go.th/"
+              }
+            ]
+          },
+          {
+            "title": "Contact",
+            "links": [
+              {
+                "text": "+44 7458 164197",
+                "href": "tel:+447458164197"
+              },
+              {
+                "text": "contact@thailandarrivalcardtourist.com",
+                "href": "mailto:contact@thailandarrivalcardtourist.com"
+              }
+            ]
+          },
+          {
+            "title": "Company Information",
+            "links": []
+          }
+        ],
+        "copyright": "© 2024 thailandarrivalcardtourist.",
+        "variant": "centered"
+      }
+    },
+    {
+      "id": "section-faq",
+      "type": "faq",
+      "order": 7,
+      "data": {
+        "title": "Frequently Asked Questions",
+        "subtitle": "",
+        "items": [
+          {
+            "question": "What is the Thailand Digital Arrival Card (TDAC)?",
+            "answer": "The TDAC is Thailands optional digital arrival form, introduced in 2024.\n                        Travelers can complete it online before arrival for convenience, or complete\n                        a physical form at the airport.\n                        If completing online, it should be done within 72 hours before entering\n                        Thailand."
+          },
+          {
+            "question": "How much does it cost to apply here?",
+            "answer": "Our service fee ranges from $50 to $70, depending on the processing option you select. This covers application handling, error checking, and 24/7 support."
+          },
+          {
+            "question": "When should I complete the TDAC?",
+            "answer": "With our service, you can complete the application at any time before your trip. We will securely process your information and ensure that your TDAC confirmation is delivered to you exactly 3 days (72 hours) before your departure, as required by Thai Immigration."
+          },
+          {
+            "question": "Do children need a TDAC?",
+            "answer": "Yes. A TDAC is required for all travelers, including children and infants. Parents or guardians must complete the form on their behalf."
+          },
+          {
+            "question": "How do I receive my TDAC after applying?",
+            "answer": "Once your application is processed, you will receive the TDAC confirmation by email as a PDF document. You can either print it or show it on your mobile phone at immigration."
+          },
+          {
+            "question": "What if I make a mistake on the application?",
+            "answer": "Our team reviews your application for common errors. If corrections are needed, we will assist you to ensure the form is accepted smoothly."
+          },
+          {
+            "question": "Do I still need a visa if I complete the TDAC?",
+            "answer": "Yes. The TDAC is not a visa. Depending on your nationality, you may still need a valid visa to enter Thailand. Our service only covers the TDAC application."
+          },
+          {
+            "question": "Why should I apply through this website?",
+            "answer": "We provide a convenient, guided application process with English support, 24/7 assistance, error-checking, and reliable delivery of your TDAC confirmation by email."
+          }
+        ],
+        "variant": "accordion"
+      }
+    }
+  ],
+  "theme": {
+    "colors": {
+      "primary": "#DC2626",
+      "secondary": "#FFFFFF",
+      "accent": "#FEF2F2",
+      "background": "#FFFFFF",
+      "foreground": "#1F2937",
+      "muted": "#6B7280",
+      "border": "#e5e7eb"
+    },
+    "fonts": {
+      "heading": "Quicksand",
+      "body": "Quicksand"
+    },
+    "borderRadius": "8px",
+    "darkMode": false
+  },
+  "metadata": {
+    "sourceUrl": "https://thailandarrivalcardtourist.com/",
+    "clonedAt": "2026-01-24T08:02:19.533Z",
+    "originalTitle": "Thailand TDAC Digital Arrival Card 2025"
+  }
+}

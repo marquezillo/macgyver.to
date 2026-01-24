@@ -192,61 +192,59 @@ export async function scrapeWebsite(url: string): Promise<ScrapedWebsite> {
  * Extrae los estilos principales de la página
  */
 async function extractStyles(page: Page): Promise<ExtractedStyles> {
-  return await page.evaluate(() => {
-    const getComputedColor = (selector: string, property: string): string => {
-      const el = document.querySelector(selector);
-      if (!el) return '#000000';
-      return window.getComputedStyle(el).getPropertyValue(property) || '#000000';
-    };
-    
-    const rgbToHex = (rgb: string): string => {
-      const match = rgb.match(/\d+/g);
-      if (!match || match.length < 3) return rgb;
-      const r = parseInt(match[0]);
-      const g = parseInt(match[1]);
-      const b = parseInt(match[2]);
-      return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
-    };
-    
-    // Buscar colores en botones, links, headers
-    const primaryButton = document.querySelector('button, .btn, [class*="primary"], a[class*="btn"]');
-    const primaryBg = primaryButton ? window.getComputedStyle(primaryButton).backgroundColor : 'rgb(59, 130, 246)';
-    
-    const body = document.body;
-    const bodyStyles = window.getComputedStyle(body);
-    
-    const h1 = document.querySelector('h1');
-    const h1Styles = h1 ? window.getComputedStyle(h1) : null;
-    
-    return {
-      colors: {
-        primary: rgbToHex(primaryBg),
-        secondary: rgbToHex(bodyStyles.backgroundColor || 'rgb(255, 255, 255)'),
-        accent: rgbToHex(primaryBg),
-        background: rgbToHex(bodyStyles.backgroundColor || 'rgb(255, 255, 255)'),
-        foreground: rgbToHex(bodyStyles.color || 'rgb(0, 0, 0)'),
-        muted: '#6b7280',
-        border: '#e5e7eb',
-      },
-      typography: {
-        fontFamily: bodyStyles.fontFamily.split(',')[0].replace(/['"]/g, '') || 'Inter',
-        headingFamily: h1Styles?.fontFamily.split(',')[0].replace(/['"]/g, '') || 'Inter',
-        sizes: {
-          h1: h1Styles?.fontSize || '48px',
-          h2: '36px',
-          h3: '24px',
-          body: bodyStyles.fontSize || '16px',
+  // Usar una función inline sin arrow functions para evitar problemas con esbuild
+  const stylesData = await page.evaluate(`
+    (function() {
+      function rgbToHex(rgb) {
+        var match = rgb.match(/\\d+/g);
+        if (!match || match.length < 3) return rgb;
+        var r = parseInt(match[0]);
+        var g = parseInt(match[1]);
+        var b = parseInt(match[2]);
+        return '#' + [r, g, b].map(function(x) { return x.toString(16).padStart(2, '0'); }).join('');
+      }
+      
+      var primaryButton = document.querySelector('button, .btn, [class*="primary"], a[class*="btn"]');
+      var primaryBg = primaryButton ? window.getComputedStyle(primaryButton).backgroundColor : 'rgb(59, 130, 246)';
+      
+      var body = document.body;
+      var bodyStyles = window.getComputedStyle(body);
+      
+      var h1 = document.querySelector('h1');
+      var h1Styles = h1 ? window.getComputedStyle(h1) : null;
+      
+      return {
+        colors: {
+          primary: rgbToHex(primaryBg),
+          secondary: rgbToHex(bodyStyles.backgroundColor || 'rgb(255, 255, 255)'),
+          accent: rgbToHex(primaryBg),
+          background: rgbToHex(bodyStyles.backgroundColor || 'rgb(255, 255, 255)'),
+          foreground: rgbToHex(bodyStyles.color || 'rgb(0, 0, 0)'),
+          muted: '#6b7280',
+          border: '#e5e7eb'
         },
-      },
-      spacing: {
-        sectionPadding: '80px',
-        containerMaxWidth: '1280px',
-      },
-      borders: {
-        radius: '8px',
-      },
-    };
-  });
+        typography: {
+          fontFamily: bodyStyles.fontFamily.split(',')[0].replace(/['"]/g, '') || 'Inter',
+          headingFamily: h1Styles ? h1Styles.fontFamily.split(',')[0].replace(/['"]/g, '') : 'Inter',
+          sizes: {
+            h1: h1Styles ? h1Styles.fontSize : '48px',
+            h2: '36px',
+            h3: '24px',
+            body: bodyStyles.fontSize || '16px'
+          }
+        },
+        spacing: {
+          sectionPadding: '80px',
+          containerMaxWidth: '1280px'
+        },
+        borders: {
+          radius: '8px'
+        }
+      };
+    })()
+  `);
+  
+  return stylesData as ExtractedStyles;
 }
 
 /**
@@ -327,10 +325,12 @@ async function extractContent(page: Page, html: string): Promise<ExtractedConten
   
   // Extraer FAQ
   const faq: ExtractedContent['faq'] = [];
-  $('[class*="faq"], [class*="accordion"], details').each((_, el) => {
-    const question = $(el).find('h3, h4, summary, [class*="question"]').first().text().trim();
-    const answer = $(el).find('p, [class*="answer"]').first().text().trim();
-    if (question && answer) {
+  $('[class*="faq"], [class*="accordion"], details, summary').each((_, el) => {
+    const question = $(el).find('h3, h4, summary, [class*="question"]').first().text().trim() ||
+                     $(el).is('summary') ? $(el).text().trim() : '';
+    const answer = $(el).find('p, [class*="answer"]').first().text().trim() ||
+                   $(el).next('div, p').text().trim();
+    if (question && answer && question.length > 5) {
       faq.push({ question, answer });
     }
   });
