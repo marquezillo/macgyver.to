@@ -17,6 +17,7 @@ import AdminUsers from "./pages/admin/Users";
 import AdminChats from "./pages/admin/Chats";
 import AdminProjects from "./pages/admin/Projects";
 import MyLandings from "./pages/MyLandings";
+import EditLanding from "./pages/EditLanding";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
@@ -94,6 +95,9 @@ function Router() {
       </Route>
       <Route path="/my-landings">
         <ProtectedRoute component={MyLandings} />
+      </Route>
+      <Route path="/edit/:id">
+        <ProtectedRoute component={EditLanding} />
       </Route>
       
       {/* Admin routes */}

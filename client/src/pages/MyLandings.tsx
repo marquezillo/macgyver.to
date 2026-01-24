@@ -33,13 +33,15 @@ import {
   BarChart3,
   Plus,
   Loader2,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Pencil
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 
 export default function MyLandings() {
+  const [, setLocation] = useLocation();
   const [deleteId, setDeleteId] = useState<number | null>(null);
   
   // Fetch user's published landings
@@ -218,6 +220,16 @@ export default function MyLandings() {
                         Ver
                       </a>
                     </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setLocation(`/edit/${landing.id}`)}
+                      className="gap-1"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Editar
+                    </Button>
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -235,6 +247,10 @@ export default function MyLandings() {
                         <DropdownMenuItem onClick={() => copyUrl(landing.url)}>
                           <Copy className="h-4 w-4 mr-2" />
                           Copiar URL
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setLocation(`/edit/${landing.id}`)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Editar landing
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
