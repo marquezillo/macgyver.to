@@ -109,18 +109,25 @@ export function detectLanguage(message: string): LanguageDetectionResult {
 export function generateLanguageInstructions(detection: LanguageDetectionResult): string {
   if (detection.language === 'es') {
     return `
-IMPORTANT LANGUAGE INSTRUCTIONS:
-The user is writing in SPANISH. You MUST generate ALL content in Spanish:
-- All section titles and headings in Spanish
-- All body text and descriptions in Spanish
-- All button labels and CTAs in Spanish (e.g., "Comenzar", "Contáctanos", "Ver más")
-- All form labels in Spanish (e.g., "Nombre", "Correo electrónico", "Teléfono")
-- All placeholder text in Spanish
-- All testimonial quotes in Spanish
-- All FAQ questions and answers in Spanish
-- All pricing labels in Spanish (e.g., "Mensual", "Anual", "Más popular")
+## ⚠️ INSTRUCCIONES CRÍTICAS DE IDIOMA - ESPAÑOL ⚠️
 
-DO NOT mix languages. The entire landing page must be in Spanish.
+**EL USUARIO ESCRIBE EN ESPAÑOL. DEBES GENERAR TODO EL CONTENIDO EN ESPAÑOL.**
+
+Esto es OBLIGATORIO y tiene MÁXIMA PRIORIDAD:
+
+✅ Títulos en español: "Sushi Japonés Auténtico" (NO "Authentic Japanese Sushi")
+✅ Botones en español: "Reserva tu Mesa" (NO "Reserve Your Table")
+✅ CTAs en español: "Comenzar", "Contáctanos", "Ver más", "Saber más"
+✅ Formularios en español: "Nombre", "Correo electrónico", "Teléfono", "Mensaje"
+✅ Testimonios en español: "La mejor experiencia..." (NO "The best experience...")
+✅ FAQs en español: "¿Ofrecen opciones vegetarianas?" (NO "Do you offer...")
+✅ Precios en español: "Mensual", "Anual", "Más popular", "/mes"
+✅ Footer en español: "Todos los derechos reservados" (NO "All rights reserved")
+
+❌ PROHIBIDO usar inglés en cualquier parte del contenido.
+❌ PROHIBIDO mezclar idiomas.
+
+TODA la landing page DEBE estar 100% en ESPAÑOL.
 `;
   } else {
     return `

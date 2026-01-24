@@ -743,3 +743,10 @@
 - [x] Eliminar línea roja del texto (desactivar FloatingElements por defecto)
 - [x] Corregir contraste en CTA/Footer (ya corregido)
 - [x] Sincronizar TODOS los archivos con producción
+
+
+## Corrección de Idioma y Colores (24-01-2026) - COMPLETADO
+- [x] Reforzar instrucciones de idioma en systemPrompt.ts (INICIO del prompt)
+- [x] Reforzar instrucciones de idioma en languageDetector.ts (más específicas)
+- [x] Verificar funcionamiento en producción (Café del Sol - 100% español)
+- [x] Verificar detección de colores (verdes y marrones aplicados correctamente)

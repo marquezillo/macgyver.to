@@ -194,7 +194,7 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
                 {column.title}
               </h4>
               <ul className="space-y-2">
-                {column.links.map((link: FooterLink, linkIndex: number) => (
+                {(column.links || []).map((link: FooterLink, linkIndex: number) => (
                   <li key={linkIndex}>
                     <a
                       href={link.href}
