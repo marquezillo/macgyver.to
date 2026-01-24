@@ -897,3 +897,12 @@
 - [x] Solicitar certificado wildcard para *.macgyver.to (expira 24-04-2026)
 - [x] Configurar Nginx para usar el certificado (HTTPS habilitado)
 - [x] Configurar renovación automática (certbot auto-renewal)subdominios
+
+
+## FASE 5: UI de Publicación de Landings (24-01-2026)
+- [x] Crear endpoints tRPC para publicación (publish, myLandings, stats, update, delete, checkSlug, getMySubdomain)
+- [x] Implementar botón "Publicar" en el editor con modal de confirmación (PublishModal.tsx)
+- [x] Crear página "Mis Landings" con lista y estadísticas de visitas (MyLandings.tsx)
+- [x] Añadir vista previa de URL/subdominio antes de publicar (en PublishModal)
+- [x] Integrar navegación a "Mis Landings" en el sidebar
+- [ ] Sincronizar con producción

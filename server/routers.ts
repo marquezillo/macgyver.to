@@ -63,11 +63,20 @@ import {
   adminDeleteUser,
   getAllChats,
   getAllProjects,
+  // Published landings functions
+  createPublishedLanding,
+  updatePublishedLanding,
+  getPublishedLandingsByUserId,
+  getPublishedLandingById,
+  deletePublishedLanding,
+  isSlugAvailable,
+  getPublishedLandingStats,
 } from "./db";
 import { SignJWT, jwtVerify } from 'jose';
 import { generateProject, generateProjectWithAI } from "./projectGenerator";
 import { deployProject, stopProject, getProjectStatus } from "./projectDeployment";
 import { startDevServer, stopDevServer, getDevServerStatus, getDevServerLogs, refreshProjectFiles, listRunningDevServers } from "./projectDevServer";
+import { generateUserSubdomain, generateProjectSlug, getProjectUrl } from "./subdomainMiddleware";
 
 // System prompt for the AI assistant
 const SYSTEM_PROMPT = `Eres un asistente de IA avanzado y versátil especializado en crear landing pages de alta conversión.
@@ -1354,6 +1363,202 @@ export const appRouter = router({
         }
         const result = await getAllProjects(input.page, input.limit);
         return result;
+      }),
+  }),
+
+  // Published Landings Router
+  publishedLandings: router({
+    // Publicar una landing
+    publish: protectedProcedure
+      .input(z.object({
+        name: z.string().min(1).max(100),
+        slug: z.string().min(1).max(100).optional(),
+        description: z.string().optional(),
+        config: z.any(), // LandingConfig JSON
+        pages: z.array(z.any()).optional(), // Additional pages
+        theme: z.any().optional(),
+        seoMetadata: z.any().optional(),
+        favicon: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const userId = ctx.user.id;
+        const subdomain = generateUserSubdomain(userId);
+        
+        // Generar slug si no se proporciona
+        const baseSlug = input.slug || input.name
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .substring(0, 50);
+        
+        // Verificar disponibilidad del slug
+        let finalSlug = baseSlug;
+        let counter = 1;
+        while (!(await isSlugAvailable(subdomain, finalSlug))) {
+          finalSlug = `${baseSlug}-${counter}`;
+          counter++;
+        }
+        
+        const landing = await createPublishedLanding({
+          userId,
+          subdomain,
+          slug: finalSlug,
+          name: input.name,
+          description: input.description,
+          config: input.config,
+          pages: input.pages || [],
+          theme: input.theme || {},
+          seoMetadata: input.seoMetadata,
+          favicon: input.favicon,
+        });
+        
+        const url = getProjectUrl(subdomain, finalSlug);
+        
+        return {
+          success: true,
+          landing,
+          url,
+          subdomain,
+          slug: finalSlug,
+        };
+      }),
+
+    // Obtener mis landings publicadas
+    myLandings: protectedProcedure
+      .query(async ({ ctx }) => {
+        const landings = await getPublishedLandingsByUserId(ctx.user.id);
+        
+        // Añadir URLs a cada landing
+        const landingsWithUrls = landings.map(landing => ({
+          ...landing,
+          url: getProjectUrl(landing.subdomain, landing.slug),
+        }));
+        
+        return landingsWithUrls;
+      }),
+
+    // Obtener una landing por ID
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const landing = await getPublishedLandingById(input.id);
+        
+        if (!landing) {
+          throw new Error('Landing no encontrada');
+        }
+        
+        // Verificar que pertenece al usuario
+        if (landing.userId !== ctx.user.id && ctx.user.role !== 'admin') {
+          throw new Error('No tienes permiso para ver esta landing');
+        }
+        
+        return {
+          ...landing,
+          url: getProjectUrl(landing.subdomain, landing.slug),
+        };
+      }),
+
+    // Actualizar una landing
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).max(100).optional(),
+        config: z.any().optional(),
+        pages: z.array(z.any()).optional(),
+        theme: z.object({
+          primaryColor: z.string().optional(),
+          secondaryColor: z.string().optional(),
+          fontFamily: z.string().optional(),
+          darkMode: z.boolean().optional(),
+        }).optional(),
+        seoTitle: z.string().optional(),
+        seoDescription: z.string().optional(),
+        seoKeywords: z.string().optional(),
+        ogImage: z.string().optional(),
+        favicon: z.string().optional(),
+        isPublic: z.boolean().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const landing = await getPublishedLandingById(input.id);
+        
+        if (!landing) {
+          throw new Error('Landing no encontrada');
+        }
+        
+        if (landing.userId !== ctx.user.id && ctx.user.role !== 'admin') {
+          throw new Error('No tienes permiso para editar esta landing');
+        }
+        
+        const { id, ...updateData } = input;
+        await updatePublishedLanding(id, ctx.user.id, updateData);
+        
+        return { success: true };
+      }),
+
+    // Eliminar una landing
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const landing = await getPublishedLandingById(input.id);
+        
+        if (!landing) {
+          throw new Error('Landing no encontrada');
+        }
+        
+        if (landing.userId !== ctx.user.id && ctx.user.role !== 'admin') {
+          throw new Error('No tienes permiso para eliminar esta landing');
+        }
+        
+        await deletePublishedLanding(input.id, ctx.user.id);
+        
+        return { success: true };
+      }),
+
+    // Verificar disponibilidad de slug
+    checkSlug: protectedProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const subdomain = generateUserSubdomain(ctx.user.id);
+        const available = await isSlugAvailable(subdomain, input.slug);
+        const previewUrl = getProjectUrl(subdomain, input.slug);
+        
+        return {
+          available,
+          subdomain,
+          slug: input.slug,
+          previewUrl,
+        };
+      }),
+
+    // Obtener estadísticas de una landing
+    stats: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const landing = await getPublishedLandingById(input.id);
+        
+        if (!landing) {
+          throw new Error('Landing no encontrada');
+        }
+        
+        if (landing.userId !== ctx.user.id && ctx.user.role !== 'admin') {
+          throw new Error('No tienes permiso para ver estas estadísticas');
+        }
+        
+        const stats = await getPublishedLandingStats(input.id);
+        
+        return stats;
+      }),
+
+    // Obtener mi subdominio
+    getMySubdomain: protectedProcedure
+      .query(async ({ ctx }) => {
+        const subdomain = generateUserSubdomain(ctx.user.id);
+        return {
+          subdomain,
+          baseUrl: `https://${subdomain}.macgyver.to`,
+        };
       }),
   }),
 });

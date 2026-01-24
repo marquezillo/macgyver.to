@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Plus, Settings, PanelLeftClose, Loader2, Trash2, Pencil, Check, X, Search,
-  Star, Folder, FolderPlus, ChevronRight, ChevronDown, MoreHorizontal, Moon, Sun, Download, Brain, Boxes
+  Star, Folder, FolderPlus, ChevronRight, ChevronDown, MoreHorizontal, Moon, Sun, Download, Brain, Boxes, Globe
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { cn } from '@/lib/utils';
@@ -638,6 +638,17 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
 
       {/* Footer: User Profile */}
       <div className="p-3 border-t border-gray-200 dark:border-gray-700 mt-auto space-y-2">
+        {/* My Landings - always visible */}
+        <Link href="/my-landings">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 px-2 h-9 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
+          >
+            <Globe className="w-4 h-4 text-blue-500" />
+            <span className="text-sm text-gray-600 dark:text-gray-300">Mis Landings</span>
+          </Button>
+        </Link>
+
         {/* Projects - always visible */}
         <Link href="/projects">
           <Button
