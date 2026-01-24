@@ -13,6 +13,8 @@ import { generateContextualImages } from "./contextualImageGenerator";
 import { detectIndustry, enrichPromptWithIndustry, applyIndustryPattern, getImageQueriesForIndustry } from "./industryDetector";
 import { detectUserColors, generateColorInstructions } from "./userColorDetector";
 import { detectLanguage, generateLanguageInstructions } from "./languageDetector";
+import { processMessageForCloning } from "./webClonerOrchestrator";
+import { detectCloneIntent, generateCloneInstructions } from "./cloneIntentDetector";
 import {
   createChat,
   getChatsByUserId,
@@ -397,6 +399,57 @@ export const appRouter = router({
           // Detectar industria del usuario para enriquecer el prompt
           const lastUserMessage = input.messages.filter(m => m.role === 'user').pop();
           const userMessageContent = lastUserMessage?.content || '';
+          
+          // PRIMERO: Detectar si el usuario quiere clonar una web
+          const cloneIntent = detectCloneIntent(userMessageContent);
+          if (cloneIntent.isCloneRequest && cloneIntent.url) {
+            console.log(`[WebCloner] Detectada intención de clonar: ${cloneIntent.url} (confianza: ${cloneIntent.confidence})`);
+            
+            try {
+              // Ejecutar clonación
+              const cloneResult = await processMessageForCloning(userMessageContent);
+              
+              if (cloneResult.shouldClone && cloneResult.cloneResult?.success && cloneResult.cloneResult.landingConfig) {
+                console.log(`[WebCloner] Clonación exitosa: ${cloneResult.cloneResult.analysisDetails?.sectionsDetected} secciones detectadas`);
+                
+                // Convertir la configuración clonada al formato de respuesta del chat
+                const landingConfig = cloneResult.cloneResult.landingConfig;
+                const sections = landingConfig.sections.map(s => ({
+                  id: s.id,
+                  type: s.type,
+                  content: s.data,
+                }));
+                
+                // Generar imágenes contextuales para las secciones clonadas
+                const businessType = landingConfig.metadata?.originalTitle || 'business';
+                const landingDataForImages = {
+                  type: 'landing',
+                  businessType,
+                  businessName: landingConfig.name,
+                  sections,
+                };
+                const { data: landingWithImages } = await generateContextualImages(landingDataForImages, { useAI: true, maxImages: 10 });
+                const sectionsWithImages = landingWithImages.sections;
+                
+                return {
+                  success: true,
+                  response: `He clonado la web ${cloneIntent.url} exitosamente. He detectado ${cloneResult.cloneResult.analysisDetails?.sectionsDetected || 0} secciones y extraído los colores y estilos principales.`,
+                  isLanding: true,
+                  landingData: {
+                    type: 'landing',
+                    businessType,
+                    businessName: landingConfig.name,
+                    sections: sectionsWithImages,
+                    theme: landingConfig.theme,
+                    clonedFrom: cloneIntent.url,
+                  },
+                };
+              }
+            } catch (cloneError) {
+              console.error('[WebCloner] Error en clonación:', cloneError);
+              // Si falla la clonación, continuar con el flujo normal pero añadir instrucciones
+            }
+          }
           
           // Detectar industria y enriquecer el system prompt
           const industryDetection = detectIndustry(userMessageContent);

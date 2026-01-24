@@ -771,3 +771,51 @@
 ### Sincronización
 - [x] Sincronizar con servidor de producción
 - [x] Verificar funcionamiento en producción (110 tests pasando)
+
+
+## Sistema de Clonación de Webs (24-01-2026)
+
+### Investigación
+- [ ] Investigar técnicas de web scraping para extraer estructura HTML
+- [ ] Investigar extracción de estilos CSS (inline, externos, computed)
+- [ ] Investigar captura de imágenes y assets
+- [ ] Investigar detección de fuentes tipográficas
+- [ ] Investigar extracción de colores y paleta
+
+### Documentación
+- [ ] Documentar arquitectura completa del sistema de clonación
+- [ ] Listar todos los componentes necesarios
+- [ ] Definir flujo de trabajo completo
+- [ ] Identificar limitaciones y soluciones
+
+
+## Implementación Sistema de Clonación (24-01-2026)
+
+### Fase 1: Web Scraper
+- [x] Instalar playwright como dependencia del proyecto
+- [x] Crear server/webCloner.ts con funciones de scraping
+- [x] Implementar captura de screenshot full-page
+- [x] Implementar extracción de HTML renderizado
+- [x] Implementar extracción de estilos CSS
+
+### Fase 2: Analizador Visual
+- [x] Crear server/visualAnalyzer.ts
+- [x] Implementar análisis con GPT-4 Vision
+- [x] Detectar secciones, colores, tipografías
+
+### Fase 3: Extractores (integrados en webCloner.ts)
+- [x] Extractor de estilos (extractStyles)
+- [x] Extractor de contenido (extractContent)
+- [x] Extractor de assets (extractAssets)
+
+### Fase 4: Mapeador y Generador (integrados en webClonerOrchestrator.ts)
+- [x] Mapeador de componentes (mapSectionToConfig)
+- [x] Generador de configuración (generateLandingConfig)
+
+### Fase 5: Integración
+- [x] Crear cloneIntentDetector.ts para detectar intención en chat
+- [x] Crear webClonerOrchestrator.ts para orquestar el proceso
+- [x] Integrar en routers.ts (ai.chat mutation)
+- [x] Tests pasando (123 tests)
+- [x] Sincronizado con producción (macgyver.to)
+- [ ] Probar con web real
