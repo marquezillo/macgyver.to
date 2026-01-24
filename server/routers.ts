@@ -219,6 +219,65 @@ IMPORTANTE SOBRE IMÁGENES:
 - form: Formulario de contacto
 - footer: Pie de página
 
+### PÁGINAS ADICIONALES:
+Cuando el usuario solicite páginas adicionales (términos, privacidad, contacto, sobre nosotros), incluye el campo "pages" en el JSON:
+
+\`\`\`json
+{
+  "type": "landing",
+  "businessName": "...",
+  "sections": [...],
+  "pages": [
+    {
+      "type": "terms",
+      "slug": "/terminos",
+      "title": "Términos y Condiciones",
+      "enabled": true,
+      "data": {}
+    },
+    {
+      "type": "privacy",
+      "slug": "/privacidad",
+      "title": "Política de Privacidad",
+      "enabled": true,
+      "data": {}
+    },
+    {
+      "type": "about",
+      "slug": "/nosotros",
+      "title": "Sobre Nosotros",
+      "enabled": true,
+      "data": {
+        "story": "Historia de la empresa...",
+        "mission": "Nuestra misión...",
+        "vision": "Nuestra visión...",
+        "values": [
+          { "title": "Valor 1", "description": "Descripción", "icon": "⭐" }
+        ]
+      }
+    },
+    {
+      "type": "contact",
+      "slug": "/contacto",
+      "title": "Contacto",
+      "enabled": true,
+      "data": {
+        "businessHours": [
+          { "day": "Lunes - Viernes", "hours": "9:00 - 18:00" }
+        ]
+      }
+    }
+  ]
+}
+\`\`\`
+
+DETECCIÓN DE PÁGINAS:
+- Si el usuario dice "web completa", "con todas las páginas", "sitio completo": incluye terms, privacy, about, contact
+- Si menciona "términos", "legal", "condiciones": incluye terms
+- Si menciona "privacidad", "datos personales", "GDPR": incluye privacy
+- Si menciona "sobre nosotros", "quiénes somos", "historia": incluye about
+- Si menciona "contacto", "formulario": incluye contact
+
 ### PALETAS DE COLORES SUGERIDAS:
 - Tecnología: #4f46e5 (índigo), #1a1a2e (oscuro), #ffffff
 - Salud/Yoga: #10b981 (verde), #f0fdf4 (verde claro), #1f2937
@@ -1165,6 +1224,51 @@ export const appRouter = router({
       .mutation(({ input }) => {
         const result = applyTemplateToLanding(input.landingJSON, input.templateId);
         return result;
+      }),
+  }),
+
+  // Landing pages router (public access for viewing)
+  landing: router({
+    // Get landing by slug (public)
+    getBySlug: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        // TODO: Implement getLandingBySlug in db.ts
+        // For now, return null to indicate not found
+        // This will be implemented when we add the landing storage
+        return null;
+      }),
+
+    // Get landing by ID (protected)
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        // TODO: Implement getLandingById in db.ts
+        return null;
+      }),
+
+    // Save landing with pages
+    save: protectedProcedure
+      .input(z.object({
+        chatId: z.number(),
+        name: z.string(),
+        slug: z.string(),
+        sections: z.array(z.record(z.string(), z.unknown())),
+        pages: z.array(z.object({
+          type: z.string(),
+          slug: z.string(),
+          title: z.string(),
+          enabled: z.boolean(),
+          data: z.record(z.string(), z.unknown()),
+        })),
+        theme: z.record(z.string(), z.unknown()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
+        navigation: z.record(z.string(), z.unknown()).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // TODO: Implement saveLanding in db.ts
+        // For now, just return success
+        return { success: true, id: 0, slug: input.slug };
       }),
   }),
 

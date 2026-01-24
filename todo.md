@@ -852,3 +852,30 @@
 - [x] El avatar circular tiene un fondo cuadrado blanco visible
 - [x] Corregir el contenedor del avatar para que sea completamente circular (overflow-hidden + rounded-full)
 - [x] Sincronizar con producción
+
+
+## FASE 1: Páginas Internas en Landings (24-01-2026)
+- [x] Crear componente TermsPage (términos y condiciones)
+- [x] Crear componente PrivacyPage (política de privacidad)
+- [x] Crear componente AboutPage (sobre nosotros)
+- [x] Crear componente ContactPage (contacto con formulario)
+- [x] Crear tipos MultiPageLandingConfig en shared/landingTypes.ts
+- [x] Crear PageRenderer para renderizar páginas dinámicamente
+- [x] Actualizar LandingConfig para soportar múltiples páginas (shared/landingTypes.ts)
+- [x] Crear multiPageStore para gestionar proyectos multi-página
+- [x] Actualizar sistema de rutas para páginas internas (LandingPageViewer.tsx)
+- [x] Actualizar navegación para incluir links a páginas internas (HeaderSection.tsx)
+- [x] Añadir router landing en routers.ts
+- [x] Actualizar LLM para detectar solicitudes de páginas adicionales (SYSTEM_PROMPT)
+- [ ] Sincronizar con producción
+
+## FASE 2: Sistema de Subdominios (24-01-2026)
+- [x] Configurar DNS wildcard *.macgyver.to (ya configurado en Cloudflare)
+- [x] Crear configuración Nginx para subdominios wildcard (nginx/macgyver-wildcard.conf)
+- [x] Crear middleware de detección de subdominios en Express (subdomainMiddleware.ts)
+- [x] Funciones para generar subdominios únicos por usuario
+- [x] Funciones para generar slugs de proyectos
+- [x] Crear subdomainRouter.ts con endpoints de API
+- [x] Integrar router en servidor Express
+- [ ] Aplicar configuración Nginx en servidor
+- [ ] Sincronizar con producción

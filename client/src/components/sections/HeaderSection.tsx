@@ -81,19 +81,40 @@ export function HeaderSection({ id, content, styles = {} }: HeaderSectionProps) 
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            {navItems.map((item: any, index: number) => (
-              <a
-                key={index}
-                href={item.href}
-                className={cn(
-                  "text-sm font-medium transition-colors hover:opacity-80",
-                  isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"
-                )}
-                style={{ color: styles?.textColor }}
-              >
-                {item.label}
-              </a>
-            ))}
+            {navItems.map((item: any, index: number) => {
+              // Si es una página interna, usar Link de wouter
+              const isInternalPage = item.isPage || (item.href && item.href.startsWith('/') && !item.href.startsWith('/#'));
+              
+              if (isInternalPage) {
+                return (
+                  <a
+                    key={index}
+                    href={item.href}
+                    className={cn(
+                      "text-sm font-medium transition-colors hover:opacity-80",
+                      isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"
+                    )}
+                    style={{ color: styles?.textColor }}
+                  >
+                    {item.label}
+                  </a>
+                );
+              }
+              
+              return (
+                <a
+                  key={index}
+                  href={item.href}
+                  className={cn(
+                    "text-sm font-medium transition-colors hover:opacity-80",
+                    isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"
+                  )}
+                  style={{ color: styles?.textColor }}
+                >
+                  {item.label}
+                </a>
+              );
+            })}
           </nav>
 
           {/* CTA Button */}

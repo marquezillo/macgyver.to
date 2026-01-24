@@ -24,6 +24,8 @@ import { compareDocumentsStream } from "../documentComparison";
 import { summarizeVideoStream } from "../videoSummary";
 import { runAutonomousTaskStream, shouldUseAutonomousMode } from "../autonomousAgents";
 import { SYSTEM_PROMPT } from "../systemPrompt";
+import { subdomainMiddleware } from "../subdomainMiddleware";
+import subdomainRouter, { handleSubdomainRequest } from "../subdomainRouter";
 import multer from "multer";
 
 // Configure multer for file uploads
@@ -59,6 +61,16 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  
+  // Middleware para detectar subdominios
+  app.use(subdomainMiddleware);
+  
+  // Router para APIs de subdominios
+  app.use(subdomainRouter);
+  
+  // Handler para requests de subdominios (antes de otras rutas)
+  app.use(handleSubdomainRequest);
+  
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 
