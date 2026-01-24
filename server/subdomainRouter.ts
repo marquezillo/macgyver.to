@@ -229,16 +229,25 @@ function renderHeaderSection(content: any, styles: any): string {
   const logo = content.logo || { text: 'Logo' };
   const navItems = content.navItems || [];
   const cta = content.cta || {};
+  const backgroundColor = content.backgroundColor || styles?.headerBackgroundColor || 'white';
+  const textColor = content.textColor || styles?.headerTextColor || '';
+  const isTransparent = content.transparent || content.variant === 'transparent';
+  
+  // Determinar clases de estilo
+  const bgClass = isTransparent ? 'bg-transparent absolute w-full' : 'bg-white shadow-sm';
+  const textClass = isTransparent || backgroundColor !== 'white' ? 'text-white' : 'text-gray-600';
+  const hoverClass = isTransparent || backgroundColor !== 'white' ? 'hover:text-gray-200' : 'hover:text-gray-900';
+  const logoTextClass = isTransparent || backgroundColor !== 'white' ? 'text-white' : '';
   
   return `
-  <header class="bg-white shadow-sm sticky top-0 z-50">
+  <header class="${bgClass} sticky top-0 z-50" ${!isTransparent && backgroundColor !== 'white' ? `style="background-color: ${backgroundColor};"` : ''}>
     <div class="container mx-auto px-4 py-4 flex items-center justify-between">
       <div class="flex items-center gap-2">
         ${logo.image ? `<img src="${logo.image}" alt="${logo.text}" class="h-8">` : ''}
-        <span class="font-bold text-xl">${logo.text || ''}</span>
+        <span class="font-bold text-xl ${logoTextClass}">${logo.text || ''}</span>
       </div>
       <nav class="hidden md:flex items-center gap-6">
-        ${navItems.map((item: any) => `<a href="${item.href || '#'}" class="text-gray-600 hover:text-gray-900">${item.label}</a>`).join('')}
+        ${navItems.map((item: any) => `<a href="${item.href || '#'}" class="${textClass} ${hoverClass}">${item.label}</a>`).join('')}
       </nav>
       ${cta.text ? `<a href="${cta.href || '#'}" class="btn-primary text-white px-4 py-2 rounded-lg">${cta.text}</a>` : ''}
     </div>
@@ -248,19 +257,67 @@ function renderHeaderSection(content: any, styles: any): string {
 function renderHeroSection(content: any, styles: any, variant: string): string {
   const title = content.title || 'Welcome';
   const subtitle = content.subtitle || '';
-  const cta = content.cta || {};
-  const image = content.image || {};
+  const badge = content.badge || '';
+  const ctaText = content.ctaText || content.cta?.text || '';
+  const ctaLink = content.ctaLink || content.cta?.href || '#';
+  const secondaryCtaText = content.secondaryCtaText || '';
+  const secondaryCtaLink = content.secondaryCtaLink || '#';
+  const backgroundImage = content.backgroundImage || '';
+  const imageUrl = content.imageUrl || content.image?.src || '';
+  const stats = content.stats || [];
+  const heroVariant = variant || content.variant || 'centered';
   
+  // Determinar el estilo basado en la variante
+  if (heroVariant === 'centered' || heroVariant === 'gradient') {
+    return `
+    <section class="relative min-h-[80vh] flex items-center justify-center overflow-hidden" ${backgroundImage ? `style="background-image: url('${backgroundImage}'); background-size: cover; background-position: center;"` : ''}>
+      ${backgroundImage ? '<div class="absolute inset-0 bg-black/50"></div>' : ''}
+      <div class="container mx-auto px-4 relative z-10 text-center">
+        ${badge ? `<span class="inline-block px-4 py-1 bg-primary/20 text-primary rounded-full text-sm font-medium mb-4">${badge}</span>` : ''}
+        <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 ${backgroundImage ? 'text-white' : ''}">${title}</h1>
+        <p class="text-xl max-w-2xl mx-auto mb-8 ${backgroundImage ? 'text-gray-200' : 'text-gray-600'}">${subtitle}</p>
+        <div class="flex flex-wrap gap-4 justify-center">
+          ${ctaText ? `<a href="${ctaLink}" class="btn-primary text-white px-8 py-3 rounded-lg text-lg inline-block">${ctaText}</a>` : ''}
+          ${secondaryCtaText ? `<a href="${secondaryCtaLink}" class="bg-white/20 backdrop-blur-sm text-white px-8 py-3 rounded-lg text-lg inline-block border border-white/30 hover:bg-white/30">${secondaryCtaText}</a>` : ''}
+        </div>
+        ${stats.length > 0 ? `
+        <div class="flex flex-wrap gap-8 justify-center mt-12">
+          ${stats.map((s: any) => `
+            <div class="text-center">
+              <div class="text-3xl font-bold ${backgroundImage ? 'text-white' : ''}">${s.value}</div>
+              <div class="text-sm ${backgroundImage ? 'text-gray-300' : 'text-gray-500'}">${s.label}</div>
+            </div>
+          `).join('')}
+        </div>` : ''}
+      </div>
+    </section>`;
+  }
+  
+  // Variantes split-left y split-right
+  const isLeft = heroVariant === 'split-left';
   return `
   <section class="py-20 bg-gradient-to-br from-gray-50 to-white">
     <div class="container mx-auto px-4">
       <div class="grid md:grid-cols-2 gap-12 items-center">
-        <div>
+        <div class="${isLeft ? 'order-1' : 'order-2 md:order-1'}">
+          ${badge ? `<span class="inline-block px-4 py-1 bg-primary/20 text-primary rounded-full text-sm font-medium mb-4">${badge}</span>` : ''}
           <h1 class="text-4xl md:text-5xl font-bold mb-6">${title}</h1>
           <p class="text-xl text-gray-600 mb-8">${subtitle}</p>
-          ${cta.text ? `<a href="${cta.href || '#'}" class="btn-primary text-white px-8 py-3 rounded-lg text-lg inline-block">${cta.text}</a>` : ''}
+          <div class="flex flex-wrap gap-4">
+            ${ctaText ? `<a href="${ctaLink}" class="btn-primary text-white px-8 py-3 rounded-lg text-lg inline-block">${ctaText}</a>` : ''}
+            ${secondaryCtaText ? `<a href="${secondaryCtaLink}" class="bg-gray-100 text-gray-900 px-8 py-3 rounded-lg text-lg inline-block hover:bg-gray-200">${secondaryCtaText}</a>` : ''}
+          </div>
+          ${stats.length > 0 ? `
+          <div class="flex flex-wrap gap-8 mt-8">
+            ${stats.map((s: any) => `
+              <div>
+                <div class="text-2xl font-bold">${s.value}</div>
+                <div class="text-sm text-gray-500">${s.label}</div>
+              </div>
+            `).join('')}
+          </div>` : ''}
         </div>
-        ${image.src ? `<div><img src="${image.src}" alt="${image.alt || ''}" class="rounded-lg shadow-xl"></div>` : ''}
+        ${imageUrl ? `<div class="${isLeft ? 'order-2' : 'order-1 md:order-2'}"><img src="${imageUrl}" alt="${title}" class="rounded-lg shadow-xl w-full"></div>` : ''}
       </div>
     </div>
   </section>`;
@@ -293,28 +350,39 @@ function renderFeaturesSection(content: any, styles: any, variant: string): stri
 
 function renderTestimonialsSection(content: any, styles: any): string {
   const title = content.title || 'What our customers say';
-  const testimonials = content.testimonials || [];
+  const subtitle = content.subtitle || '';
+  // Soportar tanto 'testimonials' como 'items' como array de testimonios
+  const testimonials = content.testimonials || content.items || [];
   
   return `
   <section class="py-20 bg-gray-50">
     <div class="container mx-auto px-4">
-      <h2 class="text-3xl font-bold text-center mb-12">${title}</h2>
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-bold mb-4" style="color: #1f2937;">${title}</h2>
+        ${subtitle ? `<p class="text-lg max-w-2xl mx-auto" style="color: #6b7280;">${subtitle}</p>` : ''}
+      </div>
       <div class="grid md:grid-cols-3 gap-8">
-        ${testimonials.map((t: any) => `
+        ${testimonials.map((t: any) => {
+          // Soportar tanto 'text' como 'quote' para el contenido del testimonio
+          const testimonialText = t.text || t.quote || t.content || '';
+          // Soportar tanto 'avatar' como 'image' para la foto
+          const avatarUrl = t.avatar || t.image || '';
+          
+          return `
           <div class="bg-white p-6 rounded-xl shadow-sm">
             <div class="flex items-center gap-1 mb-4">
               ${Array(t.rating || 5).fill('⭐').join('')}
             </div>
-            <p class="text-gray-700 mb-4">"${t.quote || ''}"</p>
+            <p class="mb-4" style="color: #374151;">"${testimonialText}"</p>
             <div class="flex items-center gap-3">
-              ${t.avatar ? `<img src="${t.avatar}" alt="${t.name}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold">${(t.name || 'A')[0]}</div>`}
+              ${avatarUrl ? `<img src="${avatarUrl}" alt="${t.name}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold">${(t.name || 'A')[0]}</div>`}
               <div>
-                <p class="font-semibold text-gray-900">${t.name || 'Anonymous'}</p>
-                <p class="text-sm text-gray-500">${t.role || ''}</p>
+                <p class="font-semibold" style="color: #1f2937;">${t.name || 'Anonymous'}</p>
+                <p class="text-sm" style="color: #6b7280;">${t.role || t.company || ''}</p>
               </div>
             </div>
           </div>
-        `).join('')}
+        `}).join('')}
       </div>
     </div>
   </section>`;

@@ -906,3 +906,16 @@
 - [x] Añadir vista previa de URL/subdominio antes de publicar (en PublishModal)
 - [x] Integrar navegación a "Mis Landings" en el sidebar
 - [ ] Sincronizar con producción
+
+
+## Bug: Renderizado de Subdominios (24-01-2026)
+- [ ] Las landings publicadas no muestran fotos, colores ni estilos en el subdominio
+- [ ] El preview funciona correctamente pero el subdominio no
+- [ ] Revisar subdomainRouter.ts y corregir el renderizado HTML
+- [ ] Sincronizar con producción
+
+## Bug: Home sin scroll y menú oculto (24-01-2026)
+- [ ] No se puede scrollear en el Home
+- [ ] Las secciones del menú inferior no se ven
+- [ ] Mover secciones debajo de "Nuevo Chat"
+- [ ] Sincronizar con producción

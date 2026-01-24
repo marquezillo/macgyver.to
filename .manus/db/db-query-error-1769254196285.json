@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, subdomain, slug, JSON_EXTRACT(config, '$.sections') as sections FROM published_landings LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 34PJYedpVygExjM.e1ecfc4d4172 --database ZbHp7JpkjVz6yScGwQHTeE --execute SELECT id, subdomain, slug, JSON_EXTRACT(config, '$.sections') as sections FROM published_landings LIMIT 1;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table 'zbhp7jpkjvz6yscgwqhtee.published_landings' doesn't exist"
+  ]
+}
