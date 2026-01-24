@@ -718,3 +718,28 @@
 - [x] Sincronizado con servidor de producción (macgyver.to)
 - [ ] Probar en viewport 1024px (desktop)
 - [ ] Sincronizar con servidor de producción
+
+
+## Bugs Críticos de Visualización (24-01-2026) - URGENTE
+### Problemas Reportados
+- [ ] Título gris sobre fondo negro - ilegible (FeaturesSection)
+- [ ] Iconos genéricos (checkmarks) en lugar de iconos relevantes
+- [ ] Línea roja atravesando el texto
+- [ ] Testimonios rotos - sin fotos ni texto visible
+- [ ] Texto blanco sobre fondo blanco - ilegible
+- [ ] Imagen del Hero incorrecta (señor con traje y móvil en vez de chef)
+- [ ] Idioma incorrecto (inglés en vez de español)
+
+### Diagnóstico
+- [ ] Verificar qué archivos están en producción vs sandbox
+- [ ] Identificar por qué los cambios no se aplican
+
+### Correcciones
+- [x] Corregir contraste de colores en FeaturesSection
+- [x] Corregir contraste de colores en CTASection
+- [x] Corregir contraste de colores en FooterSection
+- [x] Implementar iconos dinámicos según industria (100+ iconos añadidos)
+- [x] Corregir TestimonialsSection (contraste de texto)
+- [x] Eliminar línea roja del texto (desactivar FloatingElements por defecto)
+- [x] Corregir contraste en CTA/Footer (ya corregido)
+- [x] Sincronizar TODOS los archivos con producción

@@ -240,6 +240,30 @@ Para una landing efectiva, incluye estas secciones en orden:
 }
 \`\`\`
 
+### ICONOS DISPONIBLES POR INDUSTRIA
+
+**IMPORTANTE**: Usa estos nombres de iconos en el campo "icon" de las features. NO uses emojis.
+
+| Industria | Iconos Disponibles |
+|-----------|--------------------|
+| Restaurantes | utensils, chef, coffee, wine, pizza, salad, soup, icecream, cake, cookie, food |
+| Viajes | plane, flight, map, location, compass, mountain, palm, beach, anchor, ship, boat, car, train, hotel, travel |
+| Salud/Bienestar | activity, fitness, gym, dumbbell, apple, healthy, leaf, nature, flower, sun, moon, water, wind, waves, spa, wellness |
+| Tecnología | laptop, computer, smartphone, phone, mobile, monitor, server, database, code, terminal, wifi, settings, wrench, tech, cpu, cloud |
+| Negocios | briefcase, business, building, office, card, creditcard, payment, dollar, money, receipt, invoice, document, file, mail, email, calendar, schedule |
+| Educación | graduation, education, school, book, library, idea, lightbulb, pen, pencil, write |
+| Creatividad | camera, photo, image, video, music, palette, art, brush, design |
+| Otros | home, house, key, security, gift, package, delivery, truck, shipping, cart, shop, shopping, crown, premium, diamond, gem, luxury |
+| Básicos | check, zap, shield, rocket, star, heart, globe, clock, award, sparkles, target, trending, users, chart, lock |
+
+**Ejemplo para restaurante de sushi:**
+
+items: [
+  { icon: "chef", title: "Master Sushi Chefs", description: "..." },
+  { icon: "utensils", title: "Fresh Daily Selection", description: "..." },
+  { icon: "star", title: "Premium Experience", description: "..." }
+]
+
 ### TIPOS DE SECCIÓN DISPONIBLES
 
 | Tipo | Descripción | Campos Clave |

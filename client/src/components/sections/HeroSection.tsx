@@ -239,13 +239,14 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
         />
       )}
       
-      {/* Floating decorative elements */}
-      {content?.showFloatingElements !== false && (
+      {/* Floating decorative elements - solo si se activa explícitamente */}
+      {content?.showFloatingElements === true && (
         <FloatingElements
           variant={content?.floatingElementsVariant || 'minimal'}
           accentColor={accentColor}
           opacity={hasValidBgImage ? 0.3 : 0.5}
           density="low"
+          className="z-0"
         />
       )}
       

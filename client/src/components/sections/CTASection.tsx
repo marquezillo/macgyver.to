@@ -20,11 +20,56 @@ interface CTASectionProps {
   };
 }
 
+// Función para determinar si un color es claro u oscuro
+function isLightColor(color: string): boolean {
+  if (!color) return false;
+  
+  // Si es una clase de Tailwind
+  if (color.includes('white') || color.includes('gray-1') || color.includes('gray-2') || color.includes('gray-3')) {
+    return true;
+  }
+  if (color.includes('black') || color.includes('gray-9') || color.includes('gray-8') || color.includes('gray-7')) {
+    return false;
+  }
+  
+  // Si es un color hex
+  if (color.startsWith('#')) {
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5;
+  }
+  
+  // Si es rgb/rgba
+  if (color.includes('rgb')) {
+    const match = color.match(/\d+/g);
+    if (match && match.length >= 3) {
+      const r = parseInt(match[0]);
+      const g = parseInt(match[1]);
+      const b = parseInt(match[2]);
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return luminance > 0.5;
+    }
+  }
+  
+  return false;
+}
+
 export function CTASection({ id, content, styles = {} }: CTASectionProps) {
   const { selectedSectionId, selectSection } = useEditorStore();
   const isSelected = selectedSectionId === id;
 
   const hasGradient = styles?.gradientFrom && styles?.gradientTo;
+  
+  // Determinar el color de fondo efectivo
+  const effectiveBgColor = hasGradient ? styles.gradientFrom : (styles?.backgroundColor || 'bg-primary');
+  const isLightBg = isLightColor(effectiveBgColor || '');
+  
+  // Colores de texto basados en el fondo
+  const textColor = styles?.textColor || (isLightBg ? '#111827' : '#ffffff');
+  const subtitleColor = styles?.textColor || (isLightBg ? '#4b5563' : 'rgba(255,255,255,0.9)');
 
   return (
     <div
@@ -43,20 +88,15 @@ export function CTASection({ id, content, styles = {} }: CTASectionProps) {
     >
       <div className="max-w-4xl mx-auto text-center">
         <h2 
-          className={cn(
-            "text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight",
-            styles?.textColor || "text-white"
-          )}
+          className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight"
+          style={{ color: textColor }}
         >
           {content?.title || "¿Listo para comenzar?"}
         </h2>
         {content?.subtitle && (
           <p 
-            className={cn(
-              "mt-3 md:mt-4 text-base md:text-lg max-w-2xl mx-auto",
-              styles?.textColor ? "opacity-90" : "text-white/90"
-            )}
-            style={{ color: styles?.textColor }}
+            className="mt-3 md:mt-4 text-base md:text-lg max-w-2xl mx-auto"
+            style={{ color: subtitleColor }}
           >
             {content.subtitle}
           </p>
@@ -65,15 +105,10 @@ export function CTASection({ id, content, styles = {} }: CTASectionProps) {
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
           <Button 
             size="lg"
-            className={cn(
-              "group",
-              styles?.buttonColor 
-                ? "" 
-                : "bg-white text-primary hover:bg-white/90"
-            )}
+            className="group"
             style={{ 
-              backgroundColor: styles?.buttonColor,
-              color: styles?.buttonColor ? 'white' : undefined
+              backgroundColor: styles?.buttonColor || (isLightBg ? '#111827' : '#ffffff'),
+              color: styles?.buttonColor ? '#ffffff' : (isLightBg ? '#ffffff' : '#111827')
             }}
           >
             {content?.ctaText || "Comenzar ahora"}
@@ -84,15 +119,11 @@ export function CTASection({ id, content, styles = {} }: CTASectionProps) {
             <Button 
               size="lg"
               variant="outline"
-              className={cn(
-                "border-2",
-                styles?.textColor 
-                  ? "" 
-                  : "border-white text-white hover:bg-white/10"
-              )}
+              className="border-2"
               style={{ 
-                borderColor: styles?.textColor,
-                color: styles?.textColor
+                borderColor: textColor,
+                color: textColor,
+                backgroundColor: 'transparent'
               }}
             >
               {content.secondaryCtaText}

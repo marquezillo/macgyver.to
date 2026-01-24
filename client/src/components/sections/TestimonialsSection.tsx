@@ -151,10 +151,9 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
       <p
         className={cn(
           "mb-6 leading-relaxed",
-          featured ? "text-lg md:text-xl" : "text-base",
-          styles?.textColor ? "opacity-80" : "text-gray-600"
+          featured ? "text-lg md:text-xl" : "text-base"
         )}
-        style={{ color: styles?.textColor }}
+        style={{ color: styles?.textColor || '#4b5563' }}
       >
         "{testimonial.text || testimonial.quote || 'Great experience!'}"
       </p>
@@ -170,19 +169,16 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
           <p
             className={cn(
               "font-semibold",
-              featured ? "text-lg" : "",
-              styles?.textColor || "text-gray-900"
+              featured ? "text-lg" : ""
             )}
+            style={{ color: styles?.textColor || '#111827' }}
           >
             {testimonial.name}
           </p>
           {(testimonial.role || testimonial.company) && (
             <p
-              className={cn(
-                "text-sm",
-                styles?.textColor ? "opacity-60" : "text-gray-500"
-              )}
-              style={{ color: styles?.textColor }}
+              className="text-sm"
+              style={{ color: styles?.textColor || '#6b7280' }}
             >
               {testimonial.role}{testimonial.role && testimonial.company && ', '}{testimonial.company}
             </p>
@@ -511,20 +507,15 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
             </span>
           )}
           <h2
-            className={cn(
-              "text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight",
-              styles?.textColor || "text-gray-900"
-            )}
+            className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight"
+            style={{ color: styles?.textColor || (styles?.backgroundColor?.includes('gray-9') || styles?.backgroundColor?.includes('black') || styles?.backgroundColor?.includes('#1') || styles?.backgroundColor?.includes('#0') ? '#ffffff' : '#111827') }}
           >
             {content?.title || "Lo que dicen nuestros clientes"}
           </h2>
           {content?.subtitle && (
             <p
-              className={cn(
-                "mt-4 text-lg max-w-2xl mx-auto",
-                styles?.textColor ? "opacity-70" : "text-gray-600"
-              )}
-              style={{ color: styles?.textColor }}
+              className="mt-4 text-lg max-w-2xl mx-auto"
+              style={{ color: styles?.textColor || (styles?.backgroundColor?.includes('gray-9') || styles?.backgroundColor?.includes('black') || styles?.backgroundColor?.includes('#1') || styles?.backgroundColor?.includes('#0') ? 'rgba(255,255,255,0.8)' : '#4b5563') }}
             >
               {content.subtitle}
             </p>

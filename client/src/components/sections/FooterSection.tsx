@@ -13,7 +13,7 @@ interface FooterColumn {
 }
 
 interface SocialLink {
-  platform: string; // Allow any platform name
+  platform: string;
   href: string;
 }
 
@@ -42,14 +42,57 @@ const socialIcons: Record<string, typeof Facebook> = {
   instagram: Instagram,
   linkedin: Linkedin,
   youtube: Youtube,
-  tiktok: Globe, // Fallback for tiktok
-  whatsapp: Globe, // Fallback for whatsapp
-  pinterest: Globe, // Fallback for pinterest
+  tiktok: Globe,
+  whatsapp: Globe,
+  pinterest: Globe,
 };
+
+// Función para determinar si un color es claro u oscuro
+function isLightColor(color: string): boolean {
+  if (!color) return false;
+  
+  if (color.includes('white') || color.includes('gray-1') || color.includes('gray-2') || color.includes('gray-3')) {
+    return true;
+  }
+  if (color.includes('black') || color.includes('gray-9') || color.includes('gray-8') || color.includes('gray-7')) {
+    return false;
+  }
+  
+  if (color.startsWith('#')) {
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5;
+  }
+  
+  if (color.includes('rgb')) {
+    const match = color.match(/\d+/g);
+    if (match && match.length >= 3) {
+      const r = parseInt(match[0]);
+      const g = parseInt(match[1]);
+      const b = parseInt(match[2]);
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return luminance > 0.5;
+    }
+  }
+  
+  return false;
+}
 
 export function FooterSection({ id, content, styles = {} }: FooterSectionProps) {
   const { selectedSectionId, selectSection } = useEditorStore();
   const isSelected = selectedSectionId === id;
+
+  // Determinar colores basados en el fondo
+  const bgColor = styles?.backgroundColor || 'bg-gray-900';
+  const isLightBg = isLightColor(bgColor);
+  
+  // Colores de texto que garantizan contraste
+  const primaryTextColor = styles?.textColor || (isLightBg ? '#111827' : '#ffffff');
+  const secondaryTextColor = styles?.textColor || (isLightBg ? '#4b5563' : '#9ca3af');
+  const borderColor = isLightBg ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
 
   const columns = content?.columns || [
     {
@@ -84,29 +127,24 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
       }}
       className={cn(
         "relative py-8 md:py-12 px-4 sm:px-6 lg:px-8 transition-all duration-200",
-        isSelected && "ring-2 ring-primary ring-offset-2",
-        styles?.backgroundColor || "bg-gray-900"
+        isSelected && "ring-2 ring-primary ring-offset-2"
       )}
+      style={{ backgroundColor: bgColor.startsWith('#') || bgColor.startsWith('rgb') ? bgColor : undefined }}
     >
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
           {/* Company Info */}
           <div className="lg:col-span-1">
             <h3 
-              className={cn(
-                "text-lg md:text-xl font-bold mb-3 md:mb-4",
-                styles?.textColor || "text-white"
-              )}
+              className="text-lg md:text-xl font-bold mb-3 md:mb-4"
+              style={{ color: primaryTextColor }}
             >
               {content?.companyName || "Mi Empresa"}
             </h3>
             {content?.description && (
               <p 
-                className={cn(
-                  "text-sm mb-4",
-                  styles?.textColor ? "opacity-80" : "text-gray-400"
-                )}
-                style={{ color: styles?.textColor }}
+                className="text-sm mb-4"
+                style={{ color: secondaryTextColor }}
               >
                 {content.description}
               </p>
@@ -117,11 +155,8 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
               {content?.contactEmail && (
                 <a 
                   href={`mailto:${content.contactEmail}`}
-                  className={cn(
-                    "flex items-center gap-2 text-sm hover:opacity-80 transition-opacity",
-                    styles?.textColor ? "opacity-80" : "text-gray-400"
-                  )}
-                  style={{ color: styles?.textColor }}
+                  className="flex items-center gap-2 text-sm hover:opacity-80 transition-opacity"
+                  style={{ color: secondaryTextColor }}
                 >
                   <Mail className="h-4 w-4" />
                   {content.contactEmail}
@@ -130,11 +165,8 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
               {content?.contactPhone && (
                 <a 
                   href={`tel:${content.contactPhone}`}
-                  className={cn(
-                    "flex items-center gap-2 text-sm hover:opacity-80 transition-opacity",
-                    styles?.textColor ? "opacity-80" : "text-gray-400"
-                  )}
-                  style={{ color: styles?.textColor }}
+                  className="flex items-center gap-2 text-sm hover:opacity-80 transition-opacity"
+                  style={{ color: secondaryTextColor }}
                 >
                   <Phone className="h-4 w-4" />
                   {content.contactPhone}
@@ -142,11 +174,8 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
               )}
               {content?.address && (
                 <p 
-                  className={cn(
-                    "flex items-center gap-2 text-sm",
-                    styles?.textColor ? "opacity-80" : "text-gray-400"
-                  )}
-                  style={{ color: styles?.textColor }}
+                  className="flex items-center gap-2 text-sm"
+                  style={{ color: secondaryTextColor }}
                 >
                   <MapPin className="h-4 w-4 flex-shrink-0" />
                   {content.address}
@@ -159,10 +188,8 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
           {columns.map((column: FooterColumn, index: number) => (
             <div key={index}>
               <h4 
-                className={cn(
-                  "text-sm font-semibold uppercase tracking-wider mb-4",
-                  styles?.textColor || "text-white"
-                )}
+                className="text-sm font-semibold uppercase tracking-wider mb-4"
+                style={{ color: primaryTextColor }}
               >
                 {column.title}
               </h4>
@@ -171,11 +198,8 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
                   <li key={linkIndex}>
                     <a
                       href={link.href}
-                      className={cn(
-                        "text-sm hover:opacity-80 transition-opacity",
-                        styles?.textColor ? "opacity-70" : "text-gray-400 hover:text-white"
-                      )}
-                      style={{ color: styles?.textColor }}
+                      className="text-sm hover:opacity-80 transition-opacity"
+                      style={{ color: secondaryTextColor }}
                     >
                       {link.label}
                     </a>
@@ -188,10 +212,8 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
           {/* Social Links */}
           <div>
             <h4 
-              className={cn(
-                "text-sm font-semibold uppercase tracking-wider mb-4",
-                styles?.textColor || "text-white"
-              )}
+              className="text-sm font-semibold uppercase tracking-wider mb-4"
+              style={{ color: primaryTextColor }}
             >
               Síguenos
             </h4>
@@ -202,13 +224,11 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
                   <a
                     key={index}
                     href={social.href}
-                    className={cn(
-                      "p-2 rounded-full transition-colors",
-                      styles?.accentColor 
-                        ? "hover:opacity-80" 
-                        : "bg-gray-800 hover:bg-gray-700 text-white"
-                    )}
-                    style={{ backgroundColor: styles?.accentColor }}
+                    className="p-2 rounded-full transition-colors"
+                    style={{ 
+                      backgroundColor: styles?.accentColor || (isLightBg ? '#e5e7eb' : '#374151'),
+                      color: isLightBg ? '#111827' : '#ffffff'
+                    }}
                   >
                     <Icon className="h-5 w-5" />
                   </a>
@@ -220,11 +240,11 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
 
         {/* Copyright */}
         <div 
-          className={cn(
-            "mt-8 md:mt-12 pt-6 md:pt-8 border-t text-center text-xs md:text-sm",
-            styles?.textColor ? "opacity-60 border-current/20" : "text-gray-400 border-gray-800"
-          )}
-          style={{ color: styles?.textColor }}
+          className="mt-8 md:mt-12 pt-6 md:pt-8 border-t text-center text-xs md:text-sm"
+          style={{ 
+            color: secondaryTextColor,
+            borderColor: borderColor
+          }}
         >
           {content?.copyright || `© ${new Date().getFullYear()} Todos los derechos reservados.`}
         </div>
