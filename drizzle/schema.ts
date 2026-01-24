@@ -234,3 +234,51 @@ export const projectDbTables = mysqlTable("projectDbTables", {
 
 export type ProjectDbTable = typeof projectDbTables.$inferSelect;
 export type InsertProjectDbTable = typeof projectDbTables.$inferInsert;
+
+
+/**
+ * Published Landings table for storing landings served from subdominios.
+ * Each landing has a unique subdomain + slug combination.
+ */
+export const publishedLandings = mysqlTable("publishedLandings", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Foreign key to users table */
+  userId: int("userId").notNull(),
+  /** Foreign key to chats table (source chat) */
+  chatId: int("chatId"),
+  /** User's subdomain (generated from userId hash) */
+  subdomain: varchar("subdomain", { length: 50 }).notNull(),
+  /** Project slug (URL-friendly name) */
+  slug: varchar("slug", { length: 100 }).notNull(),
+  /** Landing name/title */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** Landing description */
+  description: text("description"),
+  /** Full landing configuration as JSON (LandingConfig) */
+  config: json("config").notNull(),
+  /** Additional pages as JSON array (terms, privacy, about, etc.) */
+  pages: json("pages"),
+  /** Theme configuration (colors, fonts, etc.) */
+  theme: json("theme"),
+  /** SEO metadata */
+  seoMetadata: json("seoMetadata"),
+  /** Favicon URL */
+  favicon: varchar("favicon", { length: 500 }),
+  /** Custom domain (optional, for future use) */
+  customDomain: varchar("customDomain", { length: 255 }),
+  /** Whether the landing is publicly accessible */
+  isPublic: int("isPublic").default(1).notNull(),
+  /** Whether the landing is active (can be disabled without deleting) */
+  isActive: int("isActive").default(1).notNull(),
+  /** View count for analytics */
+  viewCount: int("viewCount").default(0).notNull(),
+  /** Last viewed timestamp */
+  lastViewedAt: timestamp("lastViewedAt"),
+  /** Published timestamp */
+  publishedAt: timestamp("publishedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PublishedLanding = typeof publishedLandings.$inferSelect;
+export type InsertPublishedLanding = typeof publishedLandings.$inferInsert;

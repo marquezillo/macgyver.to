@@ -50,6 +50,13 @@
       "when": 1769091692383,
       "tag": "0006_right_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1769248509569,
+      "tag": "0007_wakeful_black_bird",
+      "breakpoints": true
     }
   ]
 }

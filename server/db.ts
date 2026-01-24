@@ -1,6 +1,6 @@
 import { eq, and, desc, isNull, sql, gte, or, like, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, chats, messages, folders, memories, formSubmissions, projects, projectFiles, projectDbTables, InsertChat, InsertMessage, InsertFolder, InsertMemory, InsertFormSubmission, Chat, Message, Folder, Memory, FormSubmission, Project, InsertProject, ProjectFile, InsertProjectFile, ProjectDbTable, InsertProjectDbTable } from "../drizzle/schema";
+import { InsertUser, users, chats, messages, folders, memories, formSubmissions, projects, projectFiles, projectDbTables, publishedLandings, InsertChat, InsertMessage, InsertFolder, InsertMemory, InsertFormSubmission, Chat, Message, Folder, Memory, FormSubmission, Project, InsertProject, ProjectFile, InsertProjectFile, ProjectDbTable, InsertProjectDbTable, PublishedLanding, InsertPublishedLanding } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import bcrypt from 'bcryptjs';
 
@@ -861,5 +861,244 @@ export async function getAllProjects(page: number = 1, limit: number = 20) {
       userName: usersMap[p.userId] || 'Unknown',
     })),
     total: countResult?.count || 0,
+  };
+}
+
+
+// ============================================
+// PUBLISHED LANDINGS FUNCTIONS
+// ============================================
+
+/**
+ * Create a new published landing
+ */
+export async function createPublishedLanding(data: {
+  userId: number;
+  chatId?: number;
+  subdomain: string;
+  slug: string;
+  name: string;
+  description?: string;
+  config: unknown;
+  pages?: unknown;
+  theme?: unknown;
+  seoMetadata?: unknown;
+  favicon?: string;
+}): Promise<PublishedLanding> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Check if subdomain + slug combination already exists
+  const existing = await db.select().from(publishedLandings).where(
+    and(
+      eq(publishedLandings.subdomain, data.subdomain),
+      eq(publishedLandings.slug, data.slug)
+    )
+  ).limit(1);
+
+  if (existing.length > 0) {
+    throw new Error("A landing with this subdomain and slug already exists");
+  }
+
+  const result = await db.insert(publishedLandings).values({
+    userId: data.userId,
+    chatId: data.chatId || null,
+    subdomain: data.subdomain,
+    slug: data.slug,
+    name: data.name,
+    description: data.description || null,
+    config: data.config,
+    pages: data.pages || null,
+    theme: data.theme || null,
+    seoMetadata: data.seoMetadata || null,
+    favicon: data.favicon || null,
+    publishedAt: new Date(),
+  });
+
+  const landingId = result[0].insertId;
+  const [landing] = await db.select().from(publishedLandings).where(eq(publishedLandings.id, landingId));
+  return landing;
+}
+
+/**
+ * Update an existing published landing
+ */
+export async function updatePublishedLanding(
+  landingId: number,
+  userId: number,
+  data: Partial<{
+    name: string;
+    description: string;
+    config: unknown;
+    pages: unknown;
+    theme: unknown;
+    seoMetadata: unknown;
+    favicon: string;
+    isPublic: boolean;
+    isActive: boolean;
+  }>
+): Promise<PublishedLanding | null> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Verify ownership
+  const [existing] = await db.select().from(publishedLandings).where(
+    and(eq(publishedLandings.id, landingId), eq(publishedLandings.userId, userId))
+  ).limit(1);
+
+  if (!existing) {
+    return null;
+  }
+
+  const updateData: Record<string, unknown> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.config !== undefined) updateData.config = data.config;
+  if (data.pages !== undefined) updateData.pages = data.pages;
+  if (data.theme !== undefined) updateData.theme = data.theme;
+  if (data.seoMetadata !== undefined) updateData.seoMetadata = data.seoMetadata;
+  if (data.favicon !== undefined) updateData.favicon = data.favicon;
+  if (data.isPublic !== undefined) updateData.isPublic = data.isPublic ? 1 : 0;
+  if (data.isActive !== undefined) updateData.isActive = data.isActive ? 1 : 0;
+
+  await db.update(publishedLandings).set(updateData).where(eq(publishedLandings.id, landingId));
+
+  const [updated] = await db.select().from(publishedLandings).where(eq(publishedLandings.id, landingId));
+  return updated;
+}
+
+/**
+ * Get a published landing by subdomain and slug
+ */
+export async function getPublishedLandingBySubdomainAndSlug(
+  subdomain: string,
+  slug: string
+): Promise<PublishedLanding | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [landing] = await db.select().from(publishedLandings).where(
+    and(
+      eq(publishedLandings.subdomain, subdomain),
+      eq(publishedLandings.slug, slug),
+      eq(publishedLandings.isActive, 1)
+    )
+  ).limit(1);
+
+  if (landing) {
+    // Increment view count
+    await db.update(publishedLandings).set({
+      viewCount: sql`viewCount + 1`,
+      lastViewedAt: new Date(),
+    }).where(eq(publishedLandings.id, landing.id));
+  }
+
+  return landing || null;
+}
+
+/**
+ * Get all published landings for a subdomain
+ */
+export async function getPublishedLandingsBySubdomain(subdomain: string): Promise<PublishedLanding[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(publishedLandings).where(
+    and(
+      eq(publishedLandings.subdomain, subdomain),
+      eq(publishedLandings.isActive, 1),
+      eq(publishedLandings.isPublic, 1)
+    )
+  ).orderBy(desc(publishedLandings.publishedAt));
+}
+
+/**
+ * Get all published landings for a user
+ */
+export async function getPublishedLandingsByUserId(userId: number): Promise<PublishedLanding[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(publishedLandings).where(
+    eq(publishedLandings.userId, userId)
+  ).orderBy(desc(publishedLandings.updatedAt));
+}
+
+/**
+ * Get a published landing by ID (with ownership check)
+ */
+export async function getPublishedLandingById(
+  landingId: number,
+  userId?: number
+): Promise<PublishedLanding | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const conditions = [eq(publishedLandings.id, landingId)];
+  if (userId !== undefined) {
+    conditions.push(eq(publishedLandings.userId, userId));
+  }
+
+  const [landing] = await db.select().from(publishedLandings).where(and(...conditions)).limit(1);
+  return landing || null;
+}
+
+/**
+ * Delete a published landing
+ */
+export async function deletePublishedLanding(landingId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Verify ownership
+  const [existing] = await db.select().from(publishedLandings).where(
+    and(eq(publishedLandings.id, landingId), eq(publishedLandings.userId, userId))
+  ).limit(1);
+
+  if (!existing) {
+    return false;
+  }
+
+  await db.delete(publishedLandings).where(eq(publishedLandings.id, landingId));
+  return true;
+}
+
+/**
+ * Check if a slug is available for a subdomain
+ */
+export async function isSlugAvailable(subdomain: string, slug: string, excludeLandingId?: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const conditions = [
+    eq(publishedLandings.subdomain, subdomain),
+    eq(publishedLandings.slug, slug)
+  ];
+
+  if (excludeLandingId) {
+    conditions.push(sql`id != ${excludeLandingId}`);
+  }
+
+  const [existing] = await db.select().from(publishedLandings).where(and(...conditions)).limit(1);
+  return !existing;
+}
+
+/**
+ * Get landing statistics for a user
+ */
+export async function getPublishedLandingStats(userId: number): Promise<{
+  totalLandings: number;
+  totalViews: number;
+  activeLandings: number;
+}> {
+  const db = await getDb();
+  if (!db) return { totalLandings: 0, totalViews: 0, activeLandings: 0 };
+
+  const landings = await db.select().from(publishedLandings).where(eq(publishedLandings.userId, userId));
+
+  return {
+    totalLandings: landings.length,
+    totalViews: landings.reduce((sum, l) => sum + (l.viewCount || 0), 0),
+    activeLandings: landings.filter(l => l.isActive === 1).length,
   };
 }

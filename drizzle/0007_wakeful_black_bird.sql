@@ -1,0 +1,23 @@
+CREATE TABLE `publishedLandings` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`chatId` int,
+	`subdomain` varchar(50) NOT NULL,
+	`slug` varchar(100) NOT NULL,
+	`name` varchar(255) NOT NULL,
+	`description` text,
+	`config` json NOT NULL,
+	`pages` json,
+	`theme` json,
+	`seoMetadata` json,
+	`favicon` varchar(500),
+	`customDomain` varchar(255),
+	`isPublic` int NOT NULL DEFAULT 1,
+	`isActive` int NOT NULL DEFAULT 1,
+	`viewCount` int NOT NULL DEFAULT 0,
+	`lastViewedAt` timestamp,
+	`publishedAt` timestamp NOT NULL DEFAULT (now()),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `publishedLandings_id` PRIMARY KEY(`id`)
+);

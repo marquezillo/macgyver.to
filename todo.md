@@ -867,7 +867,7 @@
 - [x] Actualizar navegación para incluir links a páginas internas (HeaderSection.tsx)
 - [x] Añadir router landing en routers.ts
 - [x] Actualizar LLM para detectar solicitudes de páginas adicionales (SYSTEM_PROMPT)
-- [ ] Sincronizar con producción
+- [x] Sincronizar con producción
 
 ## FASE 2: Sistema de Subdominios (24-01-2026)
 - [x] Configurar DNS wildcard *.macgyver.to (ya configurado en Cloudflare)
@@ -877,5 +877,23 @@
 - [x] Funciones para generar slugs de proyectos
 - [x] Crear subdomainRouter.ts con endpoints de API
 - [x] Integrar router en servidor Express
-- [ ] Aplicar configuración Nginx en servidor
-- [ ] Sincronizar con producción
+- [x] Aplicar configuración Nginx en servidor
+- [x] Sincronizar con producción
+- [x] Verificar funcionamiento de subdominios (test123.macgyver.to → OK)
+
+
+## FASE 3: Almacenamiento de Landings Publicadas (24-01-2026)
+- [x] Crear esquema de base de datos para landings publicadas
+- [x] Crear tabla publishedLandings con 20 campos (migración aplicada)
+- [x] Implementar funciones CRUD en db.ts (create, update, get, delete, stats)
+- [x] Actualizar subdomainRouter para servir landings desde DB (renderizado HTML completo)
+- [x] Crear endpoint de publicación de landing (POST /api/landing/publish)
+- [x] Crear endpoints de gestión (GET my-landings, PUT, DELETE, check-slug)
+- [x] Sincronizar con producción
+
+## FASE 4: Certificado SSL Wildcard (24-01-2026)
+- [x] Instalar certbot y plugin cloudflare en servidor
+- [x] Crear archivo de credenciales de Cloudflare
+- [x] Solicitar certificado wildcard para *.macgyver.to (expira 24-04-2026)
+- [x] Configurar Nginx para usar el certificado (HTTPS habilitado)
+- [x] Configurar renovación automática (certbot auto-renewal)subdominios
