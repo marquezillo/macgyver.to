@@ -750,3 +750,24 @@
 - [x] Reforzar instrucciones de idioma en languageDetector.ts (más específicas)
 - [x] Verificar funcionamiento en producción (Café del Sol - 100% español)
 - [x] Verificar detección de colores (verdes y marrones aplicados correctamente)
+
+
+## Variantes de Hero y Mejora de Imágenes (24-01-2026)
+
+### Variantes de Layout Hero
+- [x] Implementar Hero centrado (actual, mejorado)
+- [x] Implementar Hero split izquierda (imagen derecha, texto izquierda)
+- [x] Implementar Hero split derecha (imagen izquierda, texto derecha)
+- [x] Implementar Hero con video de fondo
+- [x] Implementar Hero con gradiente animado
+- [x] Actualizar systemPrompt para usar las variantes según el tipo de negocio
+
+### Mejora de Selección de Imágenes
+- [x] Crear diccionario de palabras clave por industria (industryImageKeywords.ts)
+- [x] Mejorar función de búsqueda de imágenes con keywords específicos por contexto (hero, feature, testimonial)
+- [ ] Añadir fallbacks de imágenes por categoría
+- [ ] Integrar en el flujo de generación de landings
+
+### Sincronización
+- [x] Sincronizar con servidor de producción
+- [x] Verificar funcionamiento en producción (110 tests pasando)

@@ -65,8 +65,8 @@ describe('Language Detector', () => {
   it('should generate Spanish instructions for Spanish messages', () => {
     const detection = detectLanguage('Crea una landing para mi negocio');
     const instructions = generateLanguageInstructions(detection);
-    expect(instructions).toContain('SPANISH');
-    expect(instructions).toContain('Spanish');
+    expect(instructions).toContain('ESPAÑOL');
+    expect(instructions).toContain('español');
   });
 
   it('should generate English instructions for English messages', () => {

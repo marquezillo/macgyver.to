@@ -307,9 +307,13 @@ items: [
 
 **Hero (variant):** - SIEMPRE incluir "variant" en content
 - centered: Texto centrado con imagen de fondo (clásico) - para servicios tradicionales
-- split: 50/50 con imagen a un lado - para productos, e-commerce
+- split: 50/50 con imagen a la derecha, texto a la izquierda - para productos, e-commerce
+- split-left: Imagen a la izquierda, texto a la derecha - alternativa al split
+- split-right: Imagen a la derecha, texto a la izquierda (igual que split)
 - minimal: Solo texto, muy limpio - para tech minimalista
 - asymmetric: Layout asimétrico con glow - para SaaS, startups tech
+- video: Fondo con video en loop - para experiencias inmersivas (requiere videoUrl)
+- gradient: Fondo con gradiente animado - para startups, tech moderno
 
 **Features (layout):** - SIEMPRE incluir "layout" en content
 - grid: Cuadrícula de cards (default)

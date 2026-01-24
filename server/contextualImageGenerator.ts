@@ -10,6 +10,12 @@ import { detectIndustry, getImageQueriesForIndustry } from './industryDetector';
 import { allPatterns, IndustryPattern } from './industryPatterns';
 import { generateAvatarsForTestimonials } from './avatarService';
 import { validateLandingImages } from './imageValidator';
+import { 
+  detectIndustry as detectIndustryV2, 
+  getIndustryKeywords, 
+  generateImageQuery,
+  getMultipleImageQueries 
+} from './industryImageKeywords';
 
 interface Section {
   id: string;
@@ -158,11 +164,32 @@ const BUSINESS_IMAGE_KEYWORDS: Record<string, string[]> = {
 
 /**
  * Obtiene las palabras clave de imagen para una industria específica
- * Primero busca en los patrones de industria, luego en el mapeo local
+ * Usa el nuevo sistema de keywords por industria con contexto
  */
-function getImageKeywordsForIndustry(businessType: string, userMessage?: string): string[] {
-  // Si hay mensaje del usuario, intentar detectar la industria
+function getImageKeywordsForIndustry(
+  businessType: string, 
+  userMessage?: string,
+  context: 'hero' | 'feature' | 'testimonial' | 'general' = 'general'
+): string[] {
+  // Primero intentar con el nuevo sistema de detección de industria
   if (userMessage) {
+    const detectedIndustry = detectIndustryV2(userMessage);
+    if (detectedIndustry !== 'default') {
+      const industryKeywords = getIndustryKeywords(detectedIndustry);
+      // Retornar keywords según el contexto
+      switch (context) {
+        case 'hero':
+          return [...industryKeywords.heroKeywords, ...industryKeywords.primary];
+        case 'feature':
+          return [...industryKeywords.featureKeywords, ...industryKeywords.secondary];
+        case 'testimonial':
+          return industryKeywords.testimonialBackgrounds;
+        default:
+          return [...industryKeywords.primary, ...industryKeywords.secondary];
+      }
+    }
+    
+    // Fallback al sistema anterior
     const detection = detectIndustry(userMessage);
     if (detection.detected && detection.pattern) {
       return detection.pattern.suggestedImages;
