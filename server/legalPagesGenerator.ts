@@ -2,9 +2,11 @@
  * Legal Pages Generator
  * Genera automáticamente páginas legales (términos, privacidad, contacto, about)
  * basadas en los datos del negocio extraídos de la landing.
+ * Soporta múltiples idiomas: español, inglés, francés, alemán, portugués, italiano
  */
 
 import type { PageConfig, PageType, LandingMetadata } from '../shared/landingTypes';
+import { getTranslations, type LanguageTranslations } from './legalPageTranslations';
 
 interface BusinessInfo {
   businessName: string;
@@ -15,6 +17,7 @@ interface BusinessInfo {
   websiteUrl?: string;
   description?: string;
   industry?: string;
+  language?: string; // Código de idioma (es, en, fr, de, pt, it)
 }
 
 /**
@@ -69,6 +72,13 @@ export function extractBusinessInfo(config: any): BusinessInfo {
   // Extraer industria
   const industry = config?.metadata?.industry || config?.industry || '';
   
+  // Extraer idioma (prioridad: styles.language > metadata.language > 'es')
+  const language = 
+    config?.styles?.language ||
+    config?.metadata?.language ||
+    config?.language ||
+    'es';
+  
   return {
     businessName,
     businessType: industry || 'empresa',
@@ -78,6 +88,7 @@ export function extractBusinessInfo(config: any): BusinessInfo {
     websiteUrl: config?.metadata?.websiteUrl || '',
     description,
     industry,
+    language,
   };
 }
 
@@ -174,16 +185,20 @@ export function generateTermsPage(info: BusinessInfo): PageConfig {
 </div>
   `.trim();
   
+  // Obtener traducciones según el idioma
+  const translations = getTranslations(info.language || 'es');
+  
   return {
     id: `page-terms-${Date.now()}`,
     type: 'terms',
-    slug: 'terminos',
-    title: 'Términos y Condiciones',
+    slug: translations.terms.slug,
+    title: translations.terms.title,
     enabled: true,
     data: {
       businessName: info.businessName,
       contactEmail: info.contactEmail,
       content,
+      language: info.language,
     },
   };
 }
@@ -284,16 +299,20 @@ export function generatePrivacyPage(info: BusinessInfo): PageConfig {
 </div>
   `.trim();
   
+  // Obtener traducciones según el idioma
+  const translations = getTranslations(info.language || 'es');
+  
   return {
     id: `page-privacy-${Date.now()}`,
     type: 'privacy',
-    slug: 'privacidad',
-    title: 'Política de Privacidad',
+    slug: translations.privacy.slug,
+    title: translations.privacy.title,
     enabled: true,
     data: {
       businessName: info.businessName,
       contactEmail: info.contactEmail,
       content,
+      language: info.language,
     },
   };
 }
@@ -396,11 +415,14 @@ export function generateContactPage(info: BusinessInfo): PageConfig {
 </div>
   `.trim();
   
+  // Obtener traducciones según el idioma
+  const translations = getTranslations(info.language || 'es');
+  
   return {
     id: `page-contact-${Date.now()}`,
     type: 'contact',
-    slug: 'contacto',
-    title: 'Contacto',
+    slug: translations.contact.slug,
+    title: translations.contact.title,
     enabled: true,
     data: {
       businessName: info.businessName,
@@ -408,6 +430,7 @@ export function generateContactPage(info: BusinessInfo): PageConfig {
       phone: info.phone,
       address: info.address,
       content,
+      language: info.language,
     },
   };
 }
@@ -484,16 +507,20 @@ export function generateAboutPage(info: BusinessInfo): PageConfig {
 </div>
   `.trim();
   
+  // Obtener traducciones según el idioma
+  const translations = getTranslations(info.language || 'es');
+  
   return {
     id: `page-about-${Date.now()}`,
     type: 'about',
-    slug: 'nosotros',
-    title: 'Sobre Nosotros',
+    slug: translations.about.slug,
+    title: translations.about.title,
     enabled: true,
     data: {
       businessName: info.businessName,
       description: info.description,
       content,
+      language: info.language,
     },
   };
 }

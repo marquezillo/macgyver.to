@@ -18,6 +18,7 @@ import {
 } from './db';
 import { generateUserSubdomain, generateProjectSlug } from './subdomainMiddleware';
 import { sdk } from './_core/sdk';
+import { getPageTypeFromSlug, getTranslations, detectLandingLanguage } from './legalPageTranslations';
 
 const router = Router();
 
@@ -90,6 +91,8 @@ function generateLandingHTML(landing: any, pagePath: string): string {
   const pages = (landing.pages || []) as any[];
   const theme = (landing.theme || {}) as any;
   const seo = (landing.seoMetadata || {}) as any;
+  const projectSlug = landing.slug; // Slug del proyecto para construir URLs
+  const landingLanguage = detectLandingLanguage(landing);
   
   // Determinar qué página mostrar
   let pageContent = '';
@@ -97,10 +100,20 @@ function generateLandingHTML(landing: any, pagePath: string): string {
   
   if (pagePath === 'home' || pagePath === '') {
     // Página principal - renderizar todas las secciones
-    pageContent = renderLandingSections(config);
+    pageContent = renderLandingSections(config, projectSlug, landingLanguage);
   } else {
-    // Buscar página interna
-    const page = pages.find((p: any) => p.slug === pagePath || p.path === `/${pagePath}`);
+    // Primero intentar encontrar la página por slug directo
+    let page = pages.find((p: any) => p.slug === pagePath || p.path === `/${pagePath}`);
+    
+    // Si no se encuentra, intentar mapear el slug a un tipo de página legal (multiidioma)
+    if (!page) {
+      const pageType = getPageTypeFromSlug(pagePath);
+      if (pageType) {
+        // Buscar la página por tipo
+        page = pages.find((p: any) => p.type === pageType);
+      }
+    }
+    
     if (page) {
       // Pasar los estilos para que use los colores del tema
       const styles = config?.styles || theme || {};
@@ -183,7 +196,7 @@ function generateLandingHTML(landing: any, pagePath: string): string {
 /**
  * Renderiza las secciones de una landing
  */
-function renderLandingSections(config: any): string {
+function renderLandingSections(config: any, projectSlug: string = '', language: string = 'es'): string {
   if (!config || !config.sections) {
     return '<div class="min-h-screen flex items-center justify-center"><p>No content available</p></div>';
   }
@@ -191,7 +204,7 @@ function renderLandingSections(config: any): string {
   let html = '';
   
   for (const section of config.sections) {
-    html += renderSection(section, config.styles);
+    html += renderSection(section, config.styles, projectSlug, language);
   }
   
   return html;
@@ -200,14 +213,14 @@ function renderLandingSections(config: any): string {
 /**
  * Renderiza una sección individual
  */
-function renderSection(section: any, styles: any): string {
+function renderSection(section: any, styles: any, projectSlug: string = '', language: string = 'es'): string {
   const type = section.type;
   const content = section.content || {};
   const sectionStyles = section.styles || {};
   
   switch (type) {
     case 'header':
-      return renderHeaderSection(content, styles);
+      return renderHeaderSection(content, styles, projectSlug);
     case 'hero':
       return renderHeroSection(content, styles, section.variant);
     case 'features':
@@ -221,13 +234,13 @@ function renderSection(section: any, styles: any): string {
     case 'cta':
       return renderCTASection(content, styles);
     case 'footer':
-      return renderFooterSection(content, styles);
+      return renderFooterSection(content, styles, projectSlug, language);
     default:
       return `<!-- Unknown section type: ${type} -->`;
   }
 }
 
-function renderHeaderSection(content: any, styles: any): string {
+function renderHeaderSection(content: any, styles: any, projectSlug: string = ''): string {
   const logo = content.logo || { text: 'Logo' };
   const navItems = content.navItems || [];
   const cta = content.cta || {};
@@ -450,7 +463,7 @@ function renderCTASection(content: any, styles: any): string {
   </section>`;
 }
 
-function renderFooterSection(content: any, styles: any): string {
+function renderFooterSection(content: any, styles: any, projectSlug: string = '', language: string = 'es'): string {
   const logo = content.logo || {};
   const links = content.links || [];
   const social = content.social || [];
@@ -458,12 +471,18 @@ function renderFooterSection(content: any, styles: any): string {
   const businessName = logo.text || 'Nuestra Empresa';
   const currentYear = new Date().getFullYear();
   
-  // Links legales por defecto
+  // Obtener traducciones según el idioma
+  const translations = getTranslations(language);
+  
+  // Construir base URL para las páginas internas
+  const baseUrl = projectSlug ? `/${projectSlug}` : '';
+  
+  // Links legales por defecto con el slug del proyecto y traducciones
   const legalLinks = [
-    { label: 'Términos y Condiciones', href: '/terminos' },
-    { label: 'Política de Privacidad', href: '/privacidad' },
-    { label: 'Contacto', href: '/contacto' },
-    { label: 'Sobre Nosotros', href: '/nosotros' },
+    { label: translations.terms.navLabel, href: `${baseUrl}/${translations.terms.slug}` },
+    { label: translations.privacy.navLabel, href: `${baseUrl}/${translations.privacy.slug}` },
+    { label: translations.contact.navLabel, href: `${baseUrl}/${translations.contact.slug}` },
+    { label: translations.about.navLabel, href: `${baseUrl}/${translations.about.slug}` },
   ];
   
   return `
@@ -473,7 +492,7 @@ function renderFooterSection(content: any, styles: any): string {
         <div>
           ${logo.image ? `<img src="${logo.image}" alt="${logo.text}" class="h-8 mb-4">` : ''}
           <span class="font-bold text-xl">${businessName}</span>
-          <p class="text-gray-400 mt-2 text-sm">Todos los derechos reservados.</p>
+          <p class="text-gray-400 mt-2 text-sm">${translations.labels.allRightsReserved}</p>
         </div>
         ${links.length > 0 ? links.map((group: any) => `
           <div>
@@ -484,27 +503,27 @@ function renderFooterSection(content: any, styles: any): string {
           </div>
         `).join('') : `
           <div>
-            <h4 class="font-semibold mb-4">Navegación</h4>
+            <h4 class="font-semibold mb-4">${translations.labels.navigation}</h4>
             <ul class="space-y-2">
-              <li><a href="/" class="text-gray-400 hover:text-white">Inicio</a></li>
-              <li><a href="/nosotros" class="text-gray-400 hover:text-white">Sobre Nosotros</a></li>
-              <li><a href="/contacto" class="text-gray-400 hover:text-white">Contacto</a></li>
+              <li><a href="${baseUrl}/" class="text-gray-400 hover:text-white">${translations.labels.home}</a></li>
+              <li><a href="${baseUrl}/${translations.about.slug}" class="text-gray-400 hover:text-white">${translations.about.navLabel}</a></li>
+              <li><a href="${baseUrl}/${translations.contact.slug}" class="text-gray-400 hover:text-white">${translations.contact.navLabel}</a></li>
             </ul>
           </div>
         `}
         <div>
-          <h4 class="font-semibold mb-4">Legal</h4>
+          <h4 class="font-semibold mb-4">${translations.labels.legal}</h4>
           <ul class="space-y-2">
             ${legalLinks.map(link => `<li><a href="${link.href}" class="text-gray-400 hover:text-white">${link.label}</a></li>`).join('')}
           </ul>
         </div>
       </div>
       <div class="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center">
-        <p class="text-gray-400">${copyright || `© ${currentYear} ${businessName}. Todos los derechos reservados.`}</p>
+        <p class="text-gray-400">${copyright || `© ${currentYear} ${businessName}. ${translations.labels.allRightsReserved}`}</p>
         <div class="flex gap-4 mt-4 md:mt-0">
           ${social.length > 0 ? social.map((s: any) => `<a href="${s.href || '#'}" class="text-gray-400 hover:text-white">${s.icon || s.platform}</a>`).join('') : `
-            <a href="/terminos" class="text-gray-400 hover:text-white text-sm">Términos</a>
-            <a href="/privacidad" class="text-gray-400 hover:text-white text-sm">Privacidad</a>
+            <a href="${baseUrl}/${translations.terms.slug}" class="text-gray-400 hover:text-white text-sm">${translations.terms.navLabel.split(' ')[0]}</a>
+            <a href="${baseUrl}/${translations.privacy.slug}" class="text-gray-400 hover:text-white text-sm">${translations.privacy.navLabel.split(' ')[0]}</a>
           `}
         </div>
       </div>

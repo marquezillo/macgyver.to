@@ -926,3 +926,10 @@
 - [x] Modificar proceso de publicación para generar páginas automáticamente
 - [x] Mejorar renderizado de páginas internas en subdomainRouter.ts
 - [x] Sincronizar cambios a GitHub y servidor de producción
+
+
+## URLs Multiidioma para Páginas Legales (24-01-2026)
+- [x] Crear sistema de traducción de URLs (español, inglés, francés, alemán, portugués, italiano)
+- [x] Actualizar generador de páginas legales para usar URLs según idioma
+- [x] Actualizar subdomainRouter para reconocer URLs en múltiples idiomas
+- [x] Sincronizar cambios a GitHub
