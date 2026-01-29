@@ -107,12 +107,12 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-3xl font-bold">{isLoading ? <Skeleton className="h-9 w-16" /> : stats?.newUsersToday || 0}</p>
-                  <p className="text-sm text-muted-foreground">Usuarios nuevos</p>
+                  <div className="text-3xl font-bold">{isLoading ? <Skeleton className="h-9 w-16" /> : stats?.newUsersToday || 0}</div>
+                  <div className="text-sm text-muted-foreground">Usuarios nuevos</div>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold">{isLoading ? <Skeleton className="h-9 w-16" /> : stats?.newChatsToday || 0}</p>
-                  <p className="text-sm text-muted-foreground">Conversaciones nuevas</p>
+                  <div className="text-3xl font-bold">{isLoading ? <Skeleton className="h-9 w-16" /> : stats?.newChatsToday || 0}</div>
+                  <div className="text-sm text-muted-foreground">Conversaciones nuevas</div>
                 </div>
               </div>
             </CardContent>
@@ -128,12 +128,12 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-3xl font-bold">{isLoading ? <Skeleton className="h-9 w-16" /> : stats?.usersByRole?.user || 0}</p>
-                  <p className="text-sm text-muted-foreground">Usuarios normales</p>
+                  <div className="text-3xl font-bold">{isLoading ? <Skeleton className="h-9 w-16" /> : stats?.usersByRole?.user || 0}</div>
+                  <div className="text-sm text-muted-foreground">Usuarios normales</div>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold">{isLoading ? <Skeleton className="h-9 w-16" /> : stats?.usersByRole?.admin || 0}</p>
-                  <p className="text-sm text-muted-foreground">Administradores</p>
+                  <div className="text-3xl font-bold">{isLoading ? <Skeleton className="h-9 w-16" /> : stats?.usersByRole?.admin || 0}</div>
+                  <div className="text-sm text-muted-foreground">Administradores</div>
                 </div>
               </div>
             </CardContent>
@@ -203,9 +203,9 @@ function StatsCard({
         {loading ? (
           <Skeleton className="h-8 w-24" />
         ) : (
-          <p className="text-3xl font-bold">{value?.toLocaleString() || 0}</p>
+          <div className="text-3xl font-bold">{value?.toLocaleString() || 0}</div>
         )}
-        <p className="text-xs text-muted-foreground mt-1">{description}</p>
+        <div className="text-xs text-muted-foreground mt-1">{description}</div>
       </CardContent>
     </Card>
   );
