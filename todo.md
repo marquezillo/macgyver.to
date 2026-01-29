@@ -956,3 +956,19 @@
 - [ ] Performance optimization
 - [ ] Production deployment and monitoring
 - [ ] Documentation and handoff
+
+
+## Bug Fixes - Sidebar Conversation History (29 Enero 2026)
+- [x] Fix conversation history sidebar scroll - add proper overflow and max height
+- [x] Limit displayed conversations to 20 by default
+- [x] Add "Ver todas las conversaciones" button when more than 20 exist
+- [x] Add "Mostrar menos" option to collapse back to 20
+
+## Server-Side Rendering Improvements (29 Enero 2026)
+- [x] Update renderFAQSection to match frontend styling with accordion design
+- [x] Update renderCTASection to match frontend styling with gradient support
+- [x] Update renderTestimonialsSection to match frontend styling with proper cards
+- [x] Update renderPricingSection to match frontend styling with highlighted plans
+- [x] Update renderFormSection to match frontend styling with proper form fields
+- [x] Update renderStatsSection to match frontend styling with icons and cards
+- [x] Update renderGallerySection to match frontend styling with hover effects

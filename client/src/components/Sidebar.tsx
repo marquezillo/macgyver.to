@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -243,7 +243,46 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
     chat.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const grouped = filteredChats ? groupChatsByDate(filteredChats) : { favorites: [], today: [], yesterday: [], older: [] };
+  const groupedAll = filteredChats ? groupChatsByDate(filteredChats) : { favorites: [], today: [], yesterday: [], older: [] };
+  
+  // State to show all conversations or limit to 20
+  const [showAllConversations, setShowAllConversations] = useState(false);
+  
+  // Limit conversations to 20 total (excluding favorites and folders) unless "show all" is clicked
+  const MAX_VISIBLE_CONVERSATIONS = 20;
+  
+  const { grouped, totalConversations, hasMoreConversations } = useMemo(() => {
+    const allConversations = [
+      ...groupedAll.today,
+      ...groupedAll.yesterday,
+      ...groupedAll.older
+    ];
+    const total = allConversations.length;
+    const hasMore = total > MAX_VISIBLE_CONVERSATIONS && !showAllConversations;
+    
+    if (showAllConversations || total <= MAX_VISIBLE_CONVERSATIONS) {
+      return { grouped: groupedAll, totalConversations: total, hasMoreConversations: false };
+    }
+    
+    // Limit to 20 conversations distributed across today, yesterday, older
+    let remaining = MAX_VISIBLE_CONVERSATIONS;
+    const limitedToday = groupedAll.today.slice(0, remaining);
+    remaining -= limitedToday.length;
+    const limitedYesterday = remaining > 0 ? groupedAll.yesterday.slice(0, remaining) : [];
+    remaining -= limitedYesterday.length;
+    const limitedOlder = remaining > 0 ? groupedAll.older.slice(0, remaining) : [];
+    
+    return {
+      grouped: {
+        favorites: groupedAll.favorites,
+        today: limitedToday,
+        yesterday: limitedYesterday,
+        older: limitedOlder
+      },
+      totalConversations: total,
+      hasMoreConversations: hasMore
+    };
+  }, [groupedAll, showAllConversations]);
 
   // Get chats for a specific folder
   const getChatsForFolder = (folderId: number) => {
@@ -459,8 +498,8 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
         </div>
       )}
 
-      {/* History List */}
-      <ScrollArea className="flex-1 px-3">
+      {/* History List - with proper scroll */}
+      <ScrollArea className="flex-1 px-3" style={{ minHeight: 0, maxHeight: 'calc(100vh - 350px)' }}>
         {chatsLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
@@ -630,6 +669,34 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
                 <div className="space-y-1">
                   {grouped.older.map(renderChatItem)}
                 </div>
+              </div>
+            )}
+            
+            {/* View All Conversations Link */}
+            {hasMoreConversations && (
+              <div className="pt-2 pb-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-center text-xs text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                  onClick={() => setShowAllConversations(true)}
+                >
+                  Ver todas las conversaciones ({totalConversations})
+                </Button>
+              </div>
+            )}
+            
+            {/* Collapse button when showing all */}
+            {showAllConversations && totalConversations > MAX_VISIBLE_CONVERSATIONS && (
+              <div className="pt-2 pb-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-center text-xs text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowAllConversations(false)}
+                >
+                  Mostrar menos
+                </Button>
               </div>
             )}
           </div>
