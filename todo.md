@@ -933,3 +933,26 @@
 - [x] Actualizar generador de páginas legales para usar URLs según idioma
 - [x] Actualizar subdomainRouter para reconocer URLs en múltiples idiomas
 - [x] Sincronizar cambios a GitHub
+
+## NEXT PHASE: WEEK 1 - UX Fixes (28 Jan - 03 Feb 2026)
+- [ ] Fix home page scroll issue
+- [ ] Implement image fallback system
+- [ ] Complete component translation audit
+
+## NEXT PHASE: WEEK 2 - Localization (04 Feb - 10 Feb 2026)
+- [ ] Add preferredLanguage to user schema
+- [ ] Create language persistence tRPC procedures
+- [ ] Update LanguageContext for DB persistence
+- [ ] Implement browser language auto-detection
+- [ ] Extract and translate hardcoded strings
+
+## NEXT PHASE: WEEK 3 - Feature Refinement (11 Feb - 17 Feb 2026)
+- [ ] Improve web cloning accuracy
+- [ ] Implement project export feature
+- [ ] Add comprehensive error handling
+
+## NEXT PHASE: WEEK 4 - QA & Deployment (18 Feb - 28 Feb 2026)
+- [ ] Comprehensive feature testing
+- [ ] Performance optimization
+- [ ] Production deployment and monitoring
+- [ ] Documentation and handoff

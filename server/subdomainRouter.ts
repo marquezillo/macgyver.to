@@ -231,6 +231,16 @@ function renderSection(section: any, styles: any, projectSlug: string = '', lang
       return renderPricingSection(content, styles);
     case 'faq':
       return renderFAQSection(content, styles);
+    case 'process':
+      return renderProcessSection(content, styles);
+    case 'form':
+      return renderFormSection(content, styles);
+    case 'stats':
+      return renderStatsSection(content, styles);
+    case 'gallery':
+      return renderGallerySection(content, styles);
+    case 'about':
+      return renderAboutSection(content, styles);
     case 'cta':
       return renderCTASection(content, styles);
     case 'footer':
@@ -444,6 +454,126 @@ function renderFAQSection(content: any, styles: any): string {
           </details>
         `).join('')}
       </div>
+    </div>
+  </section>`;
+}
+
+function renderProcessSection(content: any, styles: any): string {
+  const title = content.title || 'How It Works';
+  const subtitle = content.subtitle || '';
+  const steps = content.steps || [];
+  
+  return `
+  <section class="py-20 bg-gray-50">
+    <div class="container mx-auto px-4">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-bold mb-4">${title}</h2>
+        ${subtitle ? `<p class="text-gray-600 max-w-2xl mx-auto">${subtitle}</p>` : ''}
+      </div>
+      <div class="grid md:grid-cols-${Math.min(steps.length, 4)} gap-8 max-w-5xl mx-auto">
+        ${steps.map((step: any, i: number) => `
+          <div class="text-center">
+            <div class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-4 text-lg font-bold">${step.number || i + 1}</div>
+            <h3 class="text-xl font-semibold mb-2">${step.title || ''}</h3>
+            <p class="text-gray-600">${step.description || ''}</p>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderFormSection(content: any, styles: any): string {
+  const title = content.title || 'Contact Us';
+  const subtitle = content.subtitle || '';
+  const fields = content.fields || [];
+  const submitText = content.submitText || 'Send Message';
+  
+  return `
+  <section class="py-20 bg-white">
+    <div class="container mx-auto px-4 max-w-2xl">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-bold mb-4">${title}</h2>
+        ${subtitle ? `<p class="text-gray-600">${subtitle}</p>` : ''}
+      </div>
+      <form class="space-y-6">
+        ${fields.map((field: any) => `
+          <div>
+            ${field.label ? `<label class="block text-sm font-medium text-gray-900 mb-2">${field.label}</label>` : ''}
+            ${field.type === 'textarea' ? `<textarea name="${field.id}" placeholder="${field.placeholder || ''}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" rows="4"></textarea>` : `<input type="${field.type || 'text'}" name="${field.id}" placeholder="${field.placeholder || ''}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" ${field.required ? 'required' : ''}>`}
+          </div>
+        `).join('')}
+        <button type="submit" class="w-full btn-primary text-white px-8 py-3 rounded-lg text-lg font-semibold hover:opacity-90">${submitText}</button>
+      </form>
+    </div>
+  </section>`;
+}
+
+function renderStatsSection(content: any, styles: any): string {
+  const stats = content.items || [];
+  
+  return `
+  <section class="py-20 bg-gradient-to-r from-primary to-primary/80 text-white">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-${Math.min(stats.length, 4)} gap-8 text-center">
+        ${stats.map((stat: any) => `
+          <div>
+            <div class="text-4xl md:text-5xl font-bold mb-2">${stat.value || ''}</div>
+            <div class="text-lg opacity-90">${stat.label || ''}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderGallerySection(content: any, styles: any): string {
+  const title = content.title || 'Gallery';
+  const subtitle = content.subtitle || '';
+  const images = content.images || [];
+  
+  return `
+  <section class="py-20 bg-gray-50">
+    <div class="container mx-auto px-4">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-bold mb-4">${title}</h2>
+        ${subtitle ? `<p class="text-gray-600 max-w-2xl mx-auto">${subtitle}</p>` : ''}
+      </div>
+      <div class="grid md:grid-cols-3 gap-8">
+        ${images.map((img: any) => `
+          <div class="overflow-hidden rounded-lg shadow-lg">
+            <img src="${img.url || img.src || ''}" alt="${img.alt || 'Gallery image'}" class="w-full h-64 object-cover hover:scale-105 transition-transform">
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderAboutSection(content: any, styles: any): string {
+  const title = content.title || 'About Us';
+  const description = content.description || '';
+  const team = content.team || [];
+  
+  return `
+  <section class="py-20 bg-white">
+    <div class="container mx-auto px-4">
+      <div class="max-w-3xl mx-auto text-center mb-12">
+        <h2 class="text-3xl font-bold mb-4">${title}</h2>
+        <p class="text-gray-600 text-lg">${description}</p>
+      </div>
+      ${team.length > 0 ? `
+      <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        ${team.map((member: any) => `
+          <div class="text-center">
+            ${member.image ? `<img src="${member.image}" alt="${member.name}" class="w-32 h-32 rounded-full mx-auto mb-4 object-cover">` : `<div class="w-32 h-32 rounded-full mx-auto mb-4 bg-gray-200 flex items-center justify-center text-gray-400">No image</div>`}
+            <h3 class="text-xl font-semibold">${member.name || ''}</h3>
+            <p class="text-gray-600">${member.role || ''}</p>
+            ${member.bio ? `<p class="text-sm text-gray-500 mt-2">${member.bio}</p>` : ''}
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
     </div>
   </section>`;
 }

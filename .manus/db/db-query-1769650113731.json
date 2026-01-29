@@ -1,0 +1,24 @@
+{
+  "query": "SELECT id, subdomain, slug, name, JSON_LENGTH(config) as config_keys FROM publishedLandings WHERE slug LIKE '%prueba%' ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 34PJYedpVygExjM.e1ecfc4d4172 --database ZbHp7JpkjVz6yScGwQHTeE --execute SELECT id, subdomain, slug, name, JSON_LENGTH(config) as config_keys FROM publishedLandings WHERE slug LIKE '%prueba%' ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "30002",
+      "subdomain": "z01n6hba",
+      "slug": "prueba21323123",
+      "name": "prueba",
+      "config_keys": "2"
+    },
+    {
+      "id": "30001",
+      "subdomain": "z01n6hba",
+      "slug": "pruebaaa",
+      "name": "pruebalanding",
+      "config_keys": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsubdomain\tslug\tname\tconfig_keys\n30002\tz01n6hba\tprueba21323123\tprueba\t2\n30001\tz01n6hba\tpruebaaa\tpruebalanding\t2\n",
+  "stderr": "",
+  "execution_time_ms": 1516
+}
