@@ -1007,6 +1007,8 @@
 - [x] Remove ecosystem.config.cjs from git tracking
 - [x] Update .gitignore to prevent ecosystem.config.* commits
 - [x] Verify no old exposed keys remain in codebase
-- [ ] Create secure deployment script for VPS (loads env vars from .env file)
-- [ ] Test deployment with new secure configuration
+- [x] Create secure deployment script for VPS (loads env vars from .env file)
+- [x] Test deployment with new secure configuration
+- [x] Update deploy.sh to backup/restore ecosystem.config.cjs during git pulls
+- [x] Verify new API keys are loaded correctly on VPS
 - [ ] Document secure setup process for future deployments
