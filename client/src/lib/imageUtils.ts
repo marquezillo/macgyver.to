@@ -1,7 +1,13 @@
 /**
- * Centralized image utility functions for landing page components.
+ * Centralized image and media utility functions for landing page components.
+ * 
+ * @module imageUtils
+ * @description Provides functions for validating image/video URLs,
+ * generating placeholder gradients, and creating avatar fallbacks.
+ * Used across Hero, Gallery, Testimonials, and About sections.
  */
 
+/** Common placeholder image service domains to filter out */
 const PLACEHOLDER_PATTERNS = [
   'placeholder.com',
   'via.placeholder',
@@ -14,7 +20,15 @@ const PLACEHOLDER_PATTERNS = [
 const VALID_URL_PREFIXES = ['http://', 'https://', '/', 'data:', 'blob:'];
 
 /**
- * Validate if a URL is a valid image URL
+ * Validate if a URL is a valid, usable image URL.
+ * Filters out empty strings, placeholder services, and invalid formats.
+ * 
+ * @param url - URL to validate
+ * @returns true if URL is valid and not a placeholder
+ * @example
+ * isValidImageUrl('https://example.com/photo.jpg') // true
+ * isValidImageUrl('https://via.placeholder.com/150') // false (placeholder)
+ * isValidImageUrl('') // false
  */
 export function isValidImageUrl(url: string | undefined | null): boolean {
   if (!url || typeof url !== 'string') return false;
@@ -36,7 +50,15 @@ export function isValidImageUrl(url: string | undefined | null): boolean {
 }
 
 /**
- * Validate if a URL is a valid video URL
+ * Validate if a URL is a valid video URL.
+ * Checks for video file extensions and known video hosting services.
+ * 
+ * @param url - URL to validate
+ * @returns true if URL points to a video resource
+ * @example
+ * isValidVideoUrl('https://example.com/video.mp4') // true
+ * isValidVideoUrl('https://youtube.com/watch?v=abc') // true
+ * isValidVideoUrl('https://example.com/photo.jpg') // false
  */
 export function isValidVideoUrl(url: string | undefined | null): boolean {
   if (!url || typeof url !== 'string') return false;
@@ -61,7 +83,15 @@ export function isValidVideoUrl(url: string | undefined | null): boolean {
 }
 
 /**
- * Get initials from a name (for avatar fallbacks)
+ * Extract initials from a name for avatar fallbacks.
+ * Returns up to 2 characters from the first letters of each word.
+ * 
+ * @param name - Full name to extract initials from
+ * @returns 1-2 uppercase letters, or 'U' if name is empty
+ * @example
+ * getInitials('John Doe') // 'JD'
+ * getInitials('Alice') // 'A'
+ * getInitials('') // 'U'
  */
 export function getInitials(name: string | undefined | null): string {
   if (!name || typeof name !== 'string') return 'U';
@@ -75,7 +105,14 @@ export function getInitials(name: string | undefined | null): string {
 }
 
 /**
- * Generate a placeholder gradient background for missing images
+ * Generate a placeholder gradient background for missing images.
+ * Uses a hash of the seed string to select from predefined color pairs.
+ * 
+ * @param seed - String to hash for consistent color selection
+ * @param accentColor - Fallback accent color if no seed provided
+ * @returns CSS linear-gradient string
+ * @example
+ * getPlaceholderGradient('user-123') // 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
  */
 export function getPlaceholderGradient(seed: string = '', accentColor: string = '#6366f1'): string {
   const colors = [
@@ -100,7 +137,17 @@ export function getPlaceholderGradient(seed: string = '', accentColor: string = 
 }
 
 /**
- * Generate CSS background-image value with fallback gradient
+ * Generate CSS background-image properties with automatic fallback.
+ * Returns gradient placeholder if image URL is invalid.
+ * 
+ * @param imageUrl - Image URL to use
+ * @param fallbackColor - Accent color for fallback gradient
+ * @returns React.CSSProperties object for background styling
+ * @example
+ * getBackgroundImageStyle('https://example.com/photo.jpg')
+ * // { backgroundImage: 'url(...)', backgroundSize: 'cover', ... }
+ * getBackgroundImageStyle(undefined)
+ * // { background: 'linear-gradient(...)' }
  */
 export function getBackgroundImageStyle(
   imageUrl: string | undefined,
@@ -122,7 +169,14 @@ export function getBackgroundImageStyle(
 
 
 /**
- * Generate a consistent color based on text (for avatar backgrounds)
+ * Generate a consistent color from text using a hash function.
+ * Useful for generating avatar background colors from names.
+ * 
+ * @param text - Text to hash
+ * @param baseColor - Fallback color if text is empty
+ * @returns Hex color string from predefined palette
+ * @example
+ * getColorFromText('John Doe') // '#8b5cf6' (consistent for same input)
  */
 export function getColorFromText(text: string | undefined | null, baseColor: string = '#6366f1'): string {
   if (!text || typeof text !== 'string') return baseColor;

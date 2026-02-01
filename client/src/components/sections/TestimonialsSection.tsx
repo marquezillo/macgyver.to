@@ -5,37 +5,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { AvatarWithFallback } from '@/components/ui/AvatarWithFallback';
 import { isLightColor } from '@/lib/colorUtils';
-import type { TestimonialsContent, TestimonialsStyles, Testimonial } from '@shared/sectionTypes';
-
-interface ExtendedTestimonial extends Testimonial {
-  videoThumbnail?: string;
-}
-
-interface ExtendedTestimonialsContent extends TestimonialsContent {
-  autoplay?: boolean;
-  autoplayInterval?: number;
-}
+import type { TestimonialsStyles, Testimonial } from '@shared/sectionTypes';
+import {
+  TestimonialCard,
+  MinimalTestimonialCard,
+  StarRating,
+  type ExtendedTestimonialsContent,
+  CARD_TEXT_COLORS,
+  defaultTestimonials,
+  cardVariants,
+  getSectionColors,
+  getTestimonials
+} from './testimonials';
 
 interface TestimonialsSectionProps {
   id: string;
   content: ExtendedTestimonialsContent;
   styles?: TestimonialsStyles;
 }
-
-// isLightColor now imported from @/lib/colorUtils
-
-/**
- * COLORES HARDCODEADOS PARA CARDS - SIEMPRE LEGIBLES
- * Las cards de testimonios SIEMPRE tienen fondo blanco/claro, por lo tanto:
- * - Texto principal: SIEMPRE oscuro (#1f2937 - gray-800)
- * - Texto secundario: SIEMPRE gris medio (#6b7280 - gray-500)
- * - Quote: SIEMPRE gris oscuro (#4b5563 - gray-600)
- */
-const CARD_TEXT_COLORS = {
-  name: '#1f2937',      // gray-800 - SIEMPRE visible
-  quote: '#374151',     // gray-700 - SIEMPRE visible
-  role: '#6b7280',      // gray-500 - SIEMPRE visible
-};
 
 export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSectionProps) {
   const { selectedSectionId, selectSection } = useEditorStore();
@@ -45,38 +32,13 @@ export function TestimonialsSection({ id, content, styles = {} }: TestimonialsSe
   const [activeVideo, setActiveVideo] = useState<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const rawTestimonials = content?.items || content?.testimonials || [];
-  const testimonials = (Array.isArray(rawTestimonials) && rawTestimonials.length > 0) ? rawTestimonials : [
-    {
-      name: 'María García',
-      text: 'Excelente servicio, superó todas mis expectativas. Lo recomiendo totalmente.',
-      rating: 5,
-      role: 'CEO',
-      company: 'Tech Solutions'
-    },
-    {
-      name: 'Carlos Rodríguez',
-      text: 'Profesionales y eficientes. El mejor equipo con el que he trabajado.',
-      rating: 5,
-      role: 'Director',
-      company: 'Marketing Pro'
-    },
-    {
-      name: 'Ana Martínez',
-      text: 'Resultados increíbles en tiempo récord. Definitivamente volveré a contratar.',
-      rating: 5,
-      role: 'Fundadora',
-      company: 'StartupX'
-    }
-  ];
+  const testimonials = getTestimonials(content);
 
   const layout = content?.layout || 'grid';
   const autoplayInterval = content?.autoplayInterval || 5000;
   
-  // Determinar si el fondo de la sección es claro u oscuro para el título
-  const sectionBgIsLight = isLightColor(styles?.backgroundColor);
-  const sectionTitleColor = sectionBgIsLight ? '#111827' : '#ffffff';
-  const sectionSubtitleColor = sectionBgIsLight ? '#4b5563' : 'rgba(255,255,255,0.8)';
+  // Get section colors based on background
+  const { titleColor: sectionTitleColor, subtitleColor: sectionSubtitleColor } = getSectionColors(styles?.backgroundColor);
 
   // Carousel autoplay
   useEffect(() => {

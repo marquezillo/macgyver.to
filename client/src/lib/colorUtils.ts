@@ -1,15 +1,33 @@
 /**
  * Centralized color utility functions for landing page components.
+ * 
+ * @module colorUtils
+ * @description Provides functions for color parsing, contrast detection,
+ * and generating appropriate text colors based on background colors.
+ * Used across all section components to ensure consistent, readable text.
  */
 
+/**
+ * RGB color representation
+ */
 interface RGB {
+  /** Red channel (0-255) */
   r: number;
+  /** Green channel (0-255) */
   g: number;
+  /** Blue channel (0-255) */
   b: number;
 }
 
 /**
- * Parse a color string (hex, rgb, rgba) to RGB values
+ * Parse a color string to RGB values.
+ * Supports hex (#fff, #ffffff), rgb(), and rgba() formats.
+ * 
+ * @param color - Color string to parse
+ * @returns RGB object or null if parsing fails
+ * @example
+ * parseColor('#6366f1') // { r: 99, g: 102, b: 241 }
+ * parseColor('rgb(255, 0, 0)') // { r: 255, g: 0, b: 0 }
  */
 export function parseColor(color: string | undefined): RGB | null {
   if (!color || typeof color !== 'string') return null;
@@ -56,7 +74,15 @@ export function parseColor(color: string | undefined): RGB | null {
 }
 
 /**
- * Determine if a color is light (needs dark text) or dark (needs light text)
+ * Determine if a color is light (needs dark text) or dark (needs light text).
+ * Uses relative luminance formula: 0.299*R + 0.587*G + 0.114*B
+ * 
+ * @param color - Background color to analyze
+ * @returns true if color is light (luminance > 0.5), false if dark
+ * @example
+ * isLightColor('#ffffff') // true
+ * isLightColor('#000000') // false
+ * isLightColor('#6366f1') // false (indigo is dark)
  */
 export function isLightColor(color: string | undefined): boolean {
   if (!color) return true;
@@ -77,7 +103,16 @@ export interface ContrastColors {
 }
 
 /**
- * Get appropriate text colors based on background color
+ * Get a complete set of text colors that contrast well with a background.
+ * Returns colors for titles, subtitles, badges, and muted text.
+ * 
+ * @param backgroundColor - The background color to contrast against
+ * @param hasOverlay - If true, assumes dark overlay is present (always returns light text)
+ * @returns Object with textColor, subtitleColor, badgeBg, badgeText, mutedColor
+ * @example
+ * getContrastColors('#ffffff') // dark text colors for light bg
+ * getContrastColors('#1a1a1a') // light text colors for dark bg
+ * getContrastColors('#6366f1', true) // light text (overlay mode)
  */
 export function getContrastColors(
   backgroundColor: string | undefined,
@@ -115,14 +150,27 @@ export function getContrastColors(
 }
 
 /**
- * Ensure text has sufficient contrast against background
+ * Get a simple text color that contrasts with the background.
+ * Returns dark text (#111827) for light backgrounds, white for dark.
+ * 
+ * @param backgroundColor - The background color
+ * @returns Contrasting text color (hex string)
  */
 export function ensureTextContrast(backgroundColor: string | undefined): string {
   return isLightColor(backgroundColor) ? '#111827' : '#ffffff';
 }
 
 /**
- * Generate a consistent color from a text string
+ * Generate a consistent color from a text string.
+ * Uses a hash function to map any string to one of 9 predefined colors.
+ * Useful for generating avatar background colors from names.
+ * 
+ * @param text - Input text to hash
+ * @param baseColor - Fallback color if text is empty
+ * @returns Hex color string
+ * @example
+ * getColorFromText('John Doe') // '#8b5cf6' (consistent for same input)
+ * getColorFromText('Jane Smith') // '#f43f5e'
  */
 export function getColorFromText(text: string, baseColor: string = '#6366f1'): string {
   if (!text) return baseColor;
@@ -141,7 +189,13 @@ export function getColorFromText(text: string, baseColor: string = '#6366f1'): s
 }
 
 /**
- * Add alpha/opacity to a color
+ * Add alpha/opacity to a color, converting it to rgba format.
+ * 
+ * @param color - Input color (hex or rgb)
+ * @param alpha - Opacity value (0-1)
+ * @returns RGBA color string
+ * @example
+ * withAlpha('#6366f1', 0.5) // 'rgba(99, 102, 241, 0.5)'
  */
 export function withAlpha(color: string, alpha: number): string {
   const rgb = parseColor(color);

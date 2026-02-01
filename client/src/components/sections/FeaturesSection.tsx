@@ -4,8 +4,17 @@ import { ArrowRight } from 'lucide-react';
 import { getIcon } from '@/lib/iconUtils';
 import { isLightColor } from '@/lib/colorUtils';
 import type { FeaturesContent, FeaturesStyles, Feature } from '@shared/sectionTypes';
-import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
-import { useState, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { useState } from 'react';
+import {
+  Card3D,
+  containerVariants,
+  itemVariants,
+  defaultFeatures,
+  getFeatures,
+  getSectionColors,
+  getCardColors
+} from './features';
 
 interface FeaturesSectionProps {
   id: string;
@@ -13,73 +22,14 @@ interface FeaturesSectionProps {
   styles?: FeaturesStyles;
 }
 
-// Icon mapping now imported from @/lib/iconUtils
-
-// 3D Card Component
-function Card3D({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
-  
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  
-  const rotateX = useSpring(useTransform(y, [-100, 100], [10, -10]), { stiffness: 300, damping: 30 });
-  const rotateY = useSpring(useTransform(x, [-100, 100], [-10, 10]), { stiffness: 300, damping: 30 });
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    x.set(e.clientX - centerX);
-    y.set(e.clientY - centerY);
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-    x.set(0);
-    y.set(0);
-  };
-
-  return (
-    <motion.div
-      ref={ref}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        ...style,
-        rotateX: isHovered ? rotateX : 0,
-        rotateY: isHovered ? rotateY : 0,
-        transformStyle: 'preserve-3d',
-        perspective: 1000,
-      }}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
 export function FeaturesSection({ id, content, styles = {} }: FeaturesSectionProps) {
   const { selectedSectionId, selectSection } = useEditorStore();
   const isSelected = selectedSectionId === id;
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  };
+  // Animation variants imported from ./features
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
-  };
-
-  const items = content?.items || [];
+  const items = getFeatures(content);
   const layout = content?.layout || 'grid';
 
   const getIconComponent = (iconName?: string) => {
