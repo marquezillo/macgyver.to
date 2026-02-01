@@ -20,7 +20,15 @@ import {
   Play,
   Copy,
   Check,
-  FolderPlus
+  FolderPlus,
+  Layers,
+  ShoppingCart,
+  BarChart3,
+  Briefcase,
+  Building2,
+  Link,
+  Gamepad2,
+  CheckSquare
 } from 'lucide-react';
 import { useEditorStore } from '@/store/editorStore';
 import { trpc } from '@/lib/trpc';
@@ -50,6 +58,19 @@ interface ChatInterfaceProps {
 const SUGGESTIONS = [
   { icon: Globe, label: 'Crea una landing', prompt: 'Crea una landing page moderna para ', color: 'blue' },
   { icon: FolderPlus, label: 'Crear proyecto', prompt: 'Crea un proyecto full-stack para ', color: 'emerald', isProject: true },
+];
+
+// Project templates like Manus
+const PROJECT_TEMPLATES = [
+  { id: 'saas', icon: Layers, label: 'SaaS', description: 'Dashboard + Auth + Stripe', prompt: 'Build me a SaaS dashboard with user authentication and Stripe payments', color: '#6366f1' },
+  { id: 'ecommerce', icon: ShoppingCart, label: 'E-commerce', description: 'Tienda online con pagos', prompt: 'Build me an e-commerce store with product catalog and Stripe checkout', color: '#10b981' },
+  { id: 'dashboard', icon: BarChart3, label: 'Dashboard', description: 'Métricas y gráficos', prompt: 'Build me an analytics dashboard with charts and real-time metrics', color: '#3b82f6' },
+  { id: 'blog', icon: FileText, label: 'Blog', description: 'CMS con posts y SEO', prompt: 'Build me a blog with rich text editor and comment system', color: '#f59e0b' },
+  { id: 'portfolio', icon: Briefcase, label: 'Portfolio', description: 'Proyectos y skills', prompt: 'Build me a portfolio website to showcase my projects and skills', color: '#8b5cf6' },
+  { id: 'corporate', icon: Building2, label: 'Corporate', description: 'Web empresarial', prompt: 'Build me a corporate website for my company with team and services', color: '#0ea5e9' },
+  { id: 'linkinbio', icon: Link, label: 'Link-in-bio', description: 'Como Linktree', prompt: 'Build me a link-in-bio page like Linktree for my social media', color: '#ec4899' },
+  { id: 'minigames', icon: Gamepad2, label: 'Mini Games', description: 'Juegos web simples', prompt: 'Build me a simple web game with leaderboards', color: '#ef4444' },
+  { id: 'productivity', icon: CheckSquare, label: 'Productivity', description: 'Tareas y calendario', prompt: 'Build me a productivity app with tasks and calendar', color: '#14b8a6' },
 ];
 
 export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCreated }: ChatInterfaceProps) {
@@ -805,53 +826,52 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                 <p className="text-gray-500 text-sm">Selecciona una sugerencia o escribe tu mensaje</p>
               </div>
 
-              {/* Suggestion Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+              {/* Main Suggestions */}
+              <div className="grid grid-cols-2 gap-3">
                 {SUGGESTIONS.map((suggestion, index) => {
                   const Icon = suggestion.icon;
-                  const colorClasses: Record<string, string> = {
-                    indigo: 'hover:border-indigo-300 hover:bg-indigo-50/50',
-                    pink: 'hover:border-pink-300 hover:bg-pink-50/50',
-                    cyan: 'hover:border-cyan-300 hover:bg-cyan-50/50',
-                    violet: 'hover:border-violet-300 hover:bg-violet-50/50',
-                    blue: 'hover:border-blue-300 hover:bg-blue-50/50',
-                    emerald: 'hover:border-emerald-300 hover:bg-emerald-50/50',
-                    amber: 'hover:border-amber-300 hover:bg-amber-50/50',
-                    rose: 'hover:border-rose-300 hover:bg-rose-50/50',
-                  };
-                  const iconColorClasses: Record<string, string> = {
-                    indigo: 'group-hover:text-indigo-600',
-                    pink: 'group-hover:text-pink-600',
-                    cyan: 'group-hover:text-cyan-600',
-                    violet: 'group-hover:text-violet-600',
-                    blue: 'group-hover:text-blue-600',
-                    emerald: 'group-hover:text-emerald-600',
-                    amber: 'group-hover:text-amber-600',
-                    rose: 'group-hover:text-rose-600',
-                  };
                   return (
                     <button
                       key={index}
-                      onClick={() => handleSuggestionClick(suggestion.prompt, (suggestion as any).isResearch, (suggestion as any).isImage, (suggestion as any).isFileUpload, (suggestion as any).isCodeExec)}
-                      className={`group p-3 md:p-4 rounded-xl border border-gray-200 bg-white text-left transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 ${colorClasses[suggestion.color]}`}
+                      onClick={() => handleSuggestionClick(suggestion.prompt, false, false, false, false)}
+                      className="group p-4 rounded-xl border border-gray-200 bg-white text-left transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300"
                     >
-                      <Icon className={`w-4 h-4 md:w-5 md:h-5 text-gray-400 mb-1.5 md:mb-2 transition-colors duration-200 ${iconColorClasses[suggestion.color]}`} />
-                      <span className="text-xs md:text-sm font-medium text-gray-700 group-hover:text-gray-900 block">{suggestion.label}</span>
-                      {(suggestion as any).isResearch && (
-                        <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded-full font-medium">Deep</span>
-                      )}
-                      {(suggestion as any).isImage && (
-                        <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 bg-pink-100 text-pink-600 rounded-full font-medium">AI</span>
-                      )}
-                      {(suggestion as any).isFileUpload && (
-                        <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 bg-cyan-100 text-cyan-600 rounded-full font-medium">PDF</span>
-                      )}
-                      {(suggestion as any).isCodeExec && (
-                        <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded-full font-medium">Python</span>
-                      )}
+                      <Icon className="w-5 h-5 text-gray-400 mb-2 transition-colors duration-200 group-hover:text-violet-600" />
+                      <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 block">{suggestion.label}</span>
                     </button>
                   );
                 })}
+              </div>
+
+              {/* Project Templates Section */}
+              <div className="mt-6">
+                <h3 className="text-sm font-medium text-gray-500 mb-3">O elige un template de proyecto</h3>
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                  {PROJECT_TEMPLATES.map((template) => {
+                    const Icon = template.icon;
+                    return (
+                      <button
+                        key={template.id}
+                        onClick={() => handleSuggestionClick(template.prompt, false, false, false, false)}
+                        className="group p-3 rounded-lg border border-gray-200 bg-white text-center transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5"
+                        style={{ '--hover-color': template.color } as React.CSSProperties}
+                        title={template.description}
+                      >
+                        <div 
+                          className="w-8 h-8 mx-auto mb-2 rounded-lg flex items-center justify-center transition-colors duration-200"
+                          style={{ backgroundColor: `${template.color}15` }}
+                        >
+                          <Icon 
+                            className="w-4 h-4 transition-colors duration-200" 
+                            style={{ color: template.color }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium text-gray-600 group-hover:text-gray-900 block">{template.label}</span>
+                        <span className="text-[10px] text-gray-400 block mt-0.5 truncate">{template.description}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>

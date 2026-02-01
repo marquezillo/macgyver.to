@@ -78,6 +78,7 @@ import { deployProject, stopProject, getProjectStatus } from "./projectDeploymen
 import { startDevServer, stopDevServer, getDevServerStatus, getDevServerLogs, refreshProjectFiles, listRunningDevServers } from "./projectDevServer";
 import { generateUserSubdomain, generateProjectSlug, getProjectUrl } from "./subdomainMiddleware";
 import { generateAllLegalPages } from "./legalPagesGenerator";
+import { PROJECT_TEMPLATES, getTemplateById, getAllTemplates, getTemplateSystemPrompt, generateTemplateSchema, type ProjectTemplateType } from "./projectTemplates";
 
 // System prompt for the AI assistant
 const SYSTEM_PROMPT = `Eres un asistente de IA avanzado y versátil especializado en crear landing pages de alta conversión.
@@ -1567,6 +1568,99 @@ export const appRouter = router({
         return {
           subdomain,
           baseUrl: `https://${subdomain}.macgyver.to`,
+        };
+      }),
+  }),
+
+  // Project Templates (like Manus: SaaS, E-commerce, Dashboard, etc.)
+  projectTemplates: router({
+    // List all available project templates
+    list: publicProcedure.query(() => {
+      return getAllTemplates().map(t => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        icon: t.icon,
+        color: t.color,
+        features: t.features,
+        examplePrompt: t.examplePrompt,
+      }));
+    }),
+
+    // Get a specific template by ID
+    get: publicProcedure
+      .input(z.object({ templateId: z.string() }))
+      .query(({ input }) => {
+        const template = getTemplateById(input.templateId as ProjectTemplateType);
+        if (!template) {
+          throw new Error(`Template not found: ${input.templateId}`);
+        }
+        return template;
+      }),
+
+    // Get the system prompt for a template (for AI generation)
+    getSystemPrompt: publicProcedure
+      .input(z.object({ templateId: z.string() }))
+      .query(({ input }) => {
+        const template = getTemplateById(input.templateId as ProjectTemplateType);
+        if (!template) {
+          throw new Error(`Template not found: ${input.templateId}`);
+        }
+        return {
+          systemPrompt: getTemplateSystemPrompt(template),
+          schema: generateTemplateSchema(template),
+        };
+      }),
+
+    // Generate a project from a template
+    generate: protectedProcedure
+      .input(z.object({
+        templateId: z.string(),
+        projectName: z.string(),
+        customizations: z.object({
+          description: z.string().optional(),
+          features: z.array(z.string()).optional(),
+          colorScheme: z.string().optional(),
+        }).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const template = getTemplateById(input.templateId as ProjectTemplateType);
+        if (!template) {
+          throw new Error(`Template not found: ${input.templateId}`);
+        }
+
+        // Generate the project using AI with template context
+        const systemPrompt = getTemplateSystemPrompt(template);
+        const userPrompt = `Create a ${template.name} project called "${input.projectName}".
+${input.customizations?.description ? `Description: ${input.customizations.description}` : ''}
+${input.customizations?.features?.length ? `Additional features: ${input.customizations.features.join(', ')}` : ''}
+${input.customizations?.colorScheme ? `Color scheme: ${input.customizations.colorScheme}` : ''}`;
+
+        // Use the existing project generator with template context
+        const files = await generateProjectWithAI(userPrompt, input.projectName);
+
+        // Create project in database
+        const project = await createProject(ctx.user.id, {
+          name: input.projectName,
+          description: template.description,
+          type: 'webapp',
+          status: 'draft',
+        });
+
+        // Save generated files
+        for (const file of files) {
+          await createProjectFile(project.id, {
+            path: file.path,
+            content: file.content,
+            fileType: file.fileType || 'code',
+          });
+        }
+
+        return {
+          success: true,
+          project,
+          filesCount: files.length,
+          template: template.name,
         };
       }),
   }),
