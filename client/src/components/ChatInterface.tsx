@@ -57,7 +57,7 @@ interface ChatInterfaceProps {
 
 const SUGGESTIONS = [
   { icon: Globe, label: 'Crea una landing', prompt: 'Crea una landing page moderna para ', color: 'blue' },
-  { icon: FolderPlus, label: 'Crear proyecto', prompt: 'Crea un proyecto full-stack para ', color: 'emerald', isProject: true },
+  { icon: FolderPlus, label: 'Crear proyecto full-stack', prompt: '', color: 'emerald', isProject: true, showTemplates: true },
 ];
 
 // Project templates like Manus
@@ -87,6 +87,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
   const [codeOutput, setCodeOutput] = useState('');
   const [isExecutingCode, setIsExecutingCode] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [showProjectTemplates, setShowProjectTemplates] = useState(false);
   
   const { setSections, sections } = useEditorStore();
   const { isAuthenticated, user } = useAuth();
@@ -826,53 +827,75 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                 <p className="text-gray-500 text-sm">Selecciona una sugerencia o escribe tu mensaje</p>
               </div>
 
-              {/* Main Suggestions */}
-              <div className="grid grid-cols-2 gap-3">
-                {SUGGESTIONS.map((suggestion, index) => {
-                  const Icon = suggestion.icon;
-                  return (
-                    <button
-                      key={index}
-                      onClick={() => handleSuggestionClick(suggestion.prompt, false, false, false, false)}
-                      className="group p-4 rounded-xl border border-gray-200 bg-white text-left transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300"
-                    >
-                      <Icon className="w-5 h-5 text-gray-400 mb-2 transition-colors duration-200 group-hover:text-violet-600" />
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 block">{suggestion.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Project Templates Section */}
-              <div className="mt-6">
-                <h3 className="text-sm font-medium text-gray-500 mb-3">O elige un template de proyecto</h3>
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-                  {PROJECT_TEMPLATES.map((template) => {
-                    const Icon = template.icon;
+              {/* Main Suggestions or Project Templates */}
+              {!showProjectTemplates ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {SUGGESTIONS.map((suggestion, index) => {
+                    const Icon = suggestion.icon;
                     return (
                       <button
-                        key={template.id}
-                        onClick={() => handleSuggestionClick(template.prompt, false, false, false, false)}
-                        className="group p-3 rounded-lg border border-gray-200 bg-white text-center transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5"
-                        style={{ '--hover-color': template.color } as React.CSSProperties}
-                        title={template.description}
+                        key={index}
+                        onClick={() => {
+                          if ((suggestion as any).showTemplates) {
+                            setShowProjectTemplates(true);
+                          } else {
+                            handleSuggestionClick(suggestion.prompt, false, false, false, false);
+                          }
+                        }}
+                        className="group p-4 rounded-xl border border-gray-200 bg-white text-left transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300"
                       >
-                        <div 
-                          className="w-8 h-8 mx-auto mb-2 rounded-lg flex items-center justify-center transition-colors duration-200"
-                          style={{ backgroundColor: `${template.color}15` }}
-                        >
-                          <Icon 
-                            className="w-4 h-4 transition-colors duration-200" 
-                            style={{ color: template.color }}
-                          />
-                        </div>
-                        <span className="text-xs font-medium text-gray-600 group-hover:text-gray-900 block">{template.label}</span>
-                        <span className="text-[10px] text-gray-400 block mt-0.5 truncate">{template.description}</span>
+                        <Icon className="w-5 h-5 text-gray-400 mb-2 transition-colors duration-200 group-hover:text-violet-600" />
+                        <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 block">{suggestion.label}</span>
                       </button>
                     );
                   })}
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Back button */}
+                  <button
+                    onClick={() => setShowProjectTemplates(false)}
+                    className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Volver
+                  </button>
+                  
+                  <h3 className="text-lg font-semibold text-gray-900">Elige un template de proyecto</h3>
+                  <p className="text-sm text-gray-500">Selecciona el tipo de aplicación que quieres crear</p>
+                  
+                  {/* Project Templates Grid */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {PROJECT_TEMPLATES.map((template) => {
+                      const Icon = template.icon;
+                      return (
+                        <button
+                          key={template.id}
+                          onClick={() => {
+                            setShowProjectTemplates(false);
+                            handleSuggestionClick(template.prompt, false, false, false, false);
+                          }}
+                          className="group p-4 rounded-xl border border-gray-200 bg-white text-center transition-all duration-200 ease-out hover:shadow-lg hover:-translate-y-1 hover:border-gray-300"
+                        >
+                          <div 
+                            className="w-12 h-12 mx-auto mb-3 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-110"
+                            style={{ backgroundColor: `${template.color}15` }}
+                          >
+                            <Icon 
+                              className="w-6 h-6 transition-colors duration-200" 
+                              style={{ color: template.color }}
+                            />
+                          </div>
+                          <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900 block">{template.label}</span>
+                          <span className="text-xs text-gray-400 block mt-1">{template.description}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
