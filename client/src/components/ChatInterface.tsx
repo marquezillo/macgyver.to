@@ -48,12 +48,7 @@ interface ChatInterfaceProps {
 }
 
 const SUGGESTIONS = [
-  { icon: Search, label: 'Investiga un tema', prompt: 'Investiga ', color: 'indigo', isResearch: true },
-  { icon: ImageIcon, label: 'Genera una imagen', prompt: 'Genera una imagen de ', color: 'pink', isImage: true },
-  { icon: FileText, label: 'Analiza un archivo', prompt: 'Analiza este archivo: ', color: 'cyan', isFileUpload: true },
-  { icon: Terminal, label: 'Ejecuta código', prompt: '', color: 'amber', isCodeExec: true },
   { icon: Globe, label: 'Crea una landing', prompt: 'Crea una landing page moderna para ', color: 'blue' },
-  { icon: Code, label: 'Ayúdame con código', prompt: 'Ayúdame a escribir código para ', color: 'violet' },
   { icon: FolderPlus, label: 'Crear proyecto', prompt: 'Crea un proyecto full-stack para ', color: 'emerald', isProject: true },
 ];
 
