@@ -3,64 +3,16 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ImageOff } from 'lucide-react';
-
-interface GalleryImage {
-  src: string;
-  alt?: string;
-  caption?: string;
-}
+import { isValidImageUrl, getColorFromText } from '@/lib/imageUtils';
+import type { GalleryContent, GalleryStyles, GalleryImage } from '@shared/sectionTypes';
 
 interface GallerySectionProps {
   id: string;
-  content: {
-    title?: string;
-    subtitle?: string;
-    images?: GalleryImage[];
-    layout?: 'grid' | 'masonry' | 'carousel';
-  };
-  styles?: {
-    backgroundColor?: string;
-    textColor?: string;
-    accentColor?: string;
-  };
+  content: GalleryContent;
+  styles?: GalleryStyles;
 }
 
-// Función para validar si una URL de imagen es válida
-const isValidImageUrl = (url: string): boolean => {
-  if (!url || typeof url !== 'string') return false;
-  if (url.trim() === '' || url === 'undefined' || url === 'null') return false;
-  
-  // Debe empezar con http, https, / o data:
-  if (!url.startsWith('http') && !url.startsWith('/') && !url.startsWith('data:')) {
-    return false;
-  }
-  
-  // Patrones de placeholder conocidos que fallan frecuentemente
-  const badPatterns = [
-    'placeholder.com', 'via.placeholder', 'placehold.it', 
-    'dummyimage.com', 'fakeimg.pl', 'lorempixel.com',
-    'placekitten.com', 'loremflickr.com'
-  ];
-  
-  return !badPatterns.some(pattern => url.includes(pattern));
-};
-
-// Generar color basado en texto para consistencia
-const getColorFromText = (text: string, baseColor: string = '#6366f1'): string => {
-  if (!text) return baseColor;
-  
-  const colors = [
-    '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316',
-    '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'
-  ];
-  
-  let hash = 0;
-  for (let i = 0; i < text.length; i++) {
-    hash = text.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  
-  return colors[Math.abs(hash) % colors.length];
-};
+// Utilities now imported from @/lib/imageUtils
 
 // Componente de imagen con fallback
 function GalleryImageWithFallback({ 

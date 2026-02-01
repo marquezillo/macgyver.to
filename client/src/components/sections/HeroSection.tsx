@@ -5,84 +5,19 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Play, ChevronDown, ImageOff, Volume2, VolumeX } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { FloatingElements } from '@/components/ui/FloatingElements';
+import { isLightColor, getContrastColors } from '@/lib/colorUtils';
+import { isValidImageUrl, isValidVideoUrl } from '@/lib/imageUtils';
+import type { HeroContent, HeroStyles } from '@shared/sectionTypes';
 
 interface HeroSectionProps {
   id: string;
-  content: any;
-  styles?: any;
+  content: HeroContent;
+  styles?: HeroStyles;
 }
 
-// Función para validar URLs de imagen
-const isValidImageUrl = (url?: string): boolean => {
-  if (!url || typeof url !== 'string') return false;
-  if (url.trim() === '' || url === 'undefined' || url === 'null') return false;
-  if (!url.startsWith('http') && !url.startsWith('/') && !url.startsWith('data:')) return false;
-  const badPatterns = ['placeholder.com', 'via.placeholder', 'placehold.it', 'dummyimage.com'];
-  return !badPatterns.some(pattern => url.includes(pattern));
-};
-
-// Función para validar URLs de video
-const isValidVideoUrl = (url?: string): boolean => {
-  if (!url || typeof url !== 'string') return false;
-  if (url.trim() === '' || url === 'undefined' || url === 'null') return false;
-  const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov'];
-  const isVideoFile = videoExtensions.some(ext => url.toLowerCase().includes(ext));
-  const isVideoService = url.includes('youtube') || url.includes('vimeo') || url.includes('cloudinary');
-  return isVideoFile || isVideoService;
-};
-
-// Función para asegurar contraste de texto
-const ensureContrast = (bgColor?: string, hasImage?: boolean): { textColor: string; subtitleColor: string; badgeBg: string; badgeText: string } => {
-  if (hasImage) {
-    return {
-      textColor: '#ffffff',
-      subtitleColor: 'rgba(255,255,255,0.9)',
-      badgeBg: 'rgba(255,255,255,0.15)',
-      badgeText: '#ffffff'
-    };
-  }
-  
-  if (bgColor) {
-    const isLight = isLightColor(bgColor);
-    return {
-      textColor: isLight ? '#111827' : '#ffffff',
-      subtitleColor: isLight ? '#4b5563' : 'rgba(255,255,255,0.8)',
-      badgeBg: isLight ? '#6366f120' : 'rgba(255,255,255,0.15)',
-      badgeText: isLight ? '#6366f1' : '#ffffff'
-    };
-  }
-  
-  return {
-    textColor: '#ffffff',
-    subtitleColor: 'rgba(255,255,255,0.8)',
-    badgeBg: 'rgba(255,255,255,0.15)',
-    badgeText: '#ffffff'
-  };
-};
-
-// Determinar si un color es claro
-const isLightColor = (color: string): boolean => {
-  if (!color) return false;
-  
-  let r, g, b;
-  if (color.startsWith('#')) {
-    const hex = color.slice(1);
-    r = parseInt(hex.slice(0, 2), 16);
-    g = parseInt(hex.slice(2, 4), 16);
-    b = parseInt(hex.slice(4, 6), 16);
-  } else if (color.startsWith('rgb')) {
-    const match = color.match(/\d+/g);
-    if (match) {
-      [r, g, b] = match.map(Number);
-    } else {
-      return false;
-    }
-  } else {
-    return false;
-  }
-  
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.5;
+// Wrapper for contrast colors with image support
+const ensureContrast = (bgColor?: string, hasImage?: boolean) => {
+  return getContrastColors(bgColor, hasImage);
 };
 
 // Componente de imagen con fallback para Hero
@@ -201,7 +136,7 @@ function VideoBackground({
   poster,
   accentColor 
 }: { 
-  src: string; 
+  src?: string; 
   poster?: string;
   accentColor?: string;
 }) {

@@ -3,61 +3,16 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { Linkedin, Twitter, Mail, ImageOff, Building2 } from 'lucide-react';
 import { useState } from 'react';
-
-interface TeamMember {
-  name: string;
-  role?: string;
-  image?: string;
-  linkedin?: string;
-  twitter?: string;
-  email?: string;
-}
+import { isValidImageUrl, getInitials, getColorFromText } from '@/lib/imageUtils';
+import type { AboutContent, AboutStyles, TeamMember } from '@shared/sectionTypes';
 
 interface AboutSectionProps {
   id: string;
-  content: {
-    title?: string;
-    description?: string;
-    badge?: string;
-    image?: string;
-    imageAlt?: string;
-    highlights?: string[];
-    ctaText?: string;
-    team?: TeamMember[];
-    teamTitle?: string;
-    teamSubtitle?: string;
-  };
-  styles?: {
-    backgroundColor?: string;
-    textColor?: string;
-    accentColor?: string;
-  };
+  content: AboutContent;
+  styles?: AboutStyles;
 }
 
-// Función para validar URLs de imagen
-const isValidImageUrl = (url?: string): boolean => {
-  if (!url || typeof url !== 'string') return false;
-  if (url.trim() === '' || url === 'undefined' || url === 'null') return false;
-  if (!url.startsWith('http') && !url.startsWith('/') && !url.startsWith('data:')) return false;
-  
-  const badPatterns = ['placeholder.com', 'via.placeholder', 'placehold.it', 'dummyimage.com'];
-  return !badPatterns.some(pattern => url.includes(pattern));
-};
-
-// Generar color basado en texto
-const getColorFromText = (text: string, baseColor: string = '#6366f1'): string => {
-  if (!text) return baseColor;
-  const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'];
-  let hash = 0;
-  for (let i = 0; i < text.length; i++) hash = text.charCodeAt(i) + ((hash << 5) - hash);
-  return colors[Math.abs(hash) % colors.length];
-};
-
-// Obtener iniciales
-const getInitials = (name: string): string => {
-  if (!name) return 'U';
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-};
+// Utilities now imported from @/lib/imageUtils
 
 // Componente de imagen principal con fallback
 function MainImageWithFallback({ 

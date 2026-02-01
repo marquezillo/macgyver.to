@@ -1,39 +1,13 @@
 import { useEditorStore } from '@/store/editorStore';
 import { cn } from '@/lib/utils';
 import { Facebook, Twitter, Instagram, Linkedin, Youtube, Globe, Mail, Phone, MapPin } from 'lucide-react';
-
-interface FooterLink {
-  label: string;
-  href: string;
-}
-
-interface FooterColumn {
-  title: string;
-  links: FooterLink[];
-}
-
-interface SocialLink {
-  platform: string;
-  href: string;
-}
+import { isLightColor } from '@/lib/colorUtils';
+import type { FooterContent, FooterStyles, FooterLink, FooterColumn, SocialLink } from '@shared/sectionTypes';
 
 interface FooterSectionProps {
   id: string;
-  content: {
-    companyName?: string;
-    description?: string;
-    columns?: FooterColumn[];
-    socialLinks?: SocialLink[];
-    contactEmail?: string;
-    contactPhone?: string;
-    address?: string;
-    copyright?: string;
-  };
-  styles?: {
-    backgroundColor?: string;
-    textColor?: string;
-    accentColor?: string;
-  };
+  content: FooterContent;
+  styles?: FooterStyles;
 }
 
 const socialIcons: Record<string, typeof Facebook> = {
@@ -47,39 +21,7 @@ const socialIcons: Record<string, typeof Facebook> = {
   pinterest: Globe,
 };
 
-// Función para determinar si un color es claro u oscuro
-function isLightColor(color: string): boolean {
-  if (!color) return false;
-  
-  if (color.includes('white') || color.includes('gray-1') || color.includes('gray-2') || color.includes('gray-3')) {
-    return true;
-  }
-  if (color.includes('black') || color.includes('gray-9') || color.includes('gray-8') || color.includes('gray-7')) {
-    return false;
-  }
-  
-  if (color.startsWith('#')) {
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.5;
-  }
-  
-  if (color.includes('rgb')) {
-    const match = color.match(/\d+/g);
-    if (match && match.length >= 3) {
-      const r = parseInt(match[0]);
-      const g = parseInt(match[1]);
-      const b = parseInt(match[2]);
-      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-      return luminance > 0.5;
-    }
-  }
-  
-  return false;
-}
+// isLightColor now imported from @/lib/colorUtils
 
 export function FooterSection({ id, content, styles = {} }: FooterSectionProps) {
   const { selectedSectionId, selectSection } = useEditorStore();
@@ -113,11 +55,19 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
     },
   ];
 
-  const socialLinks = content?.socialLinks || [
-    { platform: 'facebook' as const, href: '#' },
-    { platform: 'twitter' as const, href: '#' },
-    { platform: 'instagram' as const, href: '#' },
-  ];
+  // Handle both array and object formats for socialLinks
+  const rawSocialLinks = content?.socialLinks;
+  const socialLinks: SocialLink[] = Array.isArray(rawSocialLinks) 
+    ? rawSocialLinks 
+    : rawSocialLinks 
+      ? Object.entries(rawSocialLinks)
+          .filter(([_, href]) => href)
+          .map(([platform, href]) => ({ platform, href: href as string }))
+      : [
+          { platform: 'facebook', href: '#' },
+          { platform: 'twitter', href: '#' },
+          { platform: 'instagram', href: '#' },
+        ];
 
   return (
     <div

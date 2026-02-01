@@ -119,3 +119,23 @@ export function getBackgroundImageStyle(
     backgroundRepeat: 'no-repeat',
   };
 }
+
+
+/**
+ * Generate a consistent color based on text (for avatar backgrounds)
+ */
+export function getColorFromText(text: string | undefined | null, baseColor: string = '#6366f1'): string {
+  if (!text || typeof text !== 'string') return baseColor;
+
+  const colors = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316',
+    '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#a855f7'
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  return colors[Math.abs(hash) % colors.length];
+}

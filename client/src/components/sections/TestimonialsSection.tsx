@@ -4,78 +4,25 @@ import { Star, Quote, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-reac
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { AvatarWithFallback } from '@/components/ui/AvatarWithFallback';
+import { isLightColor } from '@/lib/colorUtils';
+import type { TestimonialsContent, TestimonialsStyles, Testimonial } from '@shared/sectionTypes';
 
-interface Testimonial {
-  name: string;
-  text?: string;
-  quote?: string;
-  rating?: number;
-  image?: string;
-  avatar?: string;
-  role?: string;
-  company?: string;
-  videoUrl?: string;
+interface ExtendedTestimonial extends Testimonial {
   videoThumbnail?: string;
+}
+
+interface ExtendedTestimonialsContent extends TestimonialsContent {
+  autoplay?: boolean;
+  autoplayInterval?: number;
 }
 
 interface TestimonialsSectionProps {
   id: string;
-  content: {
-    title?: string;
-    subtitle?: string;
-    badge?: string;
-    items?: Testimonial[];
-    testimonials?: Testimonial[];
-    layout?: 'grid' | 'carousel' | 'featured' | 'video' | 'masonry' | 'minimal';
-    autoplay?: boolean;
-    autoplayInterval?: number;
-  };
-  styles?: {
-    backgroundColor?: string;
-    textColor?: string;
-    cardBackground?: string;
-    accentColor?: string;
-  };
+  content: ExtendedTestimonialsContent;
+  styles?: TestimonialsStyles;
 }
 
-/**
- * SOLUCIÓN DEFINITIVA: Función para determinar si un color es claro u oscuro
- * Retorna true si el color es claro (necesita texto oscuro)
- */
-function isLightColor(color: string | undefined): boolean {
-  if (!color) return true; // Si no hay color, asumimos fondo claro (blanco)
-  
-  // Convertir color a RGB
-  let r = 255, g = 255, b = 255;
-  
-  if (color.startsWith('#')) {
-    const hex = color.replace('#', '');
-    if (hex.length === 3) {
-      r = parseInt(hex[0] + hex[0], 16);
-      g = parseInt(hex[1] + hex[1], 16);
-      b = parseInt(hex[2] + hex[2], 16);
-    } else if (hex.length === 6) {
-      r = parseInt(hex.slice(0, 2), 16);
-      g = parseInt(hex.slice(2, 4), 16);
-      b = parseInt(hex.slice(4, 6), 16);
-    }
-  } else if (color.startsWith('rgb')) {
-    const match = color.match(/\d+/g);
-    if (match && match.length >= 3) {
-      r = parseInt(match[0]);
-      g = parseInt(match[1]);
-      b = parseInt(match[2]);
-    }
-  } else if (color.includes('white') || color.includes('light') || color === 'transparent') {
-    return true;
-  } else if (color.includes('black') || color.includes('dark') || color.includes('gray-9') || color.includes('gray-8')) {
-    return false;
-  }
-  
-  // Calcular luminosidad (fórmula estándar)
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.5;
-}
+// isLightColor now imported from @/lib/colorUtils
 
 /**
  * COLORES HARDCODEADOS PARA CARDS - SIEMPRE LEGIBLES

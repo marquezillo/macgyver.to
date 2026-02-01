@@ -2,60 +2,16 @@ import { useEditorStore } from '@/store/editorStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
+import { isLightColor } from '@/lib/colorUtils';
+import type { CTAContent, CTAStyles } from '@shared/sectionTypes';
 
 interface CTASectionProps {
   id: string;
-  content: {
-    title?: string;
-    subtitle?: string;
-    ctaText?: string;
-    secondaryCtaText?: string;
-  };
-  styles?: {
-    backgroundColor?: string;
-    textColor?: string;
-    buttonColor?: string;
-    gradientFrom?: string;
-    gradientTo?: string;
-  };
+  content: CTAContent;
+  styles?: CTAStyles;
 }
 
-// Función para determinar si un color es claro u oscuro
-function isLightColor(color: string): boolean {
-  if (!color) return false;
-  
-  // Si es una clase de Tailwind
-  if (color.includes('white') || color.includes('gray-1') || color.includes('gray-2') || color.includes('gray-3')) {
-    return true;
-  }
-  if (color.includes('black') || color.includes('gray-9') || color.includes('gray-8') || color.includes('gray-7')) {
-    return false;
-  }
-  
-  // Si es un color hex
-  if (color.startsWith('#')) {
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.5;
-  }
-  
-  // Si es rgb/rgba
-  if (color.includes('rgb')) {
-    const match = color.match(/\d+/g);
-    if (match && match.length >= 3) {
-      const r = parseInt(match[0]);
-      const g = parseInt(match[1]);
-      const b = parseInt(match[2]);
-      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-      return luminance > 0.5;
-    }
-  }
-  
-  return false;
-}
+// isLightColor now imported from @/lib/colorUtils
 
 export function CTASection({ id, content, styles = {} }: CTASectionProps) {
   const { selectedSectionId, selectSection } = useEditorStore();

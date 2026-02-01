@@ -139,6 +139,7 @@ export interface Testimonial {
   role?: string;
   company?: string;
   videoUrl?: string;
+  videoThumbnail?: string;
 }
 
 export interface TestimonialsContent {
@@ -201,6 +202,9 @@ export interface CTAContent {
   secondaryButtonText?: string;
   secondaryButtonLink?: string;
   badge?: string;
+  // Aliases for backward compatibility
+  ctaText?: string;
+  secondaryCtaText?: string;
 }
 
 export interface CTAStyles extends BaseStyles {
@@ -299,13 +303,18 @@ export interface FooterColumn {
   links: FooterLink[];
 }
 
+export interface SocialLink {
+  platform: string;
+  href: string;
+}
+
 export interface FooterContent {
   companyName?: string;
   description?: string;
   copyright?: string;
   logo?: string;
   columns?: FooterColumn[];
-  socialLinks?: {
+  socialLinks?: SocialLink[] | {
     facebook?: string;
     instagram?: string;
     twitter?: string;
@@ -313,6 +322,10 @@ export interface FooterContent {
     youtube?: string;
   };
   showNewsletter?: boolean;
+  // Additional contact fields
+  contactEmail?: string;
+  contactPhone?: string;
+  address?: string;
 }
 
 export interface FooterStyles extends BaseStyles {
@@ -327,6 +340,9 @@ export interface TeamMember {
   name: string;
   role?: string;
   image?: string;
+  linkedin?: string;
+  twitter?: string;
+  email?: string;
 }
 
 export interface AboutContent {
@@ -338,6 +354,8 @@ export interface AboutContent {
   highlights?: string[];
   ctaText?: string;
   team?: TeamMember[];
+  teamTitle?: string;
+  teamSubtitle?: string;
 }
 
 export interface AboutStyles extends BaseStyles {}

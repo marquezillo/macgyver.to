@@ -1,201 +1,19 @@
 import { useEditorStore } from '@/store/editorStore';
 import { cn } from '@/lib/utils';
-import { 
-  CheckCircle2, Zap, Shield, Rocket, Star, Heart, Globe, Clock, Award, ArrowRight, Sparkles, Target, TrendingUp, Users, BarChart3, Lock, Cpu, Cloud,
-  // Restaurantes y comida
-  UtensilsCrossed, ChefHat, Coffee, Wine, Pizza, Salad, Soup, IceCream, Cake, Cookie,
-  // Viajes y turismo
-  Plane, MapPin, Compass, Mountain, Palmtree, Anchor, Ship, Car, Train, Hotel,
-  // Salud y bienestar
-  Activity, Dumbbell, Apple, Leaf, Flower2, Sun, Moon, Droplets, Wind, Waves,
-  // Tecnología
-  Laptop, Smartphone, Monitor, Server, Database, Code, Terminal, Wifi, Settings, Wrench,
-  // Negocios
-  Briefcase, Building, Building2, CreditCard, DollarSign, Receipt, FileText, Mail, Phone, Calendar,
-  // Educación
-  GraduationCap, BookOpen, Library, Lightbulb, PenTool, Pencil,
-  // Creatividad
-  Camera, Image, Video, Music, Palette, Brush,
-  // Otros
-  Home, Key, Gift, Package, Truck, ShoppingCart, ShoppingBag, Crown, Diamond, Gem
-} from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { getIcon } from '@/lib/iconUtils';
+import { isLightColor } from '@/lib/colorUtils';
+import type { FeaturesContent, FeaturesStyles, Feature } from '@shared/sectionTypes';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import { useState, useRef } from 'react';
 
-interface Feature {
-  title?: string;
-  description?: string;
-  icon?: string;
-  image?: string;
-  link?: string;
-  size?: 'small' | 'medium' | 'large';
-  highlight?: boolean;
-}
-
 interface FeaturesSectionProps {
   id: string;
-  content: {
-    title?: string;
-    subtitle?: string;
-    badge?: string;
-    items?: Feature[];
-    layout?: 'grid' | 'list' | 'alternating' | 'bento' | 'animated' | 'cards3d' | 'minimal';
-  };
-  styles?: {
-    backgroundColor?: string;
-    textColor?: string;
-    accentColor?: string;
-    cardBackgroundColor?: string;
-  };
+  content: FeaturesContent;
+  styles?: FeaturesStyles;
 }
 
-// Extended icon mapping - Iconos organizados por industria
-const iconMap: Record<string, any> = {
-  // Básicos
-  check: CheckCircle2,
-  zap: Zap,
-  shield: Shield,
-  rocket: Rocket,
-  star: Star,
-  heart: Heart,
-  globe: Globe,
-  clock: Clock,
-  award: Award,
-  sparkles: Sparkles,
-  target: Target,
-  trending: TrendingUp,
-  users: Users,
-  chart: BarChart3,
-  lock: Lock,
-  cpu: Cpu,
-  cloud: Cloud,
-  
-  // Restaurantes y comida
-  utensils: UtensilsCrossed,
-  chef: ChefHat,
-  coffee: Coffee,
-  wine: Wine,
-  pizza: Pizza,
-  salad: Salad,
-  soup: Soup,
-  icecream: IceCream,
-  cake: Cake,
-  cookie: Cookie,
-  food: UtensilsCrossed,
-  restaurant: UtensilsCrossed,
-  
-  // Viajes y turismo
-  plane: Plane,
-  flight: Plane,
-  map: MapPin,
-  location: MapPin,
-  compass: Compass,
-  mountain: Mountain,
-  palm: Palmtree,
-  beach: Palmtree,
-  anchor: Anchor,
-  ship: Ship,
-  boat: Ship,
-  car: Car,
-  train: Train,
-  hotel: Hotel,
-  travel: Plane,
-  
-  // Salud y bienestar
-  activity: Activity,
-  fitness: Dumbbell,
-  gym: Dumbbell,
-  dumbbell: Dumbbell,
-  apple: Apple,
-  healthy: Apple,
-  leaf: Leaf,
-  nature: Leaf,
-  flower: Flower2,
-  sun: Sun,
-  moon: Moon,
-  water: Droplets,
-  wind: Wind,
-  waves: Waves,
-  spa: Flower2,
-  wellness: Leaf,
-  
-  // Tecnología
-  laptop: Laptop,
-  computer: Monitor,
-  smartphone: Smartphone,
-  phone: Phone,
-  mobile: Smartphone,
-  monitor: Monitor,
-  server: Server,
-  database: Database,
-  code: Code,
-  terminal: Terminal,
-  wifi: Wifi,
-  settings: Settings,
-  wrench: Wrench,
-  tech: Laptop,
-  
-  // Negocios
-  briefcase: Briefcase,
-  business: Briefcase,
-  building: Building,
-  office: Building2,
-  card: CreditCard,
-  creditcard: CreditCard,
-  payment: CreditCard,
-  dollar: DollarSign,
-  money: DollarSign,
-  receipt: Receipt,
-  invoice: Receipt,
-  document: FileText,
-  file: FileText,
-  mail: Mail,
-  email: Mail,
-  calendar: Calendar,
-  schedule: Calendar,
-  
-  // Educación
-  graduation: GraduationCap,
-  education: GraduationCap,
-  school: GraduationCap,
-  book: BookOpen,
-  library: Library,
-  idea: Lightbulb,
-  lightbulb: Lightbulb,
-  pen: PenTool,
-  pencil: Pencil,
-  write: Pencil,
-  
-  // Creatividad
-  camera: Camera,
-  photo: Camera,
-  image: Image,
-  video: Video,
-  music: Music,
-  palette: Palette,
-  art: Palette,
-  brush: Brush,
-  design: Brush,
-  
-  // Otros
-  home: Home,
-  house: Home,
-  key: Key,
-  security: Key,
-  gift: Gift,
-  package: Package,
-  delivery: Truck,
-  truck: Truck,
-  shipping: Truck,
-  cart: ShoppingCart,
-  shop: ShoppingBag,
-  shopping: ShoppingBag,
-  crown: Crown,
-  premium: Crown,
-  diamond: Diamond,
-  gem: Gem,
-  luxury: Diamond,
-};
+// Icon mapping now imported from @/lib/iconUtils
 
 // 3D Card Component
 function Card3D({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
@@ -264,9 +82,8 @@ export function FeaturesSection({ id, content, styles = {} }: FeaturesSectionPro
   const items = content?.items || [];
   const layout = content?.layout || 'grid';
 
-  const getIcon = (iconName?: string) => {
-    const IconComponent = iconMap[iconName?.toLowerCase() || ''] || CheckCircle2;
-    return IconComponent;
+  const getIconComponent = (iconName?: string) => {
+    return getIcon(iconName);
   };
 
   // Animated Icon with pulse effect
