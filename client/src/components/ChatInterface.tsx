@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -831,26 +830,12 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                     rose: 'group-hover:text-rose-600',
                   };
                   return (
-                    <motion.button
+                    <button
                       key={index}
                       onClick={() => handleSuggestionClick(suggestion.prompt, (suggestion as any).isResearch, (suggestion as any).isImage, (suggestion as any).isFileUpload, (suggestion as any).isCodeExec)}
-                      className={`group p-3 md:p-4 rounded-xl border border-gray-200 bg-white text-left transition-colors duration-200 ${colorClasses[suggestion.color]}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      whileHover={{ 
-                        scale: 1.02, 
-                        y: -4,
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
-                      }}
-                      whileTap={{ scale: 0.98 }}
+                      className={`group p-3 md:p-4 rounded-xl border border-gray-200 bg-white text-left transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 ${colorClasses[suggestion.color]}`}
                     >
-                      <motion.div
-                        whileHover={{ rotate: [0, -10, 10, -5, 0] }}
-                        transition={{ duration: 0.5 }}
-                      >
-                        <Icon className={`w-4 h-4 md:w-5 md:h-5 text-gray-400 mb-1.5 md:mb-2 transition-colors ${iconColorClasses[suggestion.color]}`} />
-                      </motion.div>
+                      <Icon className={`w-4 h-4 md:w-5 md:h-5 text-gray-400 mb-1.5 md:mb-2 transition-colors duration-200 ${iconColorClasses[suggestion.color]}`} />
                       <span className="text-xs md:text-sm font-medium text-gray-700 group-hover:text-gray-900 block">{suggestion.label}</span>
                       {(suggestion as any).isResearch && (
                         <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded-full font-medium">Deep</span>
@@ -864,7 +849,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                       {(suggestion as any).isCodeExec && (
                         <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded-full font-medium">Python</span>
                       )}
-                    </motion.button>
+                    </button>
                   );
                 })}
               </div>
