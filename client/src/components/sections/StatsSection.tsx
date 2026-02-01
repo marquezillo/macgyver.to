@@ -2,12 +2,13 @@ import { useEditorStore } from '@/store/editorStore';
 import { cn } from '@/lib/utils';
 import { motion, useInView } from 'framer-motion';
 import { useRef, useEffect, useState } from 'react';
-import { Users, Star, Clock, Award, TrendingUp, Globe, Zap, Heart } from 'lucide-react';
+import { Users, Star, Clock, Award, TrendingUp, Globe, Zap, Heart, LucideIcon } from 'lucide-react';
+import type { StatsContent, StatsStyles, StatItem } from '@shared/sectionTypes';
 
 interface StatsSectionProps {
   id: string;
-  content: any;
-  styles?: any;
+  content: StatsContent;
+  styles?: StatsStyles;
 }
 
 // Animated counter component
@@ -58,7 +59,7 @@ function parseStatValue(value: string): { number: number; suffix: string; prefix
 }
 
 // Icon mapping
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, LucideIcon> = {
   users: Users,
   star: Star,
   clock: Clock,
@@ -168,8 +169,8 @@ export function StatsSection({ id, content, styles = {} }: StatsSectionProps) {
             "md:grid-cols-4"
           )}
         >
-          {stats.map((stat: any, index: number) => {
-            const IconComponent = iconMap[stat.icon?.toLowerCase()] || Users;
+          {stats.map((stat: StatItem, index: number) => {
+            const IconComponent = stat.icon ? iconMap[stat.icon.toLowerCase()] || Users : Users;
             const parsed = parseStatValue(stat.value);
 
             return (

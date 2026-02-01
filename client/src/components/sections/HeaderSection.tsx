@@ -4,11 +4,12 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { HeaderContent, HeaderStyles, NavItem } from '@shared/sectionTypes';
 
 interface HeaderSectionProps {
   id: string;
-  content: any;
-  styles?: any;
+  content: HeaderContent;
+  styles?: HeaderStyles;
 }
 
 export function HeaderSection({ id, content, styles = {} }: HeaderSectionProps) {
@@ -81,7 +82,7 @@ export function HeaderSection({ id, content, styles = {} }: HeaderSectionProps) 
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            {navItems.map((item: any, index: number) => {
+            {navItems.map((item: NavItem & { isPage?: boolean }, index: number) => {
               // Si es una página interna, usar Link de wouter
               const isInternalPage = item.isPage || (item.href && item.href.startsWith('/') && !item.href.startsWith('/#'));
               
@@ -170,7 +171,7 @@ export function HeaderSection({ id, content, styles = {} }: HeaderSectionProps) 
             )}
           >
             <nav className="flex flex-col gap-4 pt-4">
-              {navItems.map((item: any, index: number) => (
+              {navItems.map((item: NavItem, index: number) => (
                 <a
                   key={index}
                   href={item.href}

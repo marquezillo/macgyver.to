@@ -1,11 +1,12 @@
 import { useEditorStore } from '@/store/editorStore';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import type { LogoCloudContent, LogoCloudStyles, LogoItem } from '@shared/sectionTypes';
 
 interface LogoCloudSectionProps {
   id: string;
-  content: any;
-  styles?: any;
+  content: LogoCloudContent;
+  styles?: LogoCloudStyles;
 }
 
 // Default placeholder logos (using text-based placeholders)
@@ -53,7 +54,7 @@ export function LogoCloudSection({ id, content, styles = {} }: LogoCloudSectionP
     },
   };
 
-  const renderLogo = (logo: any, index: number) => (
+  const renderLogo = (logo: LogoItem, index: number) => (
     <div
       key={index}
       className={cn(
@@ -141,7 +142,7 @@ export function LogoCloudSection({ id, content, styles = {} }: LogoCloudSectionP
               className="flex"
             >
               {/* Duplicate logos for seamless loop */}
-              {[...logos, ...logos, ...logos].map((logo: any, index: number) => renderLogo(logo, index))}
+              {[...logos, ...logos, ...logos].map((logo: LogoItem, index: number) => renderLogo(logo, index))}
             </motion.div>
           </div>
         ) : variant === 'simple' ? (
@@ -153,7 +154,7 @@ export function LogoCloudSection({ id, content, styles = {} }: LogoCloudSectionP
             viewport={{ once: true }}
             className="flex flex-wrap items-center justify-center gap-8 md:gap-12"
           >
-            {logos.map((logo: any, index: number) => (
+            {logos.map((logo: LogoItem, index: number) => (
               <motion.div key={index} variants={itemVariants}>
                 {renderLogo(logo, index)}
               </motion.div>
@@ -173,7 +174,7 @@ export function LogoCloudSection({ id, content, styles = {} }: LogoCloudSectionP
               "grid-cols-4 md:grid-cols-8"
             )}
           >
-            {logos.map((logo: any, index: number) => (
+            {logos.map((logo: LogoItem, index: number) => (
               <motion.div 
                 key={index} 
                 variants={itemVariants}

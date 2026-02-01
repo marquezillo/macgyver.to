@@ -234,6 +234,7 @@ export interface StatsContent {
 
 export interface StatsStyles extends BaseStyles {
   cardBackground?: string;
+  cardBg?: string;
 }
 
 // =============================================================================
@@ -386,6 +387,63 @@ export interface GalleryStyles extends BaseStyles {
 }
 
 // =============================================================================
+// HEADER SECTION
+// =============================================================================
+
+export interface NavItem {
+  label: string;
+  href: string;
+}
+
+export interface HeaderContent {
+  logo?: string;
+  logoText?: string;
+  logoAlt?: string;
+  navItems?: NavItem[];
+  ctaText?: string;
+  ctaLink?: string;
+  secondaryCtaText?: string;
+  secondaryCtaLink?: string;
+}
+
+export interface HeaderStyles extends BaseStyles {
+  transparent?: boolean;
+}
+
+// =============================================================================
+// LOGO CLOUD SECTION
+// =============================================================================
+
+export interface LogoItem {
+  name: string;
+  src?: string;
+  href?: string;
+}
+
+export interface LogoCloudContent {
+  title?: string;
+  subtitle?: string;
+  logos?: LogoItem[];
+  variant?: 'simple' | 'grid' | 'marquee';
+  ctaText?: string;
+  ctaLink?: string;
+}
+
+export interface LogoCloudStyles extends BaseStyles {}
+
+// =============================================================================
+// STAT ITEM (for Hero and Stats sections)
+// =============================================================================
+
+export interface StatItem {
+  value: string;
+  label: string;
+  icon?: string;
+  prefix?: string;
+  suffix?: string;
+}
+
+// =============================================================================
 // SECTION PROPS
 // =============================================================================
 
@@ -406,6 +464,8 @@ export type FormSectionProps = { id: string; content: FormContent; styles?: Form
 export type FooterSectionProps = { id: string; content: FooterContent; styles?: FooterStyles };
 export type AboutSectionProps = { id: string; content: AboutContent; styles?: AboutStyles };
 export type GallerySectionProps = { id: string; content: GalleryContent; styles?: GalleryStyles };
+export type HeaderSectionProps = { id: string; content: HeaderContent; styles?: HeaderStyles };
+export type LogoCloudSectionProps = { id: string; content: LogoCloudContent; styles?: LogoCloudStyles };
 
 // =============================================================================
 // HELPER FUNCTIONS

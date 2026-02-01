@@ -2,202 +2,17 @@ import { useEditorStore } from '@/store/editorStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { ArrowRight, Play, ChevronDown, ImageOff, Volume2, VolumeX } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { ArrowRight, Play, ChevronDown } from 'lucide-react';
 import { FloatingElements } from '@/components/ui/FloatingElements';
-import { isLightColor, getContrastColors } from '@/lib/colorUtils';
+import { isLightColor } from '@/lib/colorUtils';
 import { isValidImageUrl, isValidVideoUrl } from '@/lib/imageUtils';
-import type { HeroContent, HeroStyles } from '@shared/sectionTypes';
+import type { HeroContent, HeroStyles, StatItem } from '@shared/sectionTypes';
+import { HeroImageWithFallback, VideoBackground, fadeInUp, staggerContainer, ensureContrast } from './hero';
 
 interface HeroSectionProps {
   id: string;
   content: HeroContent;
   styles?: HeroStyles;
-}
-
-// Wrapper for contrast colors with image support
-const ensureContrast = (bgColor?: string, hasImage?: boolean) => {
-  return getContrastColors(bgColor, hasImage);
-};
-
-// Componente de imagen con fallback para Hero
-function HeroImageWithFallback({ 
-  src, 
-  alt, 
-  accentColor,
-  className = '',
-  isBackground = false
-}: { 
-  src?: string; 
-  alt?: string; 
-  accentColor?: string;
-  className?: string;
-  isBackground?: boolean;
-}) {
-  const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const isValid = isValidImageUrl(src);
-  const showFallback = !isValid || hasError;
-  const color = accentColor || '#6366f1';
-
-  if (showFallback) {
-    if (isBackground) {
-      return (
-        <div 
-          className={cn("absolute inset-0", className)}
-          style={{ 
-            background: `linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)`
-          }}
-        >
-          <div 
-            className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-20"
-            style={{ backgroundColor: color }}
-          />
-          <div 
-            className="absolute bottom-1/4 left-1/4 w-64 h-64 rounded-full blur-3xl opacity-10"
-            style={{ backgroundColor: color }}
-          />
-        </div>
-      );
-    }
-    
-    return (
-      <div 
-        className={cn(
-          "flex flex-col items-center justify-center rounded-2xl",
-          className
-        )}
-        style={{ 
-          background: `linear-gradient(135deg, ${color}15, ${color}30)` 
-        }}
-      >
-        <ImageOff className="w-12 h-12 mb-3 opacity-30" style={{ color }} />
-        {alt && (
-          <span className="text-sm opacity-40" style={{ color }}>{alt}</span>
-        )}
-      </div>
-    );
-  }
-
-  if (isBackground) {
-    return (
-      <>
-        {isLoading && (
-          <div 
-            className="absolute inset-0 animate-pulse"
-            style={{ backgroundColor: '#1e293b' }}
-          />
-        )}
-        <div
-          className={cn("absolute inset-0 transition-opacity duration-500", isLoading ? 'opacity-0' : 'opacity-100')}
-          style={{
-            backgroundImage: `url(${src})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70" />
-        <img 
-          src={src} 
-          alt="" 
-          className="hidden" 
-          onError={() => setHasError(true)}
-          onLoad={() => setIsLoading(false)}
-        />
-      </>
-    );
-  }
-
-  return (
-    <div className={cn("relative", className)}>
-      {isLoading && (
-        <div 
-          className="absolute inset-0 rounded-2xl animate-pulse"
-          style={{ backgroundColor: `${color}20` }}
-        />
-      )}
-      <img
-        src={src}
-        alt={alt || "Hero image"}
-        className={cn(
-          "rounded-2xl shadow-2xl w-full h-auto transition-opacity duration-300",
-          isLoading ? 'opacity-0' : 'opacity-100'
-        )}
-        onError={() => setHasError(true)}
-        onLoad={() => setIsLoading(false)}
-      />
-    </div>
-  );
-}
-
-// Componente de Video Background
-function VideoBackground({ 
-  src, 
-  poster,
-  accentColor 
-}: { 
-  src?: string; 
-  poster?: string;
-  accentColor?: string;
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isMuted, setIsMuted] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const isValid = isValidVideoUrl(src);
-
-  if (!isValid || hasError) {
-    return (
-      <div 
-        className="absolute inset-0"
-        style={{ 
-          background: `linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)`
-        }}
-      >
-        <div 
-          className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-20"
-          style={{ backgroundColor: accentColor || '#6366f1' }}
-        />
-      </div>
-    );
-  }
-
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
-  };
-
-  return (
-    <>
-      <video
-        ref={videoRef}
-        autoPlay
-        loop
-        muted={isMuted}
-        playsInline
-        poster={poster}
-        className="absolute inset-0 w-full h-full object-cover"
-        onError={() => setHasError(true)}
-      >
-        <source src={src} type="video/mp4" />
-      </video>
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
-      
-      {/* Mute/Unmute button */}
-      <button
-        onClick={toggleMute}
-        className="absolute bottom-6 right-6 z-20 p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
-        aria-label={isMuted ? "Activar sonido" : "Silenciar"}
-      >
-        {isMuted ? (
-          <VolumeX className="w-5 h-5 text-white" />
-        ) : (
-          <Volume2 className="w-5 h-5 text-white" />
-        )}
-      </button>
-    </>
-  );
 }
 
 export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
@@ -300,7 +115,7 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
             variants={fadeInUp}
             className="mt-12 sm:mt-16 grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 md:gap-8 max-w-2xl mx-auto"
           >
-            {content.stats.map((stat: any, index: number) => (
+            {content.stats.map((stat: StatItem, index: number) => (
               <div key={index} className="text-center backdrop-blur-sm bg-white/5 rounded-xl p-4">
                 <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
                   {stat.value}
@@ -420,7 +235,7 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
             variants={fadeInUp}
             className="mt-12 sm:mt-16 grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 md:gap-8 max-w-2xl mx-auto"
           >
-            {content.stats.map((stat: any, index: number) => (
+            {content.stats.map((stat: StatItem, index: number) => (
               <div key={index} className="text-center">
                 <div 
                   className="text-2xl sm:text-3xl md:text-4xl font-bold"
@@ -562,7 +377,7 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
                   variants={fadeInUp}
                   className="mt-10 flex items-center gap-8 flex-wrap"
                 >
-                  {content.stats.map((stat: any, index: number) => (
+                  {content.stats.map((stat: StatItem, index: number) => (
                     <div key={index}>
                       <div 
                         className="text-2xl md:text-3xl font-bold"
@@ -841,7 +656,7 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
               variants={fadeInUp}
               className="mt-12 sm:mt-16 grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 md:gap-8 max-w-2xl mx-auto"
             >
-              {content.stats.map((stat: any, index: number) => (
+              {content.stats.map((stat: StatItem, index: number) => (
                 <div key={index} className="text-center">
                   <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
                     {stat.value}
