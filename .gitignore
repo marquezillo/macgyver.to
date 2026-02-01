@@ -105,3 +105,7 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+
+# PM2 Configuration (contains sensitive env vars)
+ecosystem.config.cjs
+ecosystem.config.js
