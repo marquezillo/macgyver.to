@@ -996,3 +996,17 @@
 - [ ] Mini Games template (Canvas + Game logic)
 - [ ] Productivity template (Tasks + Calendar + Notes)
 - [ ] Update UI with template selection buttons
+
+
+## Security Fixes (Critical)
+- [x] Identify all exposed API keys in ecosystem.config.cjs
+- [x] Create secure storage for API keys (/home/ubuntu/.api_keys_secure)
+- [x] Regenerate and update API keys (Claude, OpenAI, Gemini)
+- [x] Update environment variables with new keys via webdev_edit_secrets
+- [x] Create API keys validation test (server/api-keys.test.ts)
+- [x] Remove ecosystem.config.cjs from git tracking
+- [x] Update .gitignore to prevent ecosystem.config.* commits
+- [x] Verify no old exposed keys remain in codebase
+- [ ] Create secure deployment script for VPS (loads env vars from .env file)
+- [ ] Test deployment with new secure configuration
+- [ ] Document secure setup process for future deployments
