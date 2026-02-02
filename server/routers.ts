@@ -1222,6 +1222,51 @@ export const appRouter = router({
         return tables;
       }),
 
+    // Download project as ZIP
+    downloadZip: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const project = await getProjectById(input.projectId, ctx.user.id);
+        if (!project) {
+          throw new Error('Project not found or access denied');
+        }
+
+        const files = await getProjectFiles(input.projectId);
+        
+        // Generate ZIP content as base64
+        const JSZip = (await import('jszip')).default;
+        const zip = new JSZip();
+        
+        for (const file of files) {
+          zip.file(file.path, file.content);
+        }
+        
+        // Add package.json if not exists
+        const hasPackageJson = files.some(f => f.path === 'package.json');
+        if (!hasPackageJson) {
+          zip.file('package.json', JSON.stringify({
+            name: project.name.toLowerCase().replace(/\s+/g, '-'),
+            version: '1.0.0',
+            scripts: {
+              dev: 'vite',
+              build: 'vite build',
+              preview: 'vite preview'
+            }
+          }, null, 2));
+        }
+        
+        // Add README
+        zip.file('README.md', `# ${project.name}\n\n${project.description || 'Proyecto generado con MacGyver.to'}\n\n## Instalaci\u00f3n\n\n\`\`\`bash\nnpm install\nnpm run dev\n\`\`\`\n`);
+        
+        const zipContent = await zip.generateAsync({ type: 'base64' });
+        
+        return {
+          filename: `${project.name.toLowerCase().replace(/\s+/g, '-')}.zip`,
+          content: zipContent,
+          mimeType: 'application/zip'
+        };
+      }),
+
     // Start dev server for live preview
     startDevServer: protectedProcedure
       .input(z.object({ projectId: z.number() }))

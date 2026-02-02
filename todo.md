@@ -1295,3 +1295,10 @@
 - [x] Drag & drop de conversaciones a proyectos - Permitir arrastrar conversaciones directamente a proyectos desde el sidebar
 - [x] Colores personalizados para proyectos - Elegir color al crear/editar un proyecto para mejor organización visual
 - [x] Búsqueda global mejorada - Filtrar por proyecto, favoritos, o fecha en la barra de búsqueda
+
+
+## Phase 10: Mejoras de UX para Proyectos Full-Stack
+
+- [ ] Plan visual de tareas con checkmarks y progreso visual mientras el agente desarrolla
+- [ ] Preview en vivo del proyecto con URL temporal para ver el resultado
+- [ ] Botón de descarga ZIP para descargar todos los archivos del proyecto

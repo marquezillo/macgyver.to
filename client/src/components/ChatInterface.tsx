@@ -93,6 +93,7 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
   const [isExecutingCode, setIsExecutingCode] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [showProjectTemplates, setShowProjectTemplates] = useState(false);
+  const [currentProjectPlan, setCurrentProjectPlan] = useState<{ projectName: string; taskPlan: TaskSection[] } | null>(null);
   
   const { setSections, sections } = useEditorStore();
   const { isAuthenticated, user } = useAuth();
@@ -396,6 +397,26 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                         globalStyles: artifactPayload.globalStyles,
                         metadata: artifactPayload.metadata
                       };
+                    }
+                  }
+                  
+                  // Check for project plan in the content
+                  if (fullContent.includes('"type":') && (fullContent.includes('"project_plan"') || fullContent.includes('"project_progress"'))) {
+                    try {
+                      // Extract JSON from content (may be wrapped in markdown code blocks)
+                      const jsonMatch = fullContent.match(/```json\s*([\s\S]*?)```/) || fullContent.match(/(\{[\s\S]*"type"\s*:\s*"project_(?:plan|progress)"[\s\S]*\})/);
+                      if (jsonMatch) {
+                        const projectData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+                        if (projectData.taskPlan?.sections) {
+                          setCurrentProjectPlan({
+                            projectName: projectData.projectName || 'Proyecto',
+                            taskPlan: projectData.taskPlan.sections
+                          });
+                          console.log('[ChatInterface] Detected project plan:', projectData.projectName);
+                        }
+                      }
+                    } catch (e) {
+                      console.log('[ChatInterface] Could not parse project plan JSON:', e);
                     }
                   }
                   
@@ -1072,6 +1093,16 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                           )}
                         </div>
                       </div>
+                    </div>
+                  )}
+                  
+                  {/* Current Project Plan View */}
+                  {currentProjectPlan && (
+                    <div className="w-full px-4 py-2">
+                      <TaskPlanView 
+                        sections={currentProjectPlan.taskPlan} 
+                        projectName={currentProjectPlan.projectName}
+                      />
                     </div>
                   )}
                   

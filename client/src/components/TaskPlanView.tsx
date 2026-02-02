@@ -14,8 +14,12 @@ import {
   Zap,
   FileCode,
   Settings,
-  Rocket
+  Rocket,
+  Download,
+  ExternalLink,
+  Play
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export interface Task {
@@ -37,6 +41,10 @@ interface TaskPlanViewProps {
   sections: TaskSection[];
   projectName?: string;
   onTaskClick?: (taskId: string) => void;
+  previewUrl?: string;
+  onDownloadZip?: () => void;
+  onOpenPreview?: () => void;
+  isProjectComplete?: boolean;
 }
 
 const iconMap: Record<string, React.ComponentType<any>> = {
@@ -52,7 +60,7 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   'rocket': Rocket,
 };
 
-export function TaskPlanView({ sections, projectName, onTaskClick }: TaskPlanViewProps) {
+export function TaskPlanView({ sections, projectName, onTaskClick, previewUrl, onDownloadZip, onOpenPreview, isProjectComplete }: TaskPlanViewProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(sections.map(s => s.id)));
 
   const toggleSection = (sectionId: string) => {
@@ -113,6 +121,45 @@ export function TaskPlanView({ sections, projectName, onTaskClick }: TaskPlanVie
             style={{ width: `${progress}%` }}
           />
         </div>
+        
+        {/* Action buttons when project is complete */}
+        {(isProjectComplete || progress === 100) && (
+          <div className="flex gap-2 mt-3">
+            {previewUrl && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="flex-1 gap-2"
+                onClick={() => window.open(previewUrl, '_blank')}
+              >
+                <ExternalLink className="h-4 w-4" />
+                Ver Preview
+              </Button>
+            )}
+            {onOpenPreview && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="flex-1 gap-2"
+                onClick={onOpenPreview}
+              >
+                <Play className="h-4 w-4" />
+                Abrir Proyecto
+              </Button>
+            )}
+            {onDownloadZip && (
+              <Button 
+                size="sm" 
+                variant="default"
+                className="flex-1 gap-2 bg-purple-600 hover:bg-purple-700"
+                onClick={onDownloadZip}
+              >
+                <Download className="h-4 w-4" />
+                Descargar ZIP
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Sections */}
