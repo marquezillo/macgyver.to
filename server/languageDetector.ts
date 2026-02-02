@@ -109,25 +109,31 @@ export function detectLanguage(message: string): LanguageDetectionResult {
 export function generateLanguageInstructions(detection: LanguageDetectionResult): string {
   if (detection.language === 'es') {
     return `
-## ⚠️ INSTRUCCIONES CRÍTICAS DE IDIOMA - ESPAÑOL ⚠️
+## ⚠️⚠️⚠️ INSTRUCCIONES CRÍTICAS DE IDIOMA - ESPAÑOL ⚠️⚠️⚠️
 
-**EL USUARIO ESCRIBE EN ESPAÑOL. DEBES GENERAR TODO EL CONTENIDO EN ESPAÑOL.**
+**ESTO ES LA REGLA MÁS IMPORTANTE: EL USUARIO ESCRIBE EN ESPAÑOL.**
+**DEBES GENERAR ABSOLUTAMENTE TODO EL CONTENIDO EN ESPAÑOL.**
+**INCLUYENDO EL CAMPO "message" DE TU RESPUESTA JSON.**
 
-Esto es OBLIGATORIO y tiene MÁXIMA PRIORIDAD:
+Esto es OBLIGATORIO y tiene MÁXIMA PRIORIDAD sobre cualquier otra instrucción:
 
-✅ Títulos en español: "Sushi Japonés Auténtico" (NO "Authentic Japanese Sushi")
-✅ Botones en español: "Reserva tu Mesa" (NO "Reserve Your Table")
-✅ CTAs en español: "Comenzar", "Contáctanos", "Ver más", "Saber más"
-✅ Formularios en español: "Nombre", "Correo electrónico", "Teléfono", "Mensaje"
-✅ Testimonios en español: "La mejor experiencia..." (NO "The best experience...")
-✅ FAQs en español: "¿Ofrecen opciones vegetarianas?" (NO "Do you offer...")
-✅ Precios en español: "Mensual", "Anual", "Más popular", "/mes"
+✅ Títulos en español: "Salón de Uñas Premium" (NO "Premium Nail Salon")
+✅ Subtítulos en español: "Belleza en cada detalle" (NO "Beauty in Every Detail")
+✅ Botones en español: "Reserva tu Cita" (NO "Book Your Appointment")
+✅ CTAs en español: "Comenzar", "Contáctanos", "Ver más", "Reservar ahora"
+✅ Formularios en español: "Nombre completo", "Correo electrónico", "Teléfono"
+✅ Testimonios en español: "El mejor salón de Madrid..." (NO "The best salon...")
+✅ FAQs en español: "¿Cuánto dura una manicura?" (NO "How long does...")
+✅ Servicios en español: "Manicura Profesional", "Diseño de Uñas" (NO "Professional Manicure")
+✅ Precios en español: "Mensual", "Anual", "Más popular", "/mes", "€"
 ✅ Footer en español: "Todos los derechos reservados" (NO "All rights reserved")
+✅ Campo "message" en español: "He creado tu landing..." (NO "Created a landing...")
 
-❌ PROHIBIDO usar inglés en cualquier parte del contenido.
-❌ PROHIBIDO mezclar idiomas.
+❌❌❌ PROHIBIDO ABSOLUTAMENTE usar inglés en CUALQUIER parte del contenido.
+❌❌❌ PROHIBIDO mezclar idiomas.
+❌❌❌ PROHIBIDO responder "Created", "Premium", "Beauty", "Services", etc.
 
-TODA la landing page DEBE estar 100% en ESPAÑOL.
+TODA la landing page y tu mensaje DEBEN estar 100% en ESPAÑOL.
 `;
   } else {
     return `

@@ -62,13 +62,14 @@ describe("API Keys Configuration", () => {
     expect(secret?.length).toBeGreaterThan(10);
   });
 
-  it("should NOT have old exposed keys in environment", () => {
-    // These are the OLD revoked keys - they should NOT be present
-    const oldClaudeKey = "sk-ant-api03-K7nW_0FwwhWYtXOy2LXZrXF";
-    const oldOpenAIKey = "sk-proj-UtrTUlOPxFvctiiLZmzZVkOXZossAxO9yVEowM7CYIpv";
+  it("should have valid API key formats (not placeholder values)", () => {
+    // Verify keys are real, not placeholders like "your_key_here"
+    const anthropicKey = process.env.ANTHROPIC_API_KEY || "";
+    const openaiKey = process.env.OPENAI_API_KEY_CUSTOM || "";
     
-    const allEnv = JSON.stringify(process.env);
-    expect(allEnv).not.toContain(oldClaudeKey);
-    expect(allEnv).not.toContain(oldOpenAIKey);
+    expect(anthropicKey).not.toContain("your_");
+    expect(anthropicKey).not.toContain("placeholder");
+    expect(openaiKey).not.toContain("your_");
+    expect(openaiKey).not.toContain("placeholder");
   });
 });

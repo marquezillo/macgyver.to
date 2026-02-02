@@ -374,13 +374,14 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                   if (data.content) {
                     finalContent = data.content;
                   }
-                  // Handle artifact
-                  if (data.artifactData) {
+                  // Handle artifact - check both artifactData and landingData (from autonomous clone)
+                  const artifactPayload = data.artifactData || (data.isLanding && data.landingData ? { sections: data.landingData.sections } : null);
+                  if (artifactPayload) {
                     hasArtifact = true;
-                    console.log('[ChatInterface] Received artifact data:', data.artifactData);
-                    console.log('[ChatInterface] Sections count:', data.artifactData.sections?.length || 0);
-                    console.log('[ChatInterface] Calling setSections with:', data.artifactData.sections);
-                    setSections(data.artifactData.sections || []);
+                    console.log('[ChatInterface] Received artifact data:', artifactPayload);
+                    console.log('[ChatInterface] Sections count:', artifactPayload.sections?.length || 0);
+                    console.log('[ChatInterface] Calling setSections with:', artifactPayload.sections);
+                    setSections(artifactPayload.sections || []);
                     console.log('[ChatInterface] setSections called');
                   
                     // Save artifact to database
@@ -389,13 +390,13 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                     fetch('/api/debug-log', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ message: 'Frontend reached artifact save', currentChatId, sectionsCount: data.artifactData.sections?.length })
+                      body: JSON.stringify({ message: 'Frontend reached artifact save', currentChatId, sectionsCount: artifactPayload.sections?.length })
                     }).catch(() => {});
                     if (currentChatId) {
                       console.log('[ChatInterface] Calling updateChatArtifact.mutate with chatId:', currentChatId);
                       updateChatArtifact.mutate({
                         chatId: currentChatId,
-                        artifactData: data.artifactData
+                        artifactData: artifactPayload
                       }, {
                         onSuccess: () => console.log('[ChatInterface] Artifact saved successfully'),
                         onError: (err) => console.error('[ChatInterface] Error saving artifact:', err)

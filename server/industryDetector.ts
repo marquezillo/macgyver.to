@@ -10,6 +10,7 @@ import {
   IndustryPattern,
   TOTAL_PATTERNS
 } from './industryPatterns';
+import { generateIndustryInstructions } from './industryJSONExamples';
 
 export interface DetectionResult {
   detected: boolean;
@@ -193,31 +194,52 @@ function detectByCategory(message: string): IndustryPattern | null {
 
 /**
  * Genera el prompt enriquecido con el patrón de industria detectado
+ * Incluye un ejemplo JSON completo para que el LLM siga la estructura exacta
  */
-export function enrichPromptWithIndustry(basePrompt: string, userMessage: string): string {
+export function enrichPromptWithIndustry(basePrompt: string, userMessage: string, businessName?: string): string {
   const detection = detectIndustry(userMessage);
   
   if (!detection.detected || !detection.pattern) {
     return basePrompt;
   }
   
-  const industryContext = `
-## PATRÓN DE INDUSTRIA DETECTADO: ${detection.pattern.name}
-Confianza: ${detection.confidence}
-Keywords detectados: ${detection.matchedKeywords.join(', ')}
+  // Extraer nombre del negocio del mensaje si no se proporciona
+  const extractedBusinessName = businessName || extractBusinessName(userMessage) || 'Mi Negocio';
+  
+  // Generar instrucciones completas con ejemplo JSON
+  const industryInstructions = generateIndustryInstructions(detection.pattern, extractedBusinessName);
+  
+  console.log(`[IndustryDetector] Enriching prompt with ${detection.pattern.name} pattern (${detection.pattern.sections.length} sections)`);
+  
+  return basePrompt + '\n\n' + industryInstructions;
+}
 
-${detection.industryPrompt}
-
-IMPORTANTE: DEBES usar las variantes de layout especificadas arriba para cada sección.
-- Hero DEBE usar layout: "${detection.pattern.heroVariant}"
-- Features DEBE usar layout: "${detection.pattern.featuresVariant}"
-- Testimonials DEBE usar layout: "${detection.pattern.testimonialsVariant}"
-${detection.pattern.pricingVariant ? `- Pricing DEBE usar layout: "${detection.pattern.pricingVariant}"` : ''}
-
-Las secciones DEBEN seguir el orden recomendado: ${detection.pattern.sections.join(' → ')}
-`;
-
-  return basePrompt + '\n\n' + industryContext;
+/**
+ * Extrae el nombre del negocio del mensaje del usuario
+ */
+function extractBusinessName(message: string): string | null {
+  // Patrones comunes para detectar nombres de negocios
+  const patterns = [
+    // Nombres entre comillas (prioridad más alta)
+    /["\u201c\u201d]([^"\u201c\u201d]+)["\u201c\u201d]/,
+    /["']([^"']+)["']/,
+    // Patrones con palabras clave
+    /(?:para|de|llamad[oa]|nombre)\s+([A-Z][\w\s&áéíóúñ]+)/i,
+    /(?:negocio|empresa|tienda|restaurante|cl[ií]nica|estudio|agencia)\s+([A-Z][\w\s&áéíóúñ]+)/i,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = message.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim();
+      // Evitar capturar palabras comunes
+      if (name.length > 2 && !['para', 'una', 'mi', 'el', 'la', 'de'].includes(name.toLowerCase())) {
+        return name;
+      }
+    }
+  }
+  
+  return null;
 }
 
 /**

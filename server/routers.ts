@@ -14,6 +14,7 @@ import { detectIndustry, enrichPromptWithIndustry, applyIndustryPattern, getImag
 import { detectUserColors, generateColorInstructions } from "./userColorDetector";
 import { detectLanguage, generateLanguageInstructions } from "./languageDetector";
 import { processMessageForCloning } from "./webClonerOrchestrator";
+import { extractWebData, generateEnrichedPrompt } from "./webDataExtractor";
 import { detectCloneIntent, generateCloneInstructions } from "./cloneIntentDetector";
 import {
   createChat,
@@ -82,6 +83,15 @@ import { PROJECT_TEMPLATES, getTemplateById, getAllTemplates, getTemplateSystemP
 
 // System prompt for the AI assistant
 const SYSTEM_PROMPT = `Eres un asistente de IA avanzado y versátil especializado en crear landing pages de alta conversión.
+
+## ⚠️ REGLA CRÍTICA DE IDIOMA ⚠️
+SIEMPRE responde en el MISMO IDIOMA que usa el usuario.
+- Si el usuario escribe en ESPAÑOL → TODO tu contenido DEBE estar en ESPAÑOL
+- Si el usuario escribe en INGLÉS → TODO tu contenido DEBE estar en INGLÉS
+- El campo "message" SIEMPRE debe estar en el idioma del usuario
+- TODOS los textos de la landing (títulos, botones, testimonios, FAQs) deben estar en el idioma del usuario
+- NUNCA mezcles idiomas
+- NUNCA respondas en inglés si el usuario escribe en español
 
 ## CAPACIDADES PRINCIPALES:
 - Crear landing pages profesionales y visualmente atractivas
@@ -216,18 +226,62 @@ IMPORTANTE SOBRE IMÁGENES:
 }
 \`\`\`
 
+### SISTEMA DE LAYOUTS DIVERSOS:
+NO uses siempre la misma estructura. Elige el layout según el tipo de negocio:
+
+**LAYOUTS DISPONIBLES:**
+
+1. **Minimal** (2-4 secciones) - Para: coming-soon, apps, eventos
+   - Hero + CTA
+   - Hero + Features + CTA
+   - Hero + Gallery + Form
+
+2. **Standard** (4-6 secciones) - Para: negocios tradicionales
+   - Negocio: Hero → Features → About → Testimonials → CTA
+   - Servicios: Hero → Services → Process → Testimonials → Pricing → Form
+   - Belleza/Spa: Hero → Services → Gallery → Testimonials → Team → Booking
+   - Restaurante: Hero → About → Menu → Gallery → Reviews → Location → Reservation
+
+3. **Comprehensive** (6+ secciones) - Para: SaaS, agencias
+   - SaaS: Hero → Logos → Features → Benefits → How-it-works → Pricing → Testimonials → FAQ → CTA
+   - Agencia: Hero → Services → Portfolio → Process → Team → Clients → Testimonials → Blog → Contact
+
+4. **Storytelling** - Para: marcas personales, ONGs
+   - Brand Story: Hero → Story → Values → Impact → Team → Testimonials → CTA
+   - Personal: Hero → About → Services → Credentials → Testimonials → Media → Booking
+
+5. **Conversion** - Para: lead gen, lanzamientos
+   - Lead Gen: Hero → Benefits → Social-proof → Form → FAQ → Guarantee
+   - Product: Hero → Problem → Solution → Features → Demo → Testimonials → Pricing → Guarantee → CTA
+
+6. **Portfolio** - Para: creativos, fotógrafos
+   - Hero → Portfolio → About → Skills → Testimonials → Contact
+
+7. **E-commerce** - Para: productos
+   - Hero → Features → Gallery → Specs → Reviews → Comparison → FAQ → CTA
+
+**REGLA IMPORTANTE:** Varía la estructura según el negocio. NO uses siempre Hero → Features → Testimonials → CTA.
+
 ### TIPOS DE SECCIÓN DISPONIBLES:
 - hero: Sección principal con título, subtítulo, CTA
 - features: Lista de características con iconos
+- services: Servicios ofrecidos (similar a features pero para servicios)
 - testimonials: Testimonios de clientes
 - gallery: Galería de imágenes (las imágenes se generan con IA)
 - team: Equipo de trabajo (los avatares se generan con IA)
-- destinations: Destinos/lugares (para viajes, yoga, etc.)
+- about: Historia/sobre nosotros
+- process: Proceso de trabajo (pasos)
 - pricing: Tabla de precios
 - faq: Preguntas frecuentes
 - cta: Llamada a la acción final
 - stats: Estadísticas/números
 - form: Formulario de contacto
+- booking: Reservas/citas
+- menu: Menú (restaurantes)
+- portfolio: Trabajos/proyectos
+- clients: Logos de clientes
+- benefits: Beneficios (con iconos)
+- location: Ubicación con mapa
 - footer: Pie de página
 
 ### PÁGINAS ADICIONALES:
@@ -296,7 +350,15 @@ DETECCIÓN DE PÁGINAS:
 - Viajes: #0ea5e9 (azul), #f0f9ff (azul claro), #1e293b
 - Lujo: #d4af37 (dorado), #1a1a1a (negro), #ffffff
 
-Para cualquier otra consulta, responde de forma natural y útil en español.`;
+Para cualquier otra consulta, responde de forma natural y útil.
+
+## RECORDATORIO FINAL DE IDIOMA
+El campo "message" en tu respuesta JSON DEBE estar en el idioma del usuario.
+Ejemplo si usuario escribe en español:
+"message": "He creado tu landing page para [negocio]. Incluye secciones de..."
+NUNCA: "message": "Created a landing page for..."
+
+TODO el contenido de sections[] también debe estar en el idioma del usuario.`;
 
 export const appRouter = router({
   system: systemRouter,
@@ -470,65 +532,57 @@ export const appRouter = router({
           const lastUserMessage = input.messages.filter(m => m.role === 'user').pop();
           const userMessageContent = lastUserMessage?.content || '';
           
-          // PRIMERO: Detectar si el usuario quiere clonar una web
+          // PRIMERO: Detectar si el usuario quiere clonar/inspirarse en una web
           const cloneIntent = detectCloneIntent(userMessageContent);
+          let extractedWebData: Awaited<ReturnType<typeof extractWebData>> | null = null;
+          
           if (cloneIntent.isCloneRequest && cloneIntent.url) {
             console.log(`[WebCloner] Detectada intención de clonar: ${cloneIntent.url} (confianza: ${cloneIntent.confidence})`);
             
             try {
-              // Ejecutar clonación
-              const cloneResult = await processMessageForCloning(userMessageContent);
-              
-              if (cloneResult.shouldClone && cloneResult.cloneResult?.success && cloneResult.cloneResult.landingConfig) {
-                console.log(`[WebCloner] Clonación exitosa: ${cloneResult.cloneResult.analysisDetails?.sectionsDetected} secciones detectadas`);
-                
-                // Convertir la configuración clonada al formato de respuesta del chat
-                const landingConfig = cloneResult.cloneResult.landingConfig;
-                const sections = landingConfig.sections.map(s => ({
-                  id: s.id,
-                  type: s.type,
-                  content: s.data,
-                }));
-                
-                // Generar imágenes contextuales para las secciones clonadas
-                const businessType = landingConfig.metadata?.originalTitle || 'business';
-                const landingDataForImages = {
-                  type: 'landing',
-                  businessType,
-                  businessName: landingConfig.name,
-                  sections,
-                };
-                const { data: landingWithImages } = await generateContextualImages(landingDataForImages, { useAI: true, maxImages: 10 });
-                const sectionsWithImages = landingWithImages.sections;
-                
-                return {
-                  success: true,
-                  response: `He clonado la web ${cloneIntent.url} exitosamente. He detectado ${cloneResult.cloneResult.analysisDetails?.sectionsDetected || 0} secciones y extraído los colores y estilos principales.`,
-                  isLanding: true,
-                  landingData: {
-                    type: 'landing',
-                    businessType,
-                    businessName: landingConfig.name,
-                    sections: sectionsWithImages,
-                    theme: landingConfig.theme,
-                    clonedFrom: cloneIntent.url,
-                  },
-                };
-              }
-            } catch (cloneError) {
-              console.error('[WebCloner] Error en clonación:', cloneError);
-              // Si falla la clonación, continuar con el flujo normal pero añadir instrucciones
+              // NUEVO ENFOQUE: Solo extraer datos, NO generar landing
+              // Los datos extraídos se pasan al LLM para que genere con el sistema normal
+              console.log('[WebCloner] Extrayendo datos de la web...');
+              extractedWebData = await extractWebData(cloneIntent.url);
+              console.log(`[WebCloner] Datos extraídos: industria=${extractedWebData.industry.patternName || 'no detectada'}, features=${extractedWebData.content.features.length}`);
+            } catch (extractError) {
+              console.error('[WebCloner] Error extrayendo datos:', extractError);
+              // Continuar sin datos extraídos
             }
           }
           
           // Detectar industria y enriquecer el system prompt
-          const industryDetection = detectIndustry(userMessageContent);
+          // Si tenemos datos extraídos de una web, usar la industria detectada de ahí
+          let industryDetection = detectIndustry(userMessageContent);
           let enrichedSystemPrompt = SYSTEM_PROMPT;
+          
+          // Si extrajimos datos de una web, usar esa industria y añadir contexto
+          if (extractedWebData) {
+            console.log('[WebCloner] Usando datos extraídos para enriquecer el prompt...');
+            
+            // Si la web tiene una industria detectada, usarla
+            if (extractedWebData.industry.detected && extractedWebData.industry.patternId) {
+              console.log(`[WebCloner] Industria de la web: ${extractedWebData.industry.patternName}`);
+              // Forzar la industria detectada de la web
+              industryDetection = {
+                detected: true,
+                pattern: { id: extractedWebData.industry.patternId, name: extractedWebData.industry.patternName || '' } as any,
+                confidence: extractedWebData.industry.confidence,
+                matchedKeywords: [],
+                industryPrompt: '',
+                suggestedImageQueries: [],
+              };
+            }
+            
+            // Añadir el contexto de la web extraída al prompt
+            const webContextPrompt = generateEnrichedPrompt(extractedWebData, userMessageContent);
+            enrichedSystemPrompt = enrichedSystemPrompt + '\n\n' + webContextPrompt;
+          }
           
           if (industryDetection.detected && industryDetection.pattern) {
             console.log(`[IndustryDetector] Detected: ${industryDetection.pattern.name} (confidence: ${industryDetection.confidence})`);
-            console.log(`[IndustryDetector] Keywords matched: ${industryDetection.matchedKeywords.join(', ')}`);
-            enrichedSystemPrompt = enrichPromptWithIndustry(SYSTEM_PROMPT, userMessageContent);
+            console.log(`[IndustryDetector] Keywords matched: ${industryDetection.matchedKeywords?.join(', ') || 'from web'}`);
+            enrichedSystemPrompt = enrichPromptWithIndustry(enrichedSystemPrompt, userMessageContent);
           }
           
           // Detectar colores solicitados por el usuario (PRIORIDAD sobre industria)

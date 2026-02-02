@@ -212,13 +212,16 @@ describe("Autonomous Agents", () => {
     expect(shouldUseAutonomousMode("¿Qué hora es?")).toBe(false);
     expect(shouldUseAutonomousMode("Hola")).toBe(false);
     
-    // Nuevos patrones para URLs y clonación
-    expect(shouldUseAutonomousMode("Entra a https://example.com y clona la página")).toBe(true);
-    expect(shouldUseAutonomousMode("Clona esta página https://example.com")).toBe(true);
-    expect(shouldUseAutonomousMode("Puedes clonarme una landing igual a https://example.com")).toBe(true);
-    expect(shouldUseAutonomousMode("Accede a https://example.com y analiza el contenido")).toBe(true);
-    expect(shouldUseAutonomousMode("Visita https://example.com")).toBe(true);
-    expect(shouldUseAutonomousMode("Hazme una landing parecida a https://example.com")).toBe(true);
+    // Clonación de webs NO debe activar modo autónomo - usa el flujo normal del chat
+    // que tiene mejor integración con el sistema de plantillas
+    expect(shouldUseAutonomousMode("Entra a https://example.com y clona la página")).toBe(false);
+    expect(shouldUseAutonomousMode("Clona esta página https://example.com")).toBe(false);
+    expect(shouldUseAutonomousMode("Puedes clonarme una landing igual a https://example.com")).toBe(false);
+    expect(shouldUseAutonomousMode("Hazme una landing parecida a https://example.com")).toBe(false);
+    
+    // Análisis de URLs SIN clonación SÍ debe activar modo autónomo
+    expect(shouldUseAutonomousMode("Analiza el contenido de https://example.com")).toBe(true);
+    expect(shouldUseAutonomousMode("Extrae los datos de https://example.com")).toBe(true);
   });
 
   it("plans task steps correctly", async () => {

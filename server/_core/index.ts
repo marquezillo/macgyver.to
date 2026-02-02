@@ -110,28 +110,95 @@ async function startServer() {
 
       // Check if the last user message should trigger autonomous mode
       const lastUserMessageContent = messages.filter(m => m.role === 'user').pop()?.content || '';
-      if (shouldUseAutonomousMode(lastUserMessageContent)) {
+      console.log('[AI Stream] Checking autonomous mode for message:', lastUserMessageContent.substring(0, 150));
+      const shouldUseAutonomous = shouldUseAutonomousMode(lastUserMessageContent);
+      console.log('[AI Stream] shouldUseAutonomousMode result:', shouldUseAutonomous);
+      if (shouldUseAutonomous) {
         console.log('[AI Stream] Autonomous mode triggered for:', lastUserMessageContent.substring(0, 100));
-        res.write(`data: ${JSON.stringify({ type: "status", content: "Activando modo autónomo..." })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: "status", content: "🚀 Iniciando tarea autónoma..." })}\n\n`);
         
         try {
+          let cloneData: unknown = null;
+          
           for await (const event of runAutonomousTaskStream(lastUserMessageContent)) {
-            const eventData = event.data as { tool?: string; output?: string } | undefined;
-            if (event.type === 'step_start') {
-              res.write(`data: ${JSON.stringify({ type: "status", content: `Ejecutando: ${eventData?.tool || 'tarea'}...` })}\n\n`);
-            } else if (event.type === 'step_complete') {
-              res.write(`data: ${JSON.stringify({ type: "chunk", content: `\n\n**${eventData?.tool || 'Paso'}:** ${eventData?.output?.substring(0, 500) || 'Completado'}\n\n` })}\n\n`);
-            } else if (event.type === 'done') {
-              res.write(`data: ${JSON.stringify({ type: "done", content: "Tarea autónoma completada", hasArtifact: false })}\n\n`);
-            } else if (event.type === 'error') {
-              res.write(`data: ${JSON.stringify({ type: "chunk", content: `\n\n**Error:** ${event.data}\n\n` })}\n\n`);
+            const eventData = event.data as { 
+              tool?: string; 
+              output?: string; 
+              message?: string;
+              cloneData?: unknown;
+            } | string | undefined;
+            
+            // Handle different event types with friendly messages
+            switch (event.type) {
+              case 'status':
+              case 'progress':
+                // Mensajes de estado amigables
+                res.write(`data: ${JSON.stringify({ type: "status", content: typeof eventData === 'string' ? eventData : (eventData as { message?: string })?.message || 'Procesando...' })}\n\n`);
+                break;
+                
+              case 'plan_friendly':
+                // Mostrar el plan de forma amigable
+                res.write(`data: ${JSON.stringify({ type: "chunk", content: `${typeof eventData === 'string' ? eventData : ''}\n\n` })}\n\n`);
+                break;
+                
+              case 'step_start':
+                // No mostrar nada técnico, los status ya lo cubren
+                break;
+                
+              case 'step_complete':
+                // Guardar datos de clonación si existen
+                if (typeof eventData === 'object' && eventData?.cloneData) {
+                  cloneData = eventData.cloneData;
+                }
+                break;
+                
+              case 'chunk':
+                // Contenido de texto directo
+                const chunkContent = typeof eventData === 'string' ? eventData : (eventData as { data?: string })?.data || '';
+                if (chunkContent) {
+                  res.write(`data: ${JSON.stringify({ type: "chunk", content: chunkContent })}\n\n`);
+                }
+                break;
+                
+              case 'content':
+                // Streaming de respuesta final
+                res.write(`data: ${JSON.stringify({ type: "chunk", content: typeof eventData === 'string' ? eventData : '' })}\n\n`);
+                break;
+                
+              case 'done':
+                const doneData = eventData as { message?: string; cloneData?: unknown } | undefined;
+                if (doneData?.cloneData) {
+                  cloneData = doneData.cloneData;
+                }
+                
+                // Si hay datos de clonación, enviar como landing
+                if (cloneData) {
+                  res.write(`data: ${JSON.stringify({ 
+                    type: "done", 
+                    content: doneData?.message || "✅ Tarea completada",
+                    hasArtifact: true,
+                    isLanding: true,
+                    landingData: cloneData
+                  })}\n\n`);
+                } else {
+                  res.write(`data: ${JSON.stringify({ 
+                    type: "done", 
+                    content: doneData?.message || "✅ Tarea completada",
+                    hasArtifact: false 
+                  })}\n\n`);
+                }
+                break;
+                
+              case 'error':
+                res.write(`data: ${JSON.stringify({ type: "chunk", content: `\n\n⚠️ ${typeof eventData === 'string' ? eventData : 'Error en la tarea'}\n\n` })}\n\n`);
+                break;
             }
           }
           res.end();
           return;
         } catch (autonomousError) {
           console.error('[AI Stream] Autonomous mode error:', autonomousError);
-          res.write(`data: ${JSON.stringify({ type: "chunk", content: "\n\nError en modo autónomo. Continuando con respuesta normal...\n\n" })}\n\n`);
+          res.write(`data: ${JSON.stringify({ type: "chunk", content: "\n\n⚠️ Hubo un problema con la tarea autónoma. Intentando de otra forma...\n\n" })}\n\n`);
           // Fall through to normal LLM response
         }
       }

@@ -1012,3 +1012,93 @@
 - [x] Update deploy.sh to backup/restore ecosystem.config.cjs during git pulls
 - [x] Verify new API keys are loaded correctly on VPS
 - [ ] Document secure setup process for future deployments
+
+## Git History Cleanup (Remove Exposed API Keys) - COMPLETED
+- [x] Install git-filter-repo tool
+- [x] Identify all files with API keys in Git history
+- [x] Remove ecosystem.config.cjs from entire Git history
+- [x] Replace all API key strings with REDACTED in history
+- [x] Force push cleaned history to GitHub
+- [x] Verify no API keys remain in history
+- [x] Update VPS with cleaned repository
+
+
+## Autonomous Agent Improvements
+- [x] Fix blocking issue when cloning websites (added timeout and better error handling)
+- [x] Improve progress messages to be user-friendly (like Manus style)
+- [x] Add detailed step-by-step explanations in natural language
+- [x] Show what the agent is doing at each moment
+- [x] Added clone_website tool to autonomous agent
+- [ ] Test web cloning functionality end-to-end on production
+
+
+## Web Cloning System Fix (Critical - Feb 2026)
+- [ ] Fix LLM showing JSON instead of executing clone
+- [ ] Fix "no puedo acceder a URLs externas" error message
+- [ ] Ensure clone_website tool is properly called
+- [ ] Remove technical JSON from user-facing responses
+- [ ] Test complete clone workflow end-to-end
+
+
+## Critical Landing System Bugs (Feb 2)
+- [ ] LLM responds in English even when user writes in Spanish
+- [ ] Preview vs Published mismatch - different content shown
+- [ ] Technical messages visible to user (should be transparent)
+- [ ] System should respond in user's language, not English
+
+
+## Landing System Complete Overhaul (Feb 2026)
+
+### Phase 1: Unify Rendering (Preview = Published)
+- [ ] Create unified HTML renderer that works for both preview and published
+- [ ] Replace React preview with unified renderer
+- [ ] Replace server-side HTML generation with unified renderer
+- [ ] Test 100% fidelity between preview and published
+
+### Phase 2: Mandatory Components (Header/Footer/Logo)
+- [ ] Add mandatory header component with navigation
+- [ ] Add mandatory footer component
+- [ ] Create logo generator (icon + business name) when no logo provided
+- [ ] Make these components required in all landings
+
+### Phase 3: Diverse Layout System
+- [ ] Create layout library (5+ base layouts)
+- [ ] Layout 1: Fixed header + full-width hero + grid services
+- [ ] Layout 2: Sidebar navigation + scrollable content
+- [ ] Layout 3: Transparent header over hero + alternating sections
+- [ ] Layout 4: Minimalist Linear/Stripe style
+- [ ] Layout 5: E-commerce style with featured products
+- [ ] LLM selects appropriate layout based on business type
+
+### Phase 4: Real Web Cloning (3 Levels)
+- [ ] Level A: Inspiration (colors, similar structure)
+- [ ] Level B: Visual replica (almost identical, different content)
+- [ ] Level C: Exact copy (same design, adapted content)
+- [ ] Extract real layout/structure from source web
+- [ ] Download and use actual images, logos, backgrounds
+- [ ] Copy exact color palette
+- [ ] Replicate typography
+
+### Phase 5: Design Learning System
+- [ ] Create database table for learned designs
+- [ ] Extract and store design patterns from user-provided examples
+- [ ] Allow LLM to reference learned designs
+- [ ] Auto-learn from user-generated landings
+
+### Phase 6: AI Asset Generation
+- [ ] Generate logos with AI when user doesn't have one
+- [ ] Generate contextual hero backgrounds
+- [ ] Generate placeholder team/product photos
+- [ ] Use icon libraries for consistent iconography
+
+
+## Phase 3: Industry Pattern Integration (Completed)
+- [x] Analyzed current industry detection flow
+- [x] Created industryJSONExamples.ts with generateIndustryJSONExample() function
+- [x] Created generateIndustryInstructions() to provide complete JSON examples to LLM
+- [x] Updated enrichPromptWithIndustry() to include JSON examples
+- [x] Added extractBusinessName() to detect business names from user messages
+- [x] Created comprehensive tests (12 tests passing)
+- [x] Supports all 293 industry patterns with proper section ordering
+- [x] Includes layout variants (hero, features, testimonials, pricing) in examples
+- [x] Color palettes automatically applied based on industry type
