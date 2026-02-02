@@ -298,6 +298,15 @@ export async function moveChatToFolder(chatId: number, userId: number, folderId:
   );
 }
 
+export async function linkChatToPublishedLanding(chatId: number, userId: number, publishedLandingId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(chats).set({ publishedLandingId }).where(
+    and(eq(chats.id, chatId), eq(chats.userId, userId))
+  );
+}
+
 export async function getChatsByFolderId(folderId: number, userId: number): Promise<Chat[]> {
   const db = await getDb();
   if (!db) return [];

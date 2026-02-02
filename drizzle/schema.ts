@@ -71,6 +71,8 @@ export const chats = mysqlTable("chats", {
   isFavorite: int("isFavorite").default(0).notNull(),
   /** Optional: Store the generated landing page data as JSON */
   artifactData: json("artifactData"),
+  /** Optional: Foreign key to publishedLandings table - links chat to its published landing */
+  publishedLandingId: int("publishedLandingId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

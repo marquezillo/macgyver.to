@@ -1238,3 +1238,32 @@
 - Asset caching to avoid re-downloads
 - Multi-page support for /contacto, /precios, etc.
 - 10/10 cloning tests passed successfully
+
+
+## Phase 5: Bug Fixes - Reported Issues
+
+- [ ] Sistema de páginas múltiples no crea slugs/pestañas separadas
+- [ ] Colores del menú - letras oscuras sobre fondo oscuro
+- [ ] Logo del header lleva al subdominio principal, no a la landing
+- [ ] Enlaces del menú solo funciona el de contacto
+- [ ] Sistema de publicación debe mostrar URL actual y permitir verla sin re-publicar
+- [ ] Evitar URLs duplicadas en "Mis Landings"
+
+
+## Phase 5: Bug Fixes - Reported Issues (In Progress)
+
+### Completed:
+- [x] Anchor links (#) not working - Fixed with SectionWrapper adding id to each section
+- [x] Smooth scroll added to CSS
+- [x] Menu colors not respecting dark/light theme - Added colorUtils.ts for contrast detection
+- [x] Logo in header now links to page top
+- [x] Menu links now work correctly (Features, Contact, etc.)
+- [x] Created PageTabs component for multi-page navigation
+- [x] Created PublishedUrlBanner component to show published URL
+- [x] Updated PublishModal to link chat to published landing
+- [x] Added publishedLandingId field to chats table
+
+### Pending:
+- [ ] Multi-page system needs LLM to generate separate pages (not just sections)
+- [ ] Validate published URL display in UI
+- [ ] Fix duplicate URLs in "Mis Landings"

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { HeaderContent, HeaderStyles, NavItem } from '@shared/sectionTypes';
+import { isLightColor, getContrastColors } from '@/lib/colorUtils';
 
 interface HeaderSectionProps {
   id: string;
@@ -24,12 +25,13 @@ export function HeaderSection({ id, content, styles = {} }: HeaderSectionProps) 
     { label: 'Contact', href: '#contact' },
   ];
 
-  const isDark = styles?.backgroundColor && 
-    (styles.backgroundColor.includes('#0') || 
-     styles.backgroundColor.includes('#1') || 
-     styles.backgroundColor.includes('#2') ||
-     styles.backgroundColor === '#000' ||
-     styles.backgroundColor === 'black');
+  // Use colorUtils for proper contrast detection
+  const isDark = !isLightColor(styles?.backgroundColor);
+  const contrastColors = getContrastColors(styles?.backgroundColor);
+  
+  // Determine text color - use explicit textColor from styles, or calculate from background
+  const textColor = styles?.textColor || contrastColors.textColor;
+  const secondaryTextColor = contrastColors.subtitleColor;
 
   return (
     <div
@@ -59,8 +61,8 @@ export function HeaderSection({ id, content, styles = {} }: HeaderSectionProps) 
         }}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
+          {/* Logo - links to current page (top) */}
+          <a href="#" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             {content?.logo ? (
               <img 
                 src={content.logo} 
@@ -69,16 +71,13 @@ export function HeaderSection({ id, content, styles = {} }: HeaderSectionProps) 
               />
             ) : (
               <span 
-                className={cn(
-                  "text-xl md:text-2xl font-bold",
-                  isDark ? "text-white" : "text-gray-900"
-                )}
-                style={{ color: styles?.textColor }}
+                className="text-xl md:text-2xl font-bold"
+                style={{ color: textColor }}
               >
                 {content?.logoText || 'Brand'}
               </span>
             )}
-          </div>
+          </a>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
@@ -95,7 +94,7 @@ export function HeaderSection({ id, content, styles = {} }: HeaderSectionProps) 
                       "text-sm font-medium transition-colors hover:opacity-80",
                       isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"
                     )}
-                    style={{ color: styles?.textColor }}
+                    style={{ color: textColor }}
                   >
                     {item.label}
                   </a>
@@ -110,7 +109,7 @@ export function HeaderSection({ id, content, styles = {} }: HeaderSectionProps) 
                     "text-sm font-medium transition-colors hover:opacity-80",
                     isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"
                   )}
-                  style={{ color: styles?.textColor }}
+                  style={{ color: textColor }}
                 >
                   {item.label}
                 </a>
@@ -123,11 +122,8 @@ export function HeaderSection({ id, content, styles = {} }: HeaderSectionProps) 
             {content?.secondaryCtaText && (
               <a
                 href={content.secondaryCtaLink || '#'}
-                className={cn(
-                  "text-sm font-medium transition-colors",
-                  isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"
-                )}
-                style={{ color: styles?.textColor }}
+                className="text-sm font-medium transition-colors hover:opacity-80"
+                style={{ color: textColor }}
               >
                 {content.secondaryCtaText}
               </a>
@@ -153,7 +149,7 @@ export function HeaderSection({ id, content, styles = {} }: HeaderSectionProps) 
               "md:hidden p-2 rounded-lg",
               isDark ? "text-white" : "text-gray-900"
             )}
-            style={{ color: styles?.textColor }}
+            style={{ color: textColor }}
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -179,7 +175,7 @@ export function HeaderSection({ id, content, styles = {} }: HeaderSectionProps) 
                     "text-base font-medium transition-colors",
                     isDark ? "text-gray-300" : "text-gray-600"
                   )}
-                  style={{ color: styles?.textColor }}
+                  style={{ color: textColor }}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {item.label}
@@ -193,7 +189,7 @@ export function HeaderSection({ id, content, styles = {} }: HeaderSectionProps) 
                       "text-base font-medium text-center py-2",
                       isDark ? "text-gray-300" : "text-gray-600"
                     )}
-                    style={{ color: styles?.textColor }}
+                    style={{ color: textColor }}
                   >
                     {content.secondaryCtaText}
                   </a>

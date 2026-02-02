@@ -23,6 +23,7 @@ import {
   updateChatTitle,
   updateChatArtifact,
   deleteChat,
+  linkChatToPublishedLanding,
   createMessage,
   getMessagesByChatId,
   createFolder,
@@ -826,6 +827,41 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const chatList = await getChatsByFolderId(input.folderId, ctx.user.id);
         return chatList;
+      }),
+
+    // Link a chat to its published landing
+    linkToPublishedLanding: protectedProcedure
+      .input(z.object({ 
+        chatId: z.number(), 
+        publishedLandingId: z.number() 
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const chat = await getChatById(input.chatId, ctx.user.id);
+        if (!chat) {
+          throw new Error("Chat not found or access denied");
+        }
+        await linkChatToPublishedLanding(input.chatId, ctx.user.id, input.publishedLandingId);
+        return { success: true };
+      }),
+
+    // Get the published landing URL for a chat
+    getPublishedUrl: protectedProcedure
+      .input(z.object({ chatId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const chat = await getChatById(input.chatId, ctx.user.id);
+        if (!chat || !chat.publishedLandingId) {
+          return null;
+        }
+        const landing = await getPublishedLandingById(chat.publishedLandingId);
+        if (!landing) {
+          return null;
+        }
+        return {
+          url: getProjectUrl(landing.subdomain, landing.slug),
+          landingId: landing.id,
+          name: landing.name,
+          slug: landing.slug,
+        };
       }),
   }),
 

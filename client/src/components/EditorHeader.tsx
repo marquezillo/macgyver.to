@@ -12,9 +12,10 @@ interface EditorHeaderProps {
   setViewMode: (mode: 'desktop' | 'tablet' | 'mobile') => void;
   compact?: boolean;
   projectName?: string;
+  chatId?: number | null;
 }
 
-export function EditorHeader({ viewMode, setViewMode, compact = false, projectName }: EditorHeaderProps) {
+export function EditorHeader({ viewMode, setViewMode, compact = false, projectName, chatId }: EditorHeaderProps) {
   const { sections } = useEditorStore();
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
 
@@ -132,6 +133,7 @@ export function EditorHeader({ viewMode, setViewMode, compact = false, projectNa
         onClose={() => setIsPublishModalOpen(false)}
         landingConfig={buildLandingConfig()}
         landingName={projectName}
+        chatId={chatId}
       />
     </>
   );

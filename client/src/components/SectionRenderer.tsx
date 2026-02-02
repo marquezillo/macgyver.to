@@ -18,10 +18,36 @@ interface SectionRendererProps {
   section: Section;
 }
 
+// Map section types to anchor-friendly IDs
+const SECTION_ANCHOR_MAP: Record<string, string> = {
+  'hero': 'hero',
+  'features': 'features',
+  'form': 'contact',
+  'faq': 'faq',
+  'cta': 'cta',
+  'footer': 'footer',
+  'testimonials': 'testimonials',
+  'process': 'process',
+  'pricing': 'pricing',
+  'stats': 'stats',
+  'about': 'about',
+  'gallery': 'gallery',
+  'logocloud': 'partners',
+  'logos': 'partners',
+  'partners': 'partners',
+  'clients': 'clients',
+  'header': 'header',
+  'navbar': 'header',
+  'nav': 'header',
+};
+
 // Wrapper component that adds id for anchor linking and smooth scroll
-function SectionWrapper({ id, children }: { id: string; children: React.ReactNode }) {
+function SectionWrapper({ id, type, children }: { id: string; type: string; children: React.ReactNode }) {
+  // Use descriptive anchor ID based on section type, fallback to original ID
+  const anchorId = SECTION_ANCHOR_MAP[type] || type || id;
+  
   return (
-    <div id={id} className="scroll-mt-20">
+    <div id={anchorId} data-section-id={id} className="scroll-mt-20">
       {children}
     </div>
   );
@@ -73,7 +99,7 @@ export function SectionRenderer({ section }: SectionRendererProps) {
   };
 
   return (
-    <SectionWrapper id={section.id}>
+    <SectionWrapper id={section.id} type={section.type}>
       {renderSection()}
     </SectionWrapper>
   );

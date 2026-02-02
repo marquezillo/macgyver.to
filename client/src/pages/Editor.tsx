@@ -4,6 +4,8 @@ import { PropertiesPanel } from '@/components/PropertiesPanel';
 import { Canvas } from '@/components/Canvas';
 import { ChatInterface } from '@/components/ChatInterface';
 import { Sidebar } from '@/components/Sidebar';
+import { PublishedUrlBanner } from '@/components/PublishedUrlBanner';
+import { PageTabs } from '@/components/PageTabs';
 import { cn } from '@/lib/utils';
 import { PanelRightClose, PanelLeftOpen, X, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -129,6 +131,9 @@ export default function Editor() {
           </div>
         )}
 
+        {/* Published URL Banner */}
+        <PublishedUrlBanner chatId={activeChatId} />
+
         <div className="flex-1 flex justify-center min-h-0 overflow-hidden">
            <div className={cn(
              "h-full transition-all duration-500 ease-in-out flex flex-col w-full overflow-hidden",
@@ -173,7 +178,7 @@ export default function Editor() {
            </div>
            
            <div className="flex items-center gap-2">
-             <EditorHeader viewMode={viewMode} setViewMode={setViewMode} compact={true} />
+             <EditorHeader viewMode={viewMode} setViewMode={setViewMode} compact={true} chatId={activeChatId} />
              {!isMobile && (
                <>
                  <div className="h-4 w-px bg-gray-200 mx-2" />
@@ -189,6 +194,9 @@ export default function Editor() {
              )}
            </div>
         </div>
+
+        {/* Page Tabs for multi-page landings */}
+        <PageTabs />
 
         <div className="flex-1 flex overflow-hidden relative">
           {/* Main Canvas Area */}
