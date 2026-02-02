@@ -674,13 +674,14 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
   };
 
   return (
-    <div
+    <section
+      id={id}
       onClick={(e) => {
         e.stopPropagation();
         selectSection(id);
       }}
       className={cn(
-        "transition-all duration-200",
+        "transition-all duration-200 scroll-mt-20",
         isSelected && "ring-2 ring-primary ring-offset-2"
       )}
     >
@@ -699,6 +700,6 @@ export function HeroSection({ id, content, styles = {} }: HeroSectionProps) {
       
       {/* Default centered */}
       {(variant === 'centered' || !['split', 'split-left', 'split-right', 'minimal', 'asymmetric', 'video', 'gradient'].includes(variant)) && renderCenteredHero()}
-    </div>
+    </section>
   );
 }

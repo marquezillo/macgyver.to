@@ -169,7 +169,7 @@ export function FooterSection({ id, content, styles = {} }: FooterSectionProps) 
             </h4>
             <div className="flex gap-4">
               {socialLinks.map((social: SocialLink, index: number) => {
-                const Icon = socialIcons[social.platform.toLowerCase()] || Globe;
+                const Icon = socialIcons[social?.platform?.toLowerCase?.()] || Globe;
                 return (
                   <a
                     key={index}

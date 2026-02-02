@@ -28,13 +28,14 @@ export function CTASection({ id, content, styles = {} }: CTASectionProps) {
   const subtitleColor = styles?.textColor || (isLightBg ? '#4b5563' : 'rgba(255,255,255,0.9)');
 
   return (
-    <div
+    <section
+      id={id}
       onClick={(e) => {
         e.stopPropagation();
         selectSection(id);
       }}
       className={cn(
-        "relative py-10 md:py-16 px-4 sm:px-6 lg:px-8 transition-all duration-200",
+        "relative py-10 md:py-16 px-4 sm:px-6 lg:px-8 transition-all duration-200 scroll-mt-20",
         isSelected && "ring-2 ring-primary ring-offset-2",
         !hasGradient && (styles?.backgroundColor || "bg-primary")
       )}
@@ -87,6 +88,6 @@ export function CTASection({ id, content, styles = {} }: CTASectionProps) {
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

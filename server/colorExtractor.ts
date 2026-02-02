@@ -22,6 +22,8 @@ export interface ExtractedColorPalette {
   isDark: boolean;
   hasGradients: boolean;
   gradients: string[];
+  // CSS variables extraídas del sitio
+  cssVariables?: Record<string, string>;
 }
 
 export interface ExtractedTypography {
@@ -68,6 +70,64 @@ export async function extractColors(page: Page): Promise<ExtractedColorPalette> 
         var g = parseInt(hex.substr(3, 2), 16) / 255;
         var b = parseInt(hex.substr(5, 2), 16) / 255;
         return 0.299 * r + 0.587 * g + 0.114 * b;
+      }
+
+      // Extraer CSS variables del :root y body
+      var cssVariables = {};
+      var rootStyles = window.getComputedStyle(document.documentElement);
+      var commonVarNames = [
+        '--primary', '--secondary', '--accent', '--background', '--foreground',
+        '--muted', '--border', '--card', '--popover', '--destructive',
+        '--color-primary', '--color-secondary', '--color-accent', '--color-background',
+        '--color-foreground', '--color-muted', '--color-border',
+        '--bg-primary', '--bg-secondary', '--text-primary', '--text-secondary',
+        '--brand', '--brand-primary', '--brand-secondary',
+        '--theme-primary', '--theme-secondary', '--theme-accent',
+        '--surface', '--surface-primary', '--on-surface',
+        '--neutral', '--neutral-100', '--neutral-900'
+      ];
+      
+      // Try to get CSS variables from :root
+      commonVarNames.forEach(function(varName) {
+        var value = rootStyles.getPropertyValue(varName).trim();
+        if (value) {
+          cssVariables[varName] = value;
+        }
+      });
+      
+      // Also scan stylesheets for CSS variable definitions
+      try {
+        var stylesheets = document.styleSheets;
+        for (var s = 0; s < stylesheets.length; s++) {
+          try {
+            var rules = stylesheets[s].cssRules || stylesheets[s].rules;
+            if (rules) {
+              for (var r = 0; r < rules.length; r++) {
+                var rule = rules[r];
+                if (rule.selectorText === ':root' || rule.selectorText === 'html' || rule.selectorText === 'body') {
+                  var cssText = rule.cssText;
+                  var varMatches = cssText.match(/--[\w-]+:\s*[^;]+/g);
+                  if (varMatches) {
+                    varMatches.forEach(function(match) {
+                      var parts = match.split(':');
+                      if (parts.length >= 2) {
+                        var name = parts[0].trim();
+                        var value = parts.slice(1).join(':').trim();
+                        if (value && !cssVariables[name]) {
+                          cssVariables[name] = value;
+                        }
+                      }
+                    });
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // CORS error, skip this stylesheet
+          }
+        }
+      } catch (e) {
+        // Ignore stylesheet access errors
       }
 
       // Recopilar todos los colores usados
@@ -184,6 +244,47 @@ export async function extractColors(page: Page): Promise<ExtractedColorPalette> 
         .filter(function(c) { return c !== primaryColor && c !== secondaryColor && c !== mainBg && c !== mainText; })
         .slice(0, 5);
 
+      // Use CSS variables if available to improve accuracy
+      var cssVarKeys = Object.keys(cssVariables);
+      if (cssVarKeys.length > 0) {
+        // Try to find primary color from CSS variables
+        var primaryVars = ['--primary', '--color-primary', '--brand', '--brand-primary', '--theme-primary'];
+        for (var pv = 0; pv < primaryVars.length; pv++) {
+          if (cssVariables[primaryVars[pv]]) {
+            var varValue = cssVariables[primaryVars[pv]];
+            // Convert to hex if it's a valid color
+            if (varValue.startsWith('#') || varValue.startsWith('rgb')) {
+              primaryColor = varValue.startsWith('rgb') ? rgbToHex(varValue) || primaryColor : varValue;
+              break;
+            }
+          }
+        }
+        
+        // Try to find secondary color
+        var secondaryVars = ['--secondary', '--color-secondary', '--brand-secondary', '--theme-secondary'];
+        for (var sv = 0; sv < secondaryVars.length; sv++) {
+          if (cssVariables[secondaryVars[sv]]) {
+            var varValue = cssVariables[secondaryVars[sv]];
+            if (varValue.startsWith('#') || varValue.startsWith('rgb')) {
+              secondaryColor = varValue.startsWith('rgb') ? rgbToHex(varValue) || secondaryColor : varValue;
+              break;
+            }
+          }
+        }
+        
+        // Try to find accent color
+        var accentVars = ['--accent', '--color-accent', '--theme-accent'];
+        for (var av = 0; av < accentVars.length; av++) {
+          if (cssVariables[accentVars[av]]) {
+            var varValue = cssVariables[accentVars[av]];
+            if (varValue.startsWith('#') || varValue.startsWith('rgb')) {
+              accentColor = varValue.startsWith('rgb') ? rgbToHex(varValue) || accentColor : varValue;
+              break;
+            }
+          }
+        }
+      }
+
       return {
         primary: primaryColor,
         secondary: secondaryColor,
@@ -195,7 +296,8 @@ export async function extractColors(page: Page): Promise<ExtractedColorPalette> 
         additionalColors: additionalColors,
         isDark: isDark,
         hasGradients: gradients.length > 0,
-        gradients: gradients.slice(0, 3)
+        gradients: gradients.slice(0, 3),
+        cssVariables: cssVariables
       };
     })()
   `);

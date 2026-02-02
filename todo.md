@@ -1152,3 +1152,89 @@
 1. **Inspiración** (💡) - Uses colors/structure, generates new content
 2. **Réplica Visual** (🎨) - Visual similarity, adapted content  
 3. **Copia Exacta** (📋) - Pixel-perfect copy with original assets
+
+
+## Phase 4.2: Web Cloning Testing & Improvements (In Progress)
+
+### Pruebas de Clonación (10 sitios)
+- [ ] Probar clonación de Linear.app
+- [ ] Probar clonación de Vercel.com
+- [ ] Probar clonación de Stripe.com
+- [ ] Probar clonación de Notion.so
+- [ ] Probar clonación de Figma.com
+- [ ] Probar clonación de Slack.com
+- [ ] Probar clonación de Dropbox.com
+- [ ] Probar clonación de Airbnb.com
+- [ ] Probar clonación de Spotify.com
+- [ ] Probar clonación de Netflix.com
+
+### Mejoras de Extracción de Colores
+- [ ] Agregar soporte para CSS variables (--color-primary, etc.)
+- [ ] Detectar temas dinámicos (dark/light mode)
+- [ ] Extraer colores de :root y [data-theme]
+
+### Caché de Assets
+- [ ] Crear sistema de caché para imágenes descargadas
+- [ ] Implementar hash de URL para identificar assets únicos
+- [ ] Evitar re-descargas de sitios ya clonados
+
+
+## Phase 4.3: Bug Fixes and Multi-Page System (In Progress)
+
+### Bug Fixes
+- [ ] Fix anchor links (#contacto, #precios) not scrolling to sections
+- [ ] Investigate why internal navigation doesn't work
+
+### Multi-Page System (Like Manus.im)
+- [ ] Design database schema for multi-page landings
+- [ ] Implement page routing system (/contacto, /precios, /about, etc.)
+- [ ] Update LLM prompt to generate multiple pages when requested
+- [ ] Create page navigation component
+- [ ] Update preview to handle multiple pages
+- [ ] Update publish system to deploy all pages
+
+### Web Cloning Improvements
+- [ ] Improve CSS variables extraction for modern themes
+- [ ] Implement asset caching to avoid re-downloads
+- [ ] Test cloning with 10 real websites
+
+
+## Phase 4.2: Web Cloning Testing & Improvements - COMPLETED
+
+- [x] Modify assetDownloader.ts to use local server storage instead of S3
+- [x] Integrate cloning detection in /api/ai/stream endpoint
+- [x] Add CSS variables extraction support to colorExtractor.ts
+- [x] Implement asset cache system (assetCache.ts)
+- [x] Test cloning with 10 real websites:
+  - [x] Linear.app - SUCCESS
+  - [x] Stripe.com - SUCCESS
+  - [x] Notion.so - SUCCESS
+  - [x] Slack.com - SUCCESS
+  - [x] Figma.com - SUCCESS
+  - [x] Airbnb.com - SUCCESS
+  - [x] Spotify.com - SUCCESS
+  - [x] Dropbox.com - SUCCESS
+  - [x] GitHub.com - SUCCESS
+  - [x] Shopify.com - SUCCESS
+
+## Phase 4.3: Bug Fixes and Multi-Page System - COMPLETED
+
+- [x] Fix anchor links (#) not working - Added id wrapper to SectionRenderer
+- [x] Add smooth scroll behavior to CSS
+- [x] Create multiPageTypes.ts - Types for multi-page landing system
+- [x] Create multiPageDetector.ts - Detect and generate multi-page instructions
+- [x] Integrate multi-page detection in /api/ai/stream endpoint
+- [x] Fix FooterSection undefined error for social.platform
+- [x] Fix cloneIntentDetector to recognize "réplica visual" pattern
+
+### New Files Created:
+- `server/assetCache.ts` - Asset caching system
+- `shared/multiPageTypes.ts` - Multi-page type definitions
+- `server/multiPageDetector.ts` - Multi-page detection and generation
+
+### Improvements Made:
+- Anchor links now work with smooth scrolling
+- CSS variables extraction for modern websites
+- Asset caching to avoid re-downloads
+- Multi-page support for /contacto, /precios, etc.
+- 10/10 cloning tests passed successfully

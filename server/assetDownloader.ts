@@ -6,6 +6,7 @@
 import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getCachedAsset, cacheAsset } from './assetCache';
 
 // Directorio base para assets descargados (relativo al proyecto)
 const ASSETS_BASE_DIR = path.join(process.cwd(), 'client', 'public', 'cloned-assets');
@@ -88,7 +89,8 @@ export async function downloadAssets(
 async function downloadSingleAsset(
   url: string,
   type: 'image' | 'logo' | 'icon' | 'font' | 'background',
-  projectId: string
+  projectId: string,
+  sourceUrl?: string
 ): Promise<DownloadedAsset | null> {
   try {
     // Validar y normalizar URL
@@ -96,6 +98,33 @@ async function downloadSingleAsset(
     if (!normalizedUrl) {
       console.log(`[AssetDownloader] Invalid URL: ${url}`);
       return null;
+    }
+
+    // Check cache first
+    const cachedAsset = getCachedAsset(normalizedUrl);
+    if (cachedAsset) {
+      // Copy from cache to project directory
+      const projectDir = ensureAssetsDirectory(projectId);
+      const hash = createHash('md5').update(url).digest('hex').substring(0, 8);
+      const extension = getExtensionFromMimeType(cachedAsset.mimeType);
+      const filename = `${type}-${hash}${extension}`;
+      const localPath = path.join(projectDir, filename);
+      
+      // Copy cached file to project
+      fs.copyFileSync(cachedAsset.localPath, localPath);
+      
+      const storedUrl = `/cloned-assets/${projectId}/${filename}`;
+      console.log(`[AssetDownloader] Using cached asset: ${filename}`);
+      
+      return {
+        originalUrl: url,
+        storedUrl,
+        localPath,
+        type,
+        filename,
+        mimeType: cachedAsset.mimeType,
+        size: cachedAsset.size,
+      };
     }
 
     // Descargar el asset
@@ -136,6 +165,13 @@ async function downloadSingleAsset(
     const projectDir = ensureAssetsDirectory(projectId);
     const localPath = path.join(projectDir, filename);
     fs.writeFileSync(localPath, buffer);
+
+    // Cache the asset for future use
+    try {
+      cacheAsset(normalizedUrl, buffer, contentType, sourceUrl || '');
+    } catch (cacheError) {
+      console.warn('[AssetDownloader] Failed to cache asset:', cacheError);
+    }
 
     // URL relativa para el frontend (servida desde /cloned-assets/)
     const storedUrl = `/cloned-assets/${projectId}/${filename}`;

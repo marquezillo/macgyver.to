@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Smooth scroll for anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
 @source "../../node_modules/streamdown/dist/index.js";
 
 @custom-variant dark (&:is(.dark *));

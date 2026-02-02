@@ -77,10 +77,11 @@ export function FAQSection({ id, content, styles = {} }: FAQSectionProps) {
   const answerBgClass = isDarkBg ? 'bg-white/5' : 'bg-gray-50';
 
   return (
-    <div
+    <section
+      id={id}
       onClick={handleSectionClick}
       className={cn(
-        "relative py-16 md:py-24 px-4 sm:px-6 lg:px-8 transition-all duration-200",
+        "relative py-16 md:py-24 px-4 sm:px-6 lg:px-8 transition-all duration-200 scroll-mt-20",
         isSelected && "ring-2 ring-primary ring-offset-2"
       )}
       style={{ backgroundColor: bgColor }}
@@ -183,6 +184,6 @@ export function FAQSection({ id, content, styles = {} }: FAQSectionProps) {
           })}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

@@ -43,11 +43,12 @@ const CLONE_PATTERNS = [
 const SIMPLE_CLONE_KEYWORDS = [
   'clon', 'clona', 'clonar', 'clone',
   'copia', 'copiar', 'copy',
-  'replica', 'replicar', 'replicate',
+  'replica', 'replicar', 'replicate', 'réplica',
   'igual', 'idéntica', 'identica', 'exacta',
   'como esta', 'like this', 'similar',
   'basándote', 'basandote', 'based on',
   'igual que', 'igual a', 'like',
+  'réplica visual', 'replica visual', 'copia exacta',
 ];
 
 // Patrones para extraer URLs

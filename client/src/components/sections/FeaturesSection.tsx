@@ -494,13 +494,14 @@ export function FeaturesSection({ id, content, styles = {} }: FeaturesSectionPro
   );
 
   return (
-    <div
+    <section
+      id={id}
       onClick={(e) => {
         e.stopPropagation();
         selectSection(id);
       }}
       className={cn(
-        "py-16 md:py-24 px-4 sm:px-6 lg:px-8 transition-all duration-200",
+        "py-16 md:py-24 px-4 sm:px-6 lg:px-8 transition-all duration-200 scroll-mt-20",
         isSelected && "ring-2 ring-primary ring-offset-2"
       )}
       style={{ backgroundColor: styles?.backgroundColor || '#f9fafb' }}
@@ -551,6 +552,6 @@ export function FeaturesSection({ id, content, styles = {} }: FeaturesSectionPro
          layout === 'minimal' ? renderMinimalLayout() :
          renderGridLayout()}
       </div>
-    </div>
+    </section>
   );
 }

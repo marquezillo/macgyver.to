@@ -213,8 +213,62 @@ async function startServer() {
         }
       }
 
-      // Build conversation history for LLM with memory context
-      const systemPromptWithMemory = SYSTEM_PROMPT + memoryContext;
+      // Check for multi-page request
+      let multiPageEnrichment = '';
+      const { detectMultiPageRequest, enrichPromptForMultiPage } = await import('../multiPageDetector');
+      const multiPageDetection = detectMultiPageRequest(lastUserMessageContent);
+      
+      if (multiPageDetection.isMultiPage) {
+        console.log('[AI Stream] Multi-page request detected:', multiPageDetection.requestedPages.map(p => p.slug));
+        res.write(`data: ${JSON.stringify({ type: "status", content: "📄 Detectadas múltiples páginas: " + multiPageDetection.requestedPages.map(p => p.title).join(', ') })}
+\n`);
+        multiPageEnrichment = multiPageDetection.llmInstructions;
+      }
+
+      // Check if this is a clone/replica request and enrich prompt with web data
+      let cloneEnrichment = '';
+      const { detectCloneIntent } = await import('../cloneIntentDetector');
+      const cloneIntent = detectCloneIntent(lastUserMessageContent);
+      
+      if (cloneIntent.isCloneRequest && cloneIntent.url) {
+        console.log('[AI Stream] Clone request detected for URL:', cloneIntent.url);
+        res.write(`data: ${JSON.stringify({ type: "status", content: "🌐 Analizando la página web de referencia..." })}\n\n`);
+        
+        try {
+          const { extractWebDataEnhanced, generateEnhancedPrompt } = await import('../webDataExtractorEnhanced');
+          const { detectCloningLevel, generateCloningInstructions } = await import('../cloningLevels');
+          
+          // Detect cloning level from user message
+          const cloningLevel = detectCloningLevel(lastUserMessageContent);
+          console.log('[AI Stream] Cloning level detected:', cloningLevel);
+          
+          res.write(`data: ${JSON.stringify({ type: "status", content: "🎨 Extrayendo colores, tipografía y estructura..." })}\n\n`);
+          
+          // Extract web data
+          const webData = await extractWebDataEnhanced(cloneIntent.url, cloningLevel);
+          
+          if (webData) {
+            res.write(`data: ${JSON.stringify({ type: "status", content: "✨ Preparando instrucciones de clonación..." })}\n\n`);
+            
+            // Generate enriched prompt with cloning instructions
+            cloneEnrichment = generateEnhancedPrompt(webData, lastUserMessageContent);
+            
+            // Add cloning level specific instructions
+            const { getCloningConfig } = await import('../cloningLevels');
+            const cloningConfig = getCloningConfig(cloningLevel);
+            const levelInstructions = generateCloningInstructions(cloningLevel, webData, cloningConfig);
+            cloneEnrichment += '\n\n' + levelInstructions;
+            
+            console.log('[AI Stream] Clone enrichment generated, length:', cloneEnrichment.length);
+          }
+        } catch (cloneError) {
+          console.error('[AI Stream] Clone extraction error:', cloneError);
+          res.write(`data: ${JSON.stringify({ type: "status", content: "⚠️ No pude analizar la web, crearé una landing basada en tu descripción" })}\n\n`);
+        }
+      }
+
+      // Build conversation history for LLM with memory context, clone enrichment, and multi-page instructions
+      const systemPromptWithMemory = SYSTEM_PROMPT + memoryContext + cloneEnrichment + multiPageEnrichment;
       const llmMessages = [
         { role: 'system' as const, content: systemPromptWithMemory },
         ...messages.map(m => ({
