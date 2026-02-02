@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Plus, Settings, PanelLeftClose, Loader2, Trash2, Pencil, Check, X, Search,
-  Star, Folder, FolderPlus, ChevronRight, ChevronDown, MoreHorizontal, Moon, Sun, Download, Brain, Boxes, Globe
+  Star, FolderKanban, FolderPlus, ChevronRight, ChevronDown, MoreHorizontal, Moon, Sun, Download, Brain, Boxes, Globe,
+  ExternalLink, Share2
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { cn } from '@/lib/utils';
@@ -18,7 +19,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -53,13 +59,13 @@ function groupChatsByDate(chats: { id: number; title: string; updatedAt: Date; i
   return { favorites, today, yesterday, older };
 }
 
-const FOLDER_COLORS = [
-  { name: 'gray', bg: 'bg-gray-100', text: 'text-gray-600' },
-  { name: 'blue', bg: 'bg-blue-100', text: 'text-blue-600' },
-  { name: 'green', bg: 'bg-green-100', text: 'text-green-600' },
-  { name: 'purple', bg: 'bg-purple-100', text: 'text-purple-600' },
-  { name: 'orange', bg: 'bg-orange-100', text: 'text-orange-600' },
-  { name: 'pink', bg: 'bg-pink-100', text: 'text-pink-600' },
+const PROJECT_COLORS = [
+  { name: 'gray', bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
+  { name: 'blue', bg: 'bg-blue-100', text: 'text-blue-600', dot: 'bg-blue-500' },
+  { name: 'green', bg: 'bg-green-100', text: 'text-green-600', dot: 'bg-green-500' },
+  { name: 'purple', bg: 'bg-purple-100', text: 'text-purple-600', dot: 'bg-purple-500' },
+  { name: 'orange', bg: 'bg-orange-100', text: 'text-orange-600', dot: 'bg-orange-500' },
+  { name: 'pink', bg: 'bg-pink-100', text: 'text-pink-600', dot: 'bg-pink-500' },
 ];
 
 export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatId }: SidebarProps) {
@@ -71,11 +77,12 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
   const [editingChatId, setEditingChatId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
-  const [showNewFolder, setShowNewFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
+  const [expandedProjects, setExpandedProjects] = useState<Set<number>>(new Set());
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [showProjectsSection, setShowProjectsSection] = useState(true);
   const editInputRef = useRef<HTMLInputElement>(null);
-  const newFolderInputRef = useRef<HTMLInputElement>(null);
+  const newProjectInputRef = useRef<HTMLInputElement>(null);
   
   // Fetch chats from database - always try to fetch, will return empty if not authenticated
   const { data: chats, isLoading: chatsLoading } = trpc.chat.list.useQuery(undefined, {
@@ -83,8 +90,8 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
     refetchOnWindowFocus: false,
   });
 
-  // Fetch folders
-  const { data: folders } = trpc.folder.list.useQuery(undefined, {
+  // Fetch folders (now called projects)
+  const { data: projects } = trpc.folder.list.useQuery(undefined, {
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -93,6 +100,7 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
   const deleteChat = trpc.chat.delete.useMutation({
     onSuccess: () => {
       utils.chat.list.invalidate();
+      toast.success('Conversación eliminada');
     },
   });
 
@@ -101,37 +109,42 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
     onSuccess: () => {
       utils.chat.list.invalidate();
       setEditingChatId(null);
+      toast.success('Nombre actualizado');
     },
   });
 
   // Toggle favorite mutation
   const toggleFavorite = trpc.chat.toggleFavorite.useMutation({
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       utils.chat.list.invalidate();
+      toast.success(variables.isFavorite ? 'Añadido a favoritos' : 'Quitado de favoritos');
     },
   });
 
-  // Move to folder mutation
-  const moveToFolder = trpc.chat.moveToFolder.useMutation({
+  // Move to project mutation
+  const moveToProject = trpc.chat.moveToFolder.useMutation({
     onSuccess: () => {
       utils.chat.list.invalidate();
+      toast.success('Movido al proyecto');
     },
   });
 
-  // Create folder mutation
-  const createFolder = trpc.folder.create.useMutation({
+  // Create project mutation
+  const createProject = trpc.folder.create.useMutation({
     onSuccess: () => {
       utils.folder.list.invalidate();
-      setShowNewFolder(false);
-      setNewFolderName('');
+      setShowNewProject(false);
+      setNewProjectName('');
+      toast.success('Proyecto creado');
     },
   });
 
-  // Delete folder mutation
-  const deleteFolder = trpc.folder.delete.useMutation({
+  // Delete project mutation
+  const deleteProject = trpc.folder.delete.useMutation({
     onSuccess: () => {
       utils.folder.list.invalidate();
       utils.chat.list.invalidate();
+      toast.success('Proyecto eliminado');
     },
   });
 
@@ -144,20 +157,18 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
   }, [editingChatId]);
 
   useEffect(() => {
-    if (showNewFolder && newFolderInputRef.current) {
-      newFolderInputRef.current.focus();
+    if (showNewProject && newProjectInputRef.current) {
+      newProjectInputRef.current.focus();
     }
-  }, [showNewFolder]);
+  }, [showNewProject]);
 
-  const handleDeleteChat = (e: React.MouseEvent, chatId: number) => {
-    e.stopPropagation();
+  const handleDeleteChat = (chatId: number) => {
     if (confirm('¿Estás seguro de que quieres eliminar esta conversación?')) {
       deleteChat.mutate({ chatId });
     }
   };
 
-  const handleStartEdit = (e: React.MouseEvent, chat: { id: number; title: string }) => {
-    e.stopPropagation();
+  const handleStartEdit = (chat: { id: number; title: string }) => {
     setEditingChatId(chat.id);
     setEditTitle(chat.title);
   };
@@ -187,13 +198,12 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
     }
   };
 
-  const handleToggleFavorite = (e: React.MouseEvent, chatId: number, currentFavorite: number) => {
-    e.stopPropagation();
+  const handleToggleFavorite = (chatId: number, currentFavorite: number) => {
     toggleFavorite.mutate({ chatId, isFavorite: !currentFavorite });
   };
 
-  const handleMoveToFolder = (chatId: number, folderId: number | null) => {
-    moveToFolder.mutate({ chatId, folderId });
+  const handleMoveToProject = (chatId: number, projectId: number | null) => {
+    moveToProject.mutate({ chatId, folderId: projectId });
   };
 
   const handleExportChat = async (chatId: number, format: 'markdown' | 'json') => {
@@ -208,31 +218,44 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      toast.success('Conversación exportada');
     } catch (error) {
       console.error('Export error:', error);
+      toast.error('Error al exportar');
     }
   };
 
-  const handleCreateFolder = () => {
-    if (newFolderName.trim()) {
-      createFolder.mutate({ name: newFolderName.trim() });
+  const handleShareChat = (chatId: number) => {
+    // For now, just copy a link - can be expanded later
+    const url = `${window.location.origin}/?chat=${chatId}`;
+    navigator.clipboard.writeText(url);
+    toast.success('Enlace copiado al portapapeles');
+  };
+
+  const handleOpenInNewTab = (chatId: number) => {
+    window.open(`${window.location.origin}/?chat=${chatId}`, '_blank');
+  };
+
+  const handleCreateProject = () => {
+    if (newProjectName.trim()) {
+      createProject.mutate({ name: newProjectName.trim() });
     }
   };
 
-  const handleDeleteFolder = (e: React.MouseEvent, folderId: number) => {
+  const handleDeleteProject = (e: React.MouseEvent, projectId: number) => {
     e.stopPropagation();
-    if (confirm('¿Eliminar esta carpeta? Los chats se moverán a la lista principal.')) {
-      deleteFolder.mutate({ folderId });
+    if (confirm('¿Eliminar este proyecto? Las conversaciones se moverán a la lista principal.')) {
+      deleteProject.mutate({ folderId: projectId });
     }
   };
 
-  const toggleFolderExpand = (folderId: number) => {
-    setExpandedFolders(prev => {
+  const toggleProjectExpand = (projectId: number) => {
+    setExpandedProjects(prev => {
       const next = new Set(prev);
-      if (next.has(folderId)) {
-        next.delete(folderId);
+      if (next.has(projectId)) {
+        next.delete(projectId);
       } else {
-        next.add(folderId);
+        next.add(projectId);
       }
       return next;
     });
@@ -248,7 +271,7 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
   // State to show all conversations or limit to 20
   const [showAllConversations, setShowAllConversations] = useState(false);
   
-  // Limit conversations to 20 total (excluding favorites and folders) unless "show all" is clicked
+  // Limit conversations to 20 total (excluding favorites and projects) unless "show all" is clicked
   const MAX_VISIBLE_CONVERSATIONS = 20;
   
   const { grouped, totalConversations, hasMoreConversations } = useMemo(() => {
@@ -284,9 +307,9 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
     };
   }, [groupedAll, showAllConversations]);
 
-  // Get chats for a specific folder
-  const getChatsForFolder = (folderId: number) => {
-    return filteredChats?.filter(chat => chat.folderId === folderId) || [];
+  // Get chats for a specific project
+  const getChatsForProject = (projectId: number) => {
+    return filteredChats?.filter(chat => chat.folderId === projectId) || [];
   };
 
   const renderChatItem = (chat: { id: number; title: string; updatedAt: Date; isFavorite?: number; folderId?: number | null }) => {
@@ -343,64 +366,84 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
                   size="icon"
                   className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  <MoreHorizontal className="h-3 w-3 text-gray-400" />
+                  <MoreHorizontal className="h-4 w-4 text-gray-400" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={(e) => handleStartEdit(e as any, chat)}>
-                  <Pencil className="h-3 w-3 mr-2" />
+              <DropdownMenuContent align="end" className="w-52">
+                {/* Share */}
+                <DropdownMenuItem onClick={() => handleShareChat(chat.id)}>
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Compartir
+                </DropdownMenuItem>
+                
+                {/* Rename */}
+                <DropdownMenuItem onClick={() => handleStartEdit(chat)}>
+                  <Pencil className="h-4 w-4 mr-2" />
                   Renombrar
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => handleToggleFavorite(e as any, chat.id, chat.isFavorite || 0)}>
-                  <Star className={cn("h-3 w-3 mr-2", chat.isFavorite && "fill-yellow-500 text-yellow-500")} />
+                
+                {/* Add to favorites */}
+                <DropdownMenuItem onClick={() => handleToggleFavorite(chat.id, chat.isFavorite || 0)}>
+                  <Star className={cn("h-4 w-4 mr-2", chat.isFavorite && "fill-yellow-500 text-yellow-500")} />
                   {chat.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
                 </DropdownMenuItem>
                 
-                {/* Move to folder submenu */}
-                {folders && folders.length > 0 && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="font-medium text-xs text-gray-500" disabled>
-                      Mover a carpeta
-                    </DropdownMenuItem>
-                    {chat.folderId && (
-                      <DropdownMenuItem onClick={() => handleMoveToFolder(chat.id, null)}>
-                        <X className="h-3 w-3 mr-2" />
-                        Sin carpeta
-                      </DropdownMenuItem>
-                    )}
-                    {folders.map(folder => (
-                      <DropdownMenuItem 
-                        key={folder.id}
-                        onClick={() => handleMoveToFolder(chat.id, folder.id)}
-                        disabled={chat.folderId === folder.id}
-                      >
-                        <Folder className={cn("h-3 w-3 mr-2", FOLDER_COLORS.find(c => c.name === folder.color)?.text || 'text-gray-500')} />
-                        {folder.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </>
-                )}
-                
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="font-medium text-xs text-gray-500" disabled>
-                  Exportar como
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportChat(chat.id, 'markdown')}>
-                  <Download className="h-3 w-3 mr-2" />
-                  Markdown (.md)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportChat(chat.id, 'json')}>
-                  <Download className="h-3 w-3 mr-2" />
-                  JSON (.json)
+                {/* Open in new tab */}
+                <DropdownMenuItem onClick={() => handleOpenInNewTab(chat.id)}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Abrir en una nueva pestaña
                 </DropdownMenuItem>
                 
+                {/* Move to project - submenu */}
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <FolderKanban className="h-4 w-4 mr-2" />
+                    Mover a proyecto
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="w-48">
+                      {chat.folderId && (
+                        <DropdownMenuItem onClick={() => handleMoveToProject(chat.id, null)}>
+                          <X className="h-4 w-4 mr-2" />
+                          Sin proyecto
+                        </DropdownMenuItem>
+                      )}
+                      {projects && projects.length > 0 ? (
+                        projects.map(project => {
+                          const colorClass = PROJECT_COLORS.find(c => c.name === project.color) || PROJECT_COLORS[0];
+                          return (
+                            <DropdownMenuItem 
+                              key={project.id}
+                              onClick={() => handleMoveToProject(chat.id, project.id)}
+                              disabled={chat.folderId === project.id}
+                            >
+                              <div className={cn("h-2 w-2 rounded-full mr-2", colorClass.dot)} />
+                              {project.name}
+                            </DropdownMenuItem>
+                          );
+                        })
+                      ) : (
+                        <DropdownMenuItem disabled className="text-gray-400 text-xs">
+                          No hay proyectos
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setShowNewProject(true)}>
+                        <FolderPlus className="h-4 w-4 mr-2" />
+                        Crear proyecto
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+                
                 <DropdownMenuSeparator />
+                
+                {/* Delete - in red */}
                 <DropdownMenuItem 
-                  onClick={(e) => handleDeleteChat(e as any, chat.id)}
-                  className="text-red-600 focus:text-red-600"
+                  onClick={() => handleDeleteChat(chat.id)}
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50"
                 >
-                  <Trash2 className="h-3 w-3 mr-2" />
+                  <Trash2 className="h-4 w-4 mr-2" />
                   Eliminar
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -411,43 +454,43 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
     );
   };
 
-  const renderFolderSection = (folder: { id: number; name: string; color: string | null }) => {
-    const isExpanded = expandedFolders.has(folder.id);
-    const folderChats = getChatsForFolder(folder.id);
-    const colorClass = FOLDER_COLORS.find(c => c.name === folder.color) || FOLDER_COLORS[0];
+  const renderProjectSection = (project: { id: number; name: string; color: string | null }) => {
+    const isExpanded = expandedProjects.has(project.id);
+    const projectChats = getChatsForProject(project.id);
+    const colorClass = PROJECT_COLORS.find(c => c.name === project.color) || PROJECT_COLORS[0];
 
     return (
-      <div key={folder.id} className="mb-1">
+      <div key={project.id} className="mb-1">
         <div 
           className={cn(
-            "flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer group",
+            "flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer group",
             "hover:bg-gray-200/50"
           )}
-          onClick={() => toggleFolderExpand(folder.id)}
+          onClick={() => toggleProjectExpand(project.id)}
         >
           {isExpanded ? (
-            <ChevronDown className="h-3 w-3 text-gray-400" />
+            <ChevronDown className="h-3 w-3 text-gray-400 shrink-0" />
           ) : (
-            <ChevronRight className="h-3 w-3 text-gray-400" />
+            <ChevronRight className="h-3 w-3 text-gray-400 shrink-0" />
           )}
-          <Folder className={cn("h-3.5 w-3.5", colorClass.text)} />
-          <span className="text-sm text-gray-600 flex-1 truncate">{folder.name}</span>
-          <span className="text-xs text-gray-400">{folderChats.length}</span>
+          <div className={cn("h-2 w-2 rounded-full shrink-0", colorClass.dot)} />
+          <span className="text-sm text-gray-600 flex-1 truncate">{project.name}</span>
+          <span className="text-xs text-gray-400">{projectChats.length}</span>
           <Button
             variant="ghost"
             size="icon"
             className="h-5 w-5 opacity-0 group-hover:opacity-100"
-            onClick={(e) => handleDeleteFolder(e, folder.id)}
+            onClick={(e) => handleDeleteProject(e, project.id)}
           >
             <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-500" />
           </Button>
         </div>
         {isExpanded && (
           <div className="ml-4 mt-1 space-y-1">
-            {folderChats.length === 0 ? (
-              <p className="text-xs text-gray-400 px-2 py-1">Carpeta vacía</p>
+            {projectChats.length === 0 ? (
+              <p className="text-xs text-gray-400 px-2 py-1">Proyecto vacío</p>
             ) : (
-              folderChats.map(renderChatItem)
+              projectChats.map(renderChatItem)
             )}
           </div>
         )}
@@ -498,8 +541,101 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
         </div>
       )}
 
+      {/* Projects Section - Collapsible */}
+      {isAuthenticated && (
+        <div className="px-3 mb-2">
+          <div 
+            className="flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer hover:bg-gray-200/50"
+            onClick={() => setShowProjectsSection(!showProjectsSection)}
+          >
+            <div className="flex items-center gap-1.5">
+              {showProjectsSection ? (
+                <ChevronDown className="h-3 w-3 text-gray-400" />
+              ) : (
+                <ChevronRight className="h-3 w-3 text-gray-400" />
+              )}
+              <FolderKanban className="h-3.5 w-3.5 text-gray-500" />
+              <span className="text-xs font-medium text-gray-500">Mis Landings</span>
+            </div>
+            <span className="text-xs text-gray-400">{projects?.length || 0}</span>
+          </div>
+          
+          {showProjectsSection && (
+            <div className="mt-1 ml-2">
+              {/* New Project Input */}
+              {showNewProject && (
+                <div className="flex items-center gap-1 px-2 mb-2">
+                  <Input
+                    ref={newProjectInputRef}
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    placeholder="Nombre del proyecto"
+                    className="h-7 text-xs flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreateProject();
+                      if (e.key === 'Escape') {
+                        setShowNewProject(false);
+                        setNewProjectName('');
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={handleCreateProject}
+                    disabled={createProject.isPending}
+                  >
+                    <Check className="h-3 w-3 text-green-600" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => {
+                      setShowNewProject(false);
+                      setNewProjectName('');
+                    }}
+                  >
+                    <X className="h-3 w-3 text-gray-400" />
+                  </Button>
+                </div>
+              )}
+              
+              {/* Project List */}
+              {projects && projects.length > 0 ? (
+                projects.map(renderProjectSection)
+              ) : !showNewProject && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-xs text-gray-400 hover:text-gray-600 h-8"
+                  onClick={() => setShowNewProject(true)}
+                >
+                  <FolderPlus className="h-3 w-3 mr-2" />
+                  Crear proyecto
+                </Button>
+              )}
+              
+              {/* Add Project Button when projects exist */}
+              {projects && projects.length > 0 && !showNewProject && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-xs text-gray-400 hover:text-gray-600 h-7 mt-1"
+                  onClick={() => setShowNewProject(true)}
+                >
+                  <Plus className="h-3 w-3 mr-2" />
+                  Añadir proyecto
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* History List - with proper scroll */}
-      <ScrollArea className="flex-1 px-3" style={{ minHeight: 0, maxHeight: 'calc(100vh - 350px)' }}>
+      <ScrollArea className="flex-1 px-3" style={{ minHeight: 0, maxHeight: 'calc(100vh - 400px)' }}>
         {chatsLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
@@ -526,119 +662,6 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
                 <div className="space-y-1">
                   {grouped.favorites.map(renderChatItem)}
                 </div>
-              </div>
-            )}
-
-            {/* Folders Section */}
-            {folders && folders.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between px-2 mb-2">
-                  <h3 className="text-xs font-medium text-gray-400 flex items-center gap-1">
-                    <Folder className="h-3 w-3" />
-                    Carpetas
-                  </h3>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5"
-                    onClick={() => setShowNewFolder(true)}
-                  >
-                    <FolderPlus className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-                  </Button>
-                </div>
-                {showNewFolder && (
-                  <div className="flex items-center gap-1 px-2 mb-2">
-                    <Input
-                      ref={newFolderInputRef}
-                      value={newFolderName}
-                      onChange={(e) => setNewFolderName(e.target.value)}
-                      placeholder="Nombre de carpeta"
-                      className="h-7 text-xs flex-1"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleCreateFolder();
-                        if (e.key === 'Escape') {
-                          setShowNewFolder(false);
-                          setNewFolderName('');
-                        }
-                      }}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={handleCreateFolder}
-                      disabled={createFolder.isPending}
-                    >
-                      <Check className="h-3 w-3 text-green-600" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => {
-                        setShowNewFolder(false);
-                        setNewFolderName('');
-                      }}
-                    >
-                      <X className="h-3 w-3 text-gray-400" />
-                    </Button>
-                  </div>
-                )}
-                {folders.map(renderFolderSection)}
-              </div>
-            )}
-
-            {/* Show folder creation button if no folders yet but user is authenticated */}
-            {isAuthenticated && (!folders || folders.length === 0) && (
-              <div className="px-2">
-                {showNewFolder ? (
-                  <div className="flex items-center gap-1 mb-2">
-                    <Input
-                      ref={newFolderInputRef}
-                      value={newFolderName}
-                      onChange={(e) => setNewFolderName(e.target.value)}
-                      placeholder="Nombre de carpeta"
-                      className="h-7 text-xs flex-1"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleCreateFolder();
-                        if (e.key === 'Escape') {
-                          setShowNewFolder(false);
-                          setNewFolderName('');
-                        }
-                      }}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={handleCreateFolder}
-                      disabled={createFolder.isPending}
-                    >
-                      <Check className="h-3 w-3 text-green-600" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => {
-                        setShowNewFolder(false);
-                        setNewFolderName('');
-                      }}
-                    >
-                      <X className="h-3 w-3 text-gray-400" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-xs text-gray-400 hover:text-gray-600"
-                    onClick={() => setShowNewFolder(true)}
-                  >
-                    <FolderPlus className="h-3 w-3 mr-2" />
-                    Crear carpeta
-                  </Button>
-                )}
               </div>
             )}
 
@@ -703,7 +726,7 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
         )}
       </ScrollArea>
 
-      {/* Footer: User Profile */}
+      {/* Footer: Navigation Links */}
       <div className="p-3 border-t border-gray-200 dark:border-gray-700 mt-auto space-y-2">
         {/* My Landings - always visible */}
         <Link href="/my-landings">

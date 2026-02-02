@@ -1278,11 +1278,13 @@
 
 ## Phase 6: Mejoras en Sección Proyectos y Menú Contextual
 
-- [ ] Eliminar sección "Carpetas > Mis Landings" del menú lateral
-- [ ] Añadir sección "Proyectos" que funcione como carpetas para agrupar conversaciones
-- [ ] Implementar menú contextual (3 puntos) en cada conversación con opciones:
-  - [ ] Renombrar conversación
-  - [ ] Eliminar conversación
-  - [ ] Mover a proyecto
-  - [ ] Agregar a favoritos/Fijar
-- [ ] Diseño similar al de Manus (captura de referencia)
+- [x] Eliminar sección "Carpetas > Mis Landings" del menú lateral
+- [x] Añadir sección "Proyectos" que funcione como carpetas para agrupar conversaciones
+- [x] Implementar menú contextual (3 puntos) en cada conversación con opciones:
+  - [x] Compartir conversación
+  - [x] Renombrar conversación
+  - [x] Agregar a favoritos/Fijar
+  - [x] Abrir en una nueva pestaña
+  - [x] Mover a proyecto (con submenú)
+  - [x] Eliminar conversación (en rojo)
+- [x] Diseño similar al de Manus (captura de referencia)
