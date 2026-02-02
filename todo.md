@@ -1271,6 +1271,18 @@
 
 ## Phase 5.1: Three Suggested Improvements
 
-- [ ] Mejorar sistema de páginas múltiples - LLM debe generar páginas separadas (no solo secciones)
-- [ ] Probar el banner de URL publicada en la UI
-- [ ] Implementar edición de URL existente sin crear duplicados
+- [x] Mejorar sistema de páginas múltiples - LLM debe generar páginas separadas (no solo secciones)
+- [x] Probar el banner de URL publicada en la UI
+- [x] Implementar edición de URL existente sin crear duplicados
+
+
+## Phase 6: Mejoras en Sección Proyectos y Menú Contextual
+
+- [ ] Eliminar sección "Carpetas > Mis Landings" del menú lateral
+- [ ] Añadir sección "Proyectos" que funcione como carpetas para agrupar conversaciones
+- [ ] Implementar menú contextual (3 puntos) en cada conversación con opciones:
+  - [ ] Renombrar conversación
+  - [ ] Eliminar conversación
+  - [ ] Mover a proyecto
+  - [ ] Agregar a favoritos/Fijar
+- [ ] Diseño similar al de Manus (captura de referencia)
