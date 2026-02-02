@@ -1123,3 +1123,32 @@
 - `server/colorExtractor.ts` - Color palette and typography extraction
 - `server/cloningLevels.ts` - 3-level cloning configuration
 - `server/webCloning.test.ts` - Test suite (23 tests)
+
+
+## Phase 4.1: Web Cloning Integration (2 Feb 2026)
+- [ ] Modify assetDownloader.ts to use local server storage instead of S3
+- [ ] Integrate cloning system in /api/ai/stream endpoint
+- [ ] Improve LLM prompt with cloningLevels instructions
+- [ ] Test cloning with real websites (Linear, Vercel, Stripe)
+- [ ] Validate extraction quality and fix issues
+
+
+## Phase 4.1: Web Cloning Integration - COMPLETED (Feb 2, 2026)
+
+- [x] Modify assetDownloader.ts to use local server storage instead of S3
+- [x] Create webDataExtractorEnhanced.ts - Integrates all cloning modules
+- [x] Update autonomousAgents.ts to use enhanced extractor with cloning levels
+- [x] Create webCloningEnhanced.test.ts - 17 additional tests
+- [x] All 212 tests passing
+
+### Changes Made:
+- `assetDownloader.ts` - Now uses `/home/ubuntu/user-projects/{projectId}/assets/` for local storage
+- `webDataExtractorEnhanced.ts` - New file combining all extraction modules
+- `autonomousAgents.ts` - Updated clone_website case to use enhanced extractor
+- Cloning levels (inspiration/replica/exact) now detected from user message
+- Assets downloaded locally instead of S3
+
+### Cloning Levels System:
+1. **Inspiración** (💡) - Uses colors/structure, generates new content
+2. **Réplica Visual** (🎨) - Visual similarity, adapted content  
+3. **Copia Exacta** (📋) - Pixel-perfect copy with original assets

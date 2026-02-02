@@ -1,14 +1,19 @@
 /**
  * Asset Downloader - Descarga y almacena imágenes, logos y fuentes de sitios web
- * Guarda los assets en S3 para uso en las landings generadas
+ * Guarda los assets en el servidor local para uso en las landings generadas
  */
 
-import { storagePut } from './storage';
 import { createHash } from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Directorio base para assets descargados (relativo al proyecto)
+const ASSETS_BASE_DIR = path.join(process.cwd(), 'client', 'public', 'cloned-assets');
 
 export interface DownloadedAsset {
   originalUrl: string;
-  storedUrl: string;
+  storedUrl: string;  // URL relativa para usar en el frontend
+  localPath: string;  // Ruta absoluta en el servidor
   type: 'image' | 'logo' | 'icon' | 'font' | 'background';
   filename: string;
   mimeType: string;
@@ -23,7 +28,18 @@ export interface AssetDownloadResult {
 }
 
 /**
- * Descarga múltiples assets y los almacena en S3
+ * Asegura que el directorio de assets existe
+ */
+function ensureAssetsDirectory(projectId: string): string {
+  const projectDir = path.join(ASSETS_BASE_DIR, projectId);
+  if (!fs.existsSync(projectDir)) {
+    fs.mkdirSync(projectDir, { recursive: true });
+  }
+  return projectDir;
+}
+
+/**
+ * Descarga múltiples assets y los almacena localmente
  */
 export async function downloadAssets(
   urls: Array<{ url: string; type: 'image' | 'logo' | 'icon' | 'font' | 'background' }>,
@@ -37,6 +53,9 @@ export async function downloadAssets(
   };
 
   console.log(`[AssetDownloader] Downloading ${urls.length} assets for project ${projectId}`);
+
+  // Asegurar que el directorio existe
+  ensureAssetsDirectory(projectId);
 
   // Procesar en paralelo con límite de concurrencia
   const batchSize = 5;
@@ -64,7 +83,7 @@ export async function downloadAssets(
 }
 
 /**
- * Descarga un solo asset y lo guarda en S3
+ * Descarga un solo asset y lo guarda localmente
  */
 async function downloadSingleAsset(
   url: string,
@@ -112,16 +131,21 @@ async function downloadSingleAsset(
     const hash = createHash('md5').update(url).digest('hex').substring(0, 8);
     const extension = getExtensionFromMimeType(contentType);
     const filename = `${type}-${hash}${extension}`;
-    const storagePath = `cloned-assets/${projectId}/${filename}`;
+    
+    // Guardar localmente
+    const projectDir = ensureAssetsDirectory(projectId);
+    const localPath = path.join(projectDir, filename);
+    fs.writeFileSync(localPath, buffer);
 
-    // Subir a S3
-    const { url: storedUrl } = await storagePut(storagePath, buffer, contentType);
+    // URL relativa para el frontend (servida desde /cloned-assets/)
+    const storedUrl = `/cloned-assets/${projectId}/${filename}`;
 
     console.log(`[AssetDownloader] Downloaded: ${filename} (${formatBytes(buffer.length)})`);
 
     return {
       originalUrl: url,
       storedUrl,
+      localPath,
       type,
       filename,
       mimeType: contentType,
@@ -295,6 +319,46 @@ export async function extractAndDownloadAllAssets(
 }
 
 /**
+ * Limpia los assets de un proyecto
+ */
+export function cleanupProjectAssets(projectId: string): void {
+  const projectDir = path.join(ASSETS_BASE_DIR, projectId);
+  if (fs.existsSync(projectDir)) {
+    fs.rmSync(projectDir, { recursive: true, force: true });
+    console.log(`[AssetDownloader] Cleaned up assets for project ${projectId}`);
+  }
+}
+
+/**
+ * Lista los assets de un proyecto
+ */
+export function listProjectAssets(projectId: string): DownloadedAsset[] {
+  const projectDir = path.join(ASSETS_BASE_DIR, projectId);
+  if (!fs.existsSync(projectDir)) {
+    return [];
+  }
+
+  const files = fs.readdirSync(projectDir);
+  return files.map(filename => {
+    const localPath = path.join(projectDir, filename);
+    const stats = fs.statSync(localPath);
+    const type = filename.split('-')[0] as DownloadedAsset['type'];
+    const extension = path.extname(filename);
+    const mimeType = getMimeTypeFromExtension(extension);
+
+    return {
+      originalUrl: '', // No disponible después de guardar
+      storedUrl: `/cloned-assets/${projectId}/${filename}`,
+      localPath,
+      type,
+      filename,
+      mimeType,
+      size: stats.size,
+    };
+  });
+}
+
+/**
  * Normaliza una URL
  */
 function normalizeUrl(url: string): string | null {
@@ -382,6 +446,27 @@ function getExtensionFromMimeType(mimeType: string): string {
   }
   
   return '.bin';
+}
+
+/**
+ * Obtiene el tipo MIME desde la extensión
+ */
+function getMimeTypeFromExtension(extension: string): string {
+  const extToMime: Record<string, string> = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.svg': 'image/svg+xml',
+    '.avif': 'image/avif',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+    '.otf': 'font/otf',
+  };
+  
+  return extToMime[extension.toLowerCase()] || 'application/octet-stream';
 }
 
 /**

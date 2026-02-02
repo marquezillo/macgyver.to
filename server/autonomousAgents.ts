@@ -4,6 +4,8 @@ import { performDeepResearch } from "./deepResearch";
 import { createDiagram } from "./diagramGeneration";
 import { translateText } from "./ocrTranslation";
 import { extractWebData, generateEnrichedPrompt } from "./webDataExtractor";
+import { extractWebDataEnhanced, generateEnhancedPrompt, generateUserFriendlySummary } from "./webDataExtractorEnhanced";
+import { detectCloningLevel, getCloningLevelSummary } from "./cloningLevels";
 import { detectCloneIntent } from "./cloneIntentDetector";
 
 export type AgentTool = 
@@ -236,22 +238,37 @@ async function executeStep(
       const urlMatch = step.input.match(/https?:\/\/[^\s]+/);
       if (urlMatch) {
         try {
-          // NUEVO: Solo extraer datos, NO generar landing
-          // Los datos se pasan al sistema normal de generación
-          const extractedData = await extractWebData(urlMatch[0]);
+          // Detectar nivel de clonación del mensaje del usuario
+          const cloningLevel = detectCloningLevel(step.input);
+          const levelSummary = getCloningLevelSummary(cloningLevel);
           
-          // Formatear los datos extraídos para el contexto
-          const colorsStr = `${extractedData.colors.primary}, ${extractedData.colors.secondary}, ${extractedData.colors.accent}`;
-          const featuresCount = extractedData.content.features.length;
-          const industryStr = extractedData.industry.patternName || 'general';
+          console.log(`[clone_website] Nivel de clonación detectado: ${levelSummary.name}`);
           
-          // Generar el prompt enriquecido para el LLM
-          const enrichedPrompt = generateEnrichedPrompt(extractedData, step.input);
+          // Usar el extractor mejorado con descarga de assets
+          const projectId = `clone-${Date.now()}`;
+          const enhancedData = await extractWebDataEnhanced(urlMatch[0], step.input, projectId);
           
-          return `He analizado la página web exitosamente.\n\n**Datos extraídos:**\n- Industria detectada: ${industryStr}\n- Colores principales: ${colorsStr}\n- Características encontradas: ${featuresCount}\n- Testimonios: ${extractedData.content.testimonials.length}\n- Estilo: ${extractedData.style.darkMode ? 'Modo oscuro' : 'Modo claro'}\n\n__EXTRACTED_WEB_DATA__${JSON.stringify(extractedData)}__END_EXTRACTED_DATA__\n\n__ENRICHED_PROMPT__${enrichedPrompt}__END_ENRICHED_PROMPT__`;
+          // Generar resumen amigable para el usuario
+          const userSummary = generateUserFriendlySummary(enhancedData);
+          
+          // Generar el prompt enriquecido con instrucciones de clonación
+          const enrichedPrompt = generateEnhancedPrompt(enhancedData, step.input);
+          
+          // Formatear datos para el contexto
+          const assetsDownloaded = (enhancedData.downloadedAssets.heroImages?.length || 0) + 
+                                   (enhancedData.downloadedAssets.galleryImages?.length || 0);
+          
+          return `${userSummary}\n\n__ENHANCED_WEB_DATA__${JSON.stringify(enhancedData)}__END_ENHANCED_DATA__\n\n__CLONING_INSTRUCTIONS__${enrichedPrompt}__END_CLONING_INSTRUCTIONS__\n\n__CLONING_LEVEL__${cloningLevel}__END_CLONING_LEVEL__`;
         } catch (error) {
           console.error('[clone_website] Error extrayendo datos:', error);
-          return `No pude analizar la página completamente. ${error instanceof Error ? error.message : 'Intenta con otra URL.'}`;
+          // Fallback al extractor básico
+          try {
+            const extractedData = await extractWebData(urlMatch[0]);
+            const enrichedPrompt = generateEnrichedPrompt(extractedData, step.input);
+            return `He analizado la página web.\n\n__EXTRACTED_WEB_DATA__${JSON.stringify(extractedData)}__END_EXTRACTED_DATA__\n\n__ENRICHED_PROMPT__${enrichedPrompt}__END_ENRICHED_PROMPT__`;
+          } catch (fallbackError) {
+            return `No pude analizar la página completamente. ${error instanceof Error ? error.message : 'Intenta con otra URL.'}`;
+          }
         }
       }
       return 'No encontré una URL válida para analizar.';
