@@ -1288,3 +1288,10 @@
   - [x] Mover a proyecto (con submenú)
   - [x] Eliminar conversación (en rojo)
 - [x] Diseño similar al de Manus (captura de referencia)
+
+
+## Phase 8: Tres Sugerencias de Mejora
+
+- [x] Drag & drop de conversaciones a proyectos - Permitir arrastrar conversaciones directamente a proyectos desde el sidebar
+- [x] Colores personalizados para proyectos - Elegir color al crear/editar un proyecto para mejor organización visual
+- [x] Búsqueda global mejorada - Filtrar por proyecto, favoritos, o fecha en la barra de búsqueda
