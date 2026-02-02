@@ -215,7 +215,7 @@ function DraggableChatItem({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                className="h-6 w-6 opacity-100 transition-opacity shrink-0"
               >
                 <MoreHorizontal className="h-4 w-4 text-gray-400" />
               </Button>
