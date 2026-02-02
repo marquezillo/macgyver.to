@@ -35,6 +35,7 @@ import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Streamdown } from 'streamdown';
 import { ChatImagePreview } from './ImageLightbox';
+import { TaskPlanView, TaskSection, parseTaskPlan } from './TaskPlanView';
 
 interface Message {
   id?: number;
@@ -46,6 +47,10 @@ interface Message {
   isImage?: boolean;
   imageUrl?: string;
   imagePrompt?: string;
+  // Project plan fields
+  isProjectPlan?: boolean;
+  projectName?: string;
+  taskPlan?: TaskSection[];
 }
 
 interface ChatInterfaceProps {
@@ -427,8 +432,14 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                 // Regular streaming chunk
                 fullContent += data.content;
                 
+                // Check if this looks like a project plan JSON being generated
+                if (fullContent.includes('"type": "project_plan"') || fullContent.includes('"type":"project_plan"') ||
+                    fullContent.includes('"type": "project_progress"') || fullContent.includes('"type":"project_progress"')) {
+                  // Show a friendly message for project plan
+                  setStreamingContent('🛠️ Preparando el plan del proyecto...\n\nEstoy organizando las tareas y fases del desarrollo.');
+                }
                 // Check if this looks like a landing JSON being generated (single page or multi-page format)
-                if (fullContent.includes('"type": "landing"') || fullContent.includes('"type":"landing"') || 
+                else if (fullContent.includes('"type": "landing"') || fullContent.includes('"type":"landing"') || 
                     fullContent.includes('```json') && (fullContent.includes('"sections"') || fullContent.includes('"pages"'))) {
                   isGeneratingLanding = true;
                   // Show a friendly message instead of JSON
@@ -1006,6 +1017,16 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                                 </a>
                               ))}
                             </div>
+                          </div>
+                        )}
+                        
+                        {/* Project Plan View */}
+                        {msg.isProjectPlan && msg.taskPlan && (
+                          <div className="w-full mt-2">
+                            <TaskPlanView 
+                              sections={msg.taskPlan} 
+                              projectName={msg.projectName}
+                            />
                           </div>
                         )}
                         
