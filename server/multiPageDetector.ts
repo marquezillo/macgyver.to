@@ -205,13 +205,17 @@ function generateMultiPageInstructions(pages: PageRequest[]): string {
   if (pages.length === 0) return '';
 
   let instructions = `
-## MULTI-PAGE LANDING INSTRUCTIONS
+## MULTI-PAGE LANDING GENERATION - CRITICAL INSTRUCTIONS
 
-The user wants a landing with MULTIPLE PAGES. You must generate a complete multi-page website.
+**IMPORTANT**: The user explicitly requested MULTIPLE SEPARATE PAGES. You MUST generate a complete multi-page website structure.
 
-### IMPORTANT: Response Format for Multi-Page Landings
+### MANDATORY: Response Format for Multi-Page Landings
 
-Your response MUST include a "pages" array with each page as a separate object:
+You MUST respond with VALID JSON containing a "pages" array. Each page must be a SEPARATE, COMPLETE page with its own sections.
+
+**CRITICAL**: Do NOT generate all content in a single page with anchor links. Generate SEPARATE pages with different URLs.
+
+### REQUIRED JSON STRUCTURE:
 
 \`\`\`json
 {
@@ -220,7 +224,14 @@ Your response MUST include a "pages" array with each page as a separate object:
       "slug": "",
       "title": "Inicio",
       "isHomePage": true,
-      "sections": [/* home page sections */]
+      "sections": [
+        { "type": "header", "data": { "logo": "...", "navigation": [...] } },
+        { "type": "hero", "data": { "title": "...", "subtitle": "..." } },
+        { "type": "features", "data": { "items": [...] } },
+        { "type": "testimonials", "data": { "items": [...] } },
+        { "type": "cta", "data": { "title": "...", "button": "..." } },
+        { "type": "footer", "data": { "links": [...] } }
+      ]
     },
 `;
 
@@ -229,7 +240,20 @@ Your response MUST include a "pages" array with each page as a separate object:
       "slug": "${page.slug}",
       "title": "${page.title}",
       "isHomePage": false,
-      "sections": [/* ${page.description} sections */]
+      "sections": [
+        { "type": "header", "data": { "logo": "...", "navigation": [...] } },
+        { "type": "hero", "data": { "title": "...", "subtitle": "..." } },
+`;
+    
+    // Add suggested sections
+    for (const section of page.suggestedSections) {
+      if (section !== 'header' && section !== 'footer') {
+        instructions += `        { "type": "${section}", "data": { "items": [...] } },\n`;
+      }
+    }
+    
+    instructions += `        { "type": "footer", "data": { "links": [...] } }
+      ]
     },
 `;
   }
@@ -248,33 +272,38 @@ Your response MUST include a "pages" array with each page as a separate object:
 }
 \`\`\`
 
-### Requested Pages:
+### Requested Pages to Generate:
 
 `;
 
   for (const page of pages) {
     instructions += `
-#### Page: /${page.slug} - ${page.title}
+**Page: /${page.slug} - ${page.title}**
 - Description: ${page.description || 'Custom page'}
-- Suggested sections: ${page.suggestedSections.join(', ')}
-- MUST include header with navigation to all pages
-- MUST include footer with links
+- Required sections: ${page.suggestedSections.join(', ')}
+- MUST include: header with navigation to ALL pages, footer with links
+- Each section must have complete, realistic data
 `;
   }
 
   instructions += `
-### Navigation Rules:
-1. ALL pages must have a consistent header with navigation links to ALL other pages
-2. Navigation links must use href="/slug" format (NOT anchor links like #section)
-3. The header navigation must be identical across all pages
+
+### CRITICAL Navigation Rules:
+1. EVERY page must have a header with navigation links to ALL other pages
+2. Navigation links MUST use href="/slug" format (e.g., href="/contacto", href="/precios")
+3. The header navigation must be IDENTICAL across all pages
 4. Footer must include links to important pages
+5. Logo in header must link to home page (href="/")
 
-### Section ID Rules for Multi-Page:
-- Home page sections: hero-1, features-1, etc.
-- Contact page sections: contacto-hero-1, contacto-form-1, etc.
-- Pricing page sections: precios-hero-1, precios-pricing-1, etc.
-- Use page slug as prefix for non-home pages (e.g., contacto-hero-1)
+### Section ID Rules:
+- Home page: hero-1, features-1, pricing-1, etc.
+- Other pages: PREFIX-sectiontype-1 (e.g., contacto-hero-1, contacto-form-1, precios-pricing-1)
 
+### VALIDATION:
+- Ensure you have exactly ${pages.length + 1} pages (1 home + ${pages.length} additional)
+- Each page must have at least 3 sections
+- All pages must have header and footer
+- Navigation must be consistent across all pages
 `;
 
   return instructions;

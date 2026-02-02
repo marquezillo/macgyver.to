@@ -937,6 +937,7 @@ export async function updatePublishedLanding(
   userId: number,
   data: Partial<{
     name: string;
+    slug: string;
     description: string;
     config: unknown;
     pages: unknown;
@@ -961,6 +962,7 @@ export async function updatePublishedLanding(
 
   const updateData: Record<string, unknown> = {};
   if (data.name !== undefined) updateData.name = data.name;
+  if (data.slug !== undefined) updateData.slug = data.slug;
   if (data.description !== undefined) updateData.description = data.description;
   if (data.config !== undefined) updateData.config = data.config;
   if (data.pages !== undefined) updateData.pages = data.pages;

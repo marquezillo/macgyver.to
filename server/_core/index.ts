@@ -307,7 +307,12 @@ async function startServer() {
         
         if (jsonString) {
           const parsed = JSON.parse(jsonString);
-          if (parsed?.type === 'landing') {
+          
+          // Handle both single-page (type: landing) and multi-page (pages array) formats
+          const isMultiPage = parsed?.pages && Array.isArray(parsed.pages);
+          const isSinglePage = parsed?.type === 'landing';
+          
+          if (isMultiPage || isSinglePage) {
             hasArtifact = true;
             
             // Enriquecer las secciones con imágenes automáticas
@@ -317,21 +322,58 @@ async function startServer() {
             try {
               const businessType = parsed.businessType || 'business';
               const businessName = parsed.businessName || 'Company';
-              const enrichedSections = await enrichLandingWithImages(
-                parsed.sections,
-                businessType,
-                businessName
-              );
-              artifactData = { sections: enrichedSections };
+              
+              if (isMultiPage) {
+                // Multi-page format: enrich each page's sections
+                console.log('[AI Stream] Processing multi-page format with', parsed.pages.length, 'pages');
+                const enrichedPages = [];
+                for (const page of parsed.pages) {
+                  if (page.sections && Array.isArray(page.sections)) {
+                    const enrichedSections = await enrichLandingWithImages(
+                      page.sections,
+                      businessType,
+                      businessName
+                    );
+                    enrichedPages.push({ ...page, sections: enrichedSections });
+                  } else {
+                    enrichedPages.push(page);
+                  }
+                }
+                // Find homepage and use its sections for preview
+                const homePage = enrichedPages.find(p => p.isHomePage || p.slug === '' || p.slug === '/') || enrichedPages[0];
+                artifactData = { 
+                  sections: homePage?.sections || [], 
+                  pages: enrichedPages,
+                  globalStyles: parsed.globalStyles,
+                  metadata: parsed.metadata
+                };
+                console.log('[AI Stream] Multi-page landing enriched with', enrichedPages.length, 'pages');
+              } else {
+                // Single-page format
+                const enrichedSections = await enrichLandingWithImages(
+                  parsed.sections,
+                  businessType,
+                  businessName
+                );
+                artifactData = { sections: enrichedSections };
+              }
               console.log('[AI Stream] Landing enriched with images successfully');
             } catch (enrichError) {
               console.error('[AI Stream] Error enriching landing with images:', enrichError);
               // Usar las secciones originales si falla el enriquecimiento
-              artifactData = { sections: parsed.sections };
+              if (isMultiPage) {
+                const homePage = parsed.pages.find((p: any) => p.isHomePage || p.slug === '' || p.slug === '/') || parsed.pages[0];
+                artifactData = { sections: homePage?.sections || [], pages: parsed.pages };
+              } else {
+                artifactData = { sections: parsed.sections };
+              }
             }
             
             // Use the message from JSON or generate a friendly message
-            displayMessage = parsed.message || 'He creado tu landing page con imágenes. Puedes ver el preview a la derecha y editar las secciones haciendo clic en ellas.';
+            const pageCount = isMultiPage ? parsed.pages.length : 1;
+            displayMessage = parsed.message || (isMultiPage 
+              ? `He creado tu landing page con ${pageCount} páginas. Puedes ver el preview a la derecha y navegar entre las páginas.`
+              : 'He creado tu landing page con imágenes. Puedes ver el preview a la derecha y editar las secciones haciendo clic en ellas.');
           }
         }
       } catch (parseError) {

@@ -1267,3 +1267,10 @@
 - [ ] Multi-page system needs LLM to generate separate pages (not just sections)
 - [ ] Validate published URL display in UI
 - [ ] Fix duplicate URLs in "Mis Landings"
+
+
+## Phase 5.1: Three Suggested Improvements
+
+- [ ] Mejorar sistema de páginas múltiples - LLM debe generar páginas separadas (no solo secciones)
+- [ ] Probar el banner de URL publicada en la UI
+- [ ] Implementar edición de URL existente sin crear duplicados

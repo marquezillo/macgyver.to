@@ -375,7 +375,25 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                     finalContent = data.content;
                   }
                   // Handle artifact - check both artifactData and landingData (from autonomous clone)
-                  const artifactPayload = data.artifactData || (data.isLanding && data.landingData ? { sections: data.landingData.sections } : null);
+                  let artifactPayload = data.artifactData || (data.isLanding && data.landingData ? { sections: data.landingData.sections } : null);
+                  
+                  // Handle multi-page format - extract sections from pages array
+                  if (artifactPayload?.pages && Array.isArray(artifactPayload.pages)) {
+                    console.log('[ChatInterface] Detected multi-page format with', artifactPayload.pages.length, 'pages');
+                    // Find homepage or use first page
+                    const homePage = artifactPayload.pages.find((p: any) => p.isHomePage || p.slug === '' || p.slug === '/') || artifactPayload.pages[0];
+                    if (homePage?.sections) {
+                      console.log('[ChatInterface] Using homepage sections:', homePage.sections.length);
+                      // Store all pages in artifact but use homepage sections for preview
+                      artifactPayload = { 
+                        sections: homePage.sections, 
+                        pages: artifactPayload.pages,
+                        globalStyles: artifactPayload.globalStyles,
+                        metadata: artifactPayload.metadata
+                      };
+                    }
+                  }
+                  
                   if (artifactPayload) {
                     hasArtifact = true;
                     console.log('[ChatInterface] Received artifact data:', artifactPayload);
@@ -409,9 +427,9 @@ export function ChatInterface({ onOpenPreview, isPreviewOpen, chatId, onChatCrea
                 // Regular streaming chunk
                 fullContent += data.content;
                 
-                // Check if this looks like a landing JSON being generated
+                // Check if this looks like a landing JSON being generated (single page or multi-page format)
                 if (fullContent.includes('"type": "landing"') || fullContent.includes('"type":"landing"') || 
-                    fullContent.includes('```json') && fullContent.includes('"sections"')) {
+                    fullContent.includes('```json') && (fullContent.includes('"sections"') || fullContent.includes('"pages"'))) {
                   isGeneratingLanding = true;
                   // Show a friendly message instead of JSON
                   setStreamingContent('🎨 Generando tu landing page...\n\nEstoy diseñando las secciones, colores y contenido para tu página. En unos segundos podrás ver el preview a la derecha.');

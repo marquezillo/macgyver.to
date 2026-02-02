@@ -70,6 +70,7 @@ import {
   updatePublishedLanding,
   getPublishedLandingsByUserId,
   getPublishedLandingById,
+  getPublishedLandingBySubdomainAndSlug,
   deletePublishedLanding,
   isSlugAvailable,
   getPublishedLandingStats,
@@ -1565,6 +1566,7 @@ export const appRouter = router({
       .input(z.object({
         id: z.number(),
         name: z.string().min(1).max(100).optional(),
+        slug: z.string().min(3).max(50).regex(/^[a-z0-9-]+$/).optional(),
         config: z.any().optional(),
         pages: z.array(z.any()).optional(),
         theme: z.object({
@@ -1591,10 +1593,21 @@ export const appRouter = router({
           throw new Error('No tienes permiso para editar esta landing');
         }
         
+        // Check if new slug is available (if changing)
+        if (input.slug && input.slug !== landing.slug) {
+          const existingWithSlug = await getPublishedLandingBySubdomainAndSlug(landing.subdomain, input.slug);
+          if (existingWithSlug && existingWithSlug.id !== input.id) {
+            throw new Error('Este slug ya está en uso. Elige otro.');
+          }
+        }
+        
         const { id, ...updateData } = input;
         await updatePublishedLanding(id, ctx.user.id, updateData);
         
-        return { success: true };
+        // Return the new URL if slug changed
+        const newUrl = `https://${landing.subdomain}.macgyver.to/${input.slug || landing.slug}`;
+        
+        return { success: true, url: newUrl };
       }),
 
     // Eliminar una landing
