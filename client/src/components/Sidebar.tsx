@@ -364,7 +364,7 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-6 w-6 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                 >
                   <MoreHorizontal className="h-4 w-4 text-gray-400" />
                 </Button>
@@ -555,7 +555,7 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
                 <ChevronRight className="h-3 w-3 text-gray-400" />
               )}
               <FolderKanban className="h-3.5 w-3.5 text-gray-500" />
-              <span className="text-xs font-medium text-gray-500">Mis Landings</span>
+              <span className="text-xs font-medium text-gray-500">Proyectos</span>
             </div>
             <span className="text-xs text-gray-400">{projects?.length || 0}</span>
           </div>
@@ -746,7 +746,7 @@ export function Sidebar({ isOpen, onToggle, onNewChat, onSelectChat, activeChatI
             className="w-full justify-start gap-2 px-2 h-9 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
           >
             <Boxes className="w-4 h-4 text-emerald-500" />
-            <span className="text-sm text-gray-600 dark:text-gray-300">Proyectos</span>
+            <span className="text-sm text-gray-600 dark:text-gray-300">Mis Apps</span>
           </Button>
         </Link>
 
